@@ -2,7 +2,7 @@
 
 **版本 1.1.0**（2026-11-11）· [CHANGELOG](CHANGELOG.md)
 
-一台 Windows 机器上，一个 AI 的**记忆、眼睛、手和声音**。十二个插件，跑在 [DeepSeek Harness](https://github.com/deepseek-ai)（DSH）上。
+一台 Windows 机器上，一个 AI 的**记忆、眼睛、手和声音**。原有插件集之外，这个 Fork 新增 Discord 消息桥，跑在 [DeepSeek Harness](https://github.com/deepseek-ai)（DSH）上。
 
 它们不是一个框架，是同一个东西的十二个面：会记得、会看图、会动手、会说话、会自己出去逛。
 
@@ -19,14 +19,15 @@
 | `dsh-ming-browse` | 「自己玩」：工作区闲够久时自己醒一轮，只读地看，点按被硬拦；面板上有个「打开我的浏览器」，开的是带登录态的真窗口（投稿、投稿件最后要选文件，只能在那个窗口里点） |
 | `dsh-ming-interest` | 兴趣唤醒：被 @ 门控丢掉的消息里，只有命中在意的题材才叫醒 |
 | `dsh-ming-wake` | 定时唤醒：工具写 `dueAt`，插件扫描后调 `agents.resume` |
-| `dsh-ming-resume` | 插话之后记得回去：检测到 steer 插话，下一步追加「先答她、再回到原任务」 |
+| `dsh-ming-resume` | 插话之后记得回去：检测到 QQ / Discord steer 插话，下一步追加「先答她、再回到原任务」 |
+| `dsh-ming-discord` | Discord ↔ DSH 消息桥：每个服务器频道 / 私讯独立 Session、图片附件、回覆路由、未 @ 消息写入兴趣唤醒 inbox |
 | `dsh-ming-skill-isolate` | 按工作区遮 skill：这个目录用不上的从模型视野里关掉，不删文件 |
 | `dsh-ming-ui` | **不是插件**。两份「唯一源」（样式、面板渲染）和把它们推给各包的同步脚本 |
 
 
-## 消息源：AstrBot（QQ-Agent 已停用）
+## 消息源：AstrBot 与 Discord
 
-2026-11-11 起，QQ 那一侧从 **QQ-Agent 换到 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 4.29**。
+2026-11-11 起，QQ 那一侧从 **QQ-Agent 换到 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 4.29**。这个 Fork 另加 Discord gateway，直接接入 DSH Agent，不需要经过 AstrBot。
 
 - **不再支持 QQ-Agent**；它的壳已退役，相关插件、看门狗、启动路径都不再维护。
 - 这套 DSH 插件本身不依赖具体的 QQ 后端——它们读的是**文件与工具**，不是某个 bot 的 API。
@@ -40,6 +41,8 @@
 群聊蒸馏同理：蒸馏脚本读的是消息文件与 `day/` 目录，不关心是谁写进来的；换壳之后只要
 inbox 还在长，蒸馏就照常跑。
 
+Discord 由 `dsh-ming-discord` 直接接入 DSH：服务器频道与私讯各自使用独立 Session；服务器频道默认必须 @ Bot 才会触发回复，但未 @ 的消息仍会记录到兼容 OneBot 的 inbox，让 `dsh-ming-interest` 可以按兴趣唤醒。Discord 图片会存成 DSH 原生持久附件。
+
 ## 装法
 
 这些包走 DSH profile 的 `link:` 安装，没有发 npm。假定你 clone 到 `C:/dsh/ming`：
@@ -48,7 +51,8 @@ inbox 还在长，蒸馏就照常跑。
 // <DSH_HOME>/profiles/web/package.json 的 dependencies
 "dsh-ming-graph": "link:C:/dsh/ming/dsh-ming-graph",
 "dsh-ming-mousepet": "link:C:/dsh/ming/dsh-ming-mousepet",
-// ……其余九个同理
+"dsh-ming-discord": "link:C:/dsh/ming/dsh-ming-discord",
+// ……其余插件同理
 ```
 
 再把它们加进同一个文件的 `dsh.profile.bundles` 数组，重启 DSH。
@@ -69,12 +73,16 @@ cd dsh-ming-memory && node build.mjs
 | 变量 / 位置 | 说明 |
 |---|---|
 | `MING_WORKSPACE` | 工作区目录（放人设、日记、见闻的那个夹子） |
-| `MING_OWNER_QQ` | 谁的私聊算「本人指令」（`dsh-ming-browse` 的开关只认这个号） |
+| `MING_OWNER_QQ` | 谁的 QQ 私聊算「本人指令」（`dsh-ming-browse` 的开关只认这个号） |
+| `MING_OWNER_DISCORD_ID` | 谁的 Discord 私讯算「本人指令」；Discord 服务器频道不能控制自由活动开关 |
+| `DISCORD_BOT_TOKEN` | Discord Bot Token；只放在 Windows 用户环境变量，不要写进仓库 |
 | `USERPROFILE` | 本机路径默认从它拼，不用改 |
 | `MING_FFPLAY` | 试听用的 ffplay，默认走 `PATH` |
 | `MING_GRAPH_CONFIG` | 星图的本地配置（群号、群名），默认 `~/.dsh/ming-graph.json` |
 
 `dsh-ming-interest/cordis.patch.yml` 里的群号是空的，填你自己的。
+
+Discord Bot 建立、Message Content Intent、邀请权限与环境变量设置，见 [`dsh-ming-discord/README.md`](dsh-ming-discord/README.md)。
 
 ## 人格
 
