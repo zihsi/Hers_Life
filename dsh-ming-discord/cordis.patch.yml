@@ -4,12 +4,14 @@
       config:
         enabled: true
         # Token 從 Windows 環境變數 DISCORD_BOT_TOKEN 讀取，勿寫進倉庫。
-        workspacePath: '<DSH>\\workspace'
+        workspacePath: '<DSH>/workspace'
         mentionRequired: true
         directMessages: true
         # 空陣列代表不額外限制；建議正式使用時填入允許的 Guild / Channel ID。
         allowedGuildIds: []
         allowedChannelIds: []
+        # 若設定 MING_OWNER_DISCORD_ID，主人會自動加入允許名單。
+        allowedUserIds: []
         ownerUserIds: []
         newMessagePolicy: steer
         provider: ''
@@ -17,5 +19,5 @@
         agentPreset: ''
         maxAttachmentBytes: 10485760
         # 使用相容 OneBot 格式的 inbox，讓 ming-interest 可以讀取未 @ Bot 的群訊息。
-        inboxPath: '<DSH_HOME>\\media\\onebot\\qq-inbox.jsonl'
-        chatSessionsPath: '<DSH_HOME>\\media\\onebot\\chat-sessions.json'
+        inboxPath: '<DSH_HOME>/media/onebot/qq-inbox.jsonl'
+        chatSessionsPath: '<DSH_HOME>/media/onebot/chat-sessions.json'
