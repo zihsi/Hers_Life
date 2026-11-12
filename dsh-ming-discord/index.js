@@ -53,7 +53,7 @@ export function apply(ctx, input = {}) {
     directMessages: input.directMessages !== false,
     allowedGuildIds: list(input.allowedGuildIds),
     allowedChannelIds: list(input.allowedChannelIds),
-    ownerUserIds: list(input.ownerUserIds),
+    ownerUserIds: [...new Set([...list(input.ownerUserIds), process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
     newMessagePolicy: input.newMessagePolicy === 'followup' ? 'followup' : 'steer',
     maxAttachmentBytes: Number.isFinite(Number(input.maxAttachmentBytes)) && Number(input.maxAttachmentBytes) > 0
       ? Math.floor(Number(input.maxAttachmentBytes)) : 10 * 1024 * 1024,
