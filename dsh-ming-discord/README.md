@@ -27,7 +27,9 @@ PowerShell example (replace the placeholders locally; never paste the real token
 [Environment]::SetEnvironmentVariable("MING_OWNER_DISCORD_ID", "YOUR_DISCORD_USER_ID", "User")
 ```
 
-The owner ID is optional for ordinary chatting, but needed if `dsh-ming-browse` should accept your private-message commands and send its activity report back to your DM. Server-channel messages never control those owner-only switches.
+The owner ID is optional for ordinary chatting, but needed if `dsh-ming-browse` should accept your private-message commands and send its activity report back to your DM. When set, it is automatically allowed to use the bridge. Server-channel messages never control those owner-only switches.
+
+Because a Discord session can expose the DSH tools enabled in its profile (including local workspace or desktop tools), keep the bot in trusted servers and configure `MING_OWNER_DISCORD_ID` or `allowedUserIds`. Do not invite it to public servers with unrestricted tool access.
 
 Never paste the bot token into GitHub, chat logs or screenshots.
 
@@ -47,7 +49,9 @@ Link this directory into the DSH profile as `dsh-ming-discord`, add it to the pr
 | `directMessages` | Accept DMs |
 | `allowedGuildIds` | Optional Guild ID allowlist; empty means all guilds |
 | `allowedChannelIds` | Optional Channel ID allowlist |
+| `allowedUserIds` | Optional user ID allowlist; the configured `MING_OWNER_DISCORD_ID` is always included |
 | `ownerUserIds` | Owner Discord IDs, marked in the incoming message envelope |
+| `MING_DISCORD_ALLOWED_USER_IDS` | Optional comma-separated user ID allowlist from the Windows environment |
 | `newMessagePolicy` | `steer` interrupts a running turn; `followup` queues the message |
 | `maxAttachmentBytes` | Maximum downloaded image size; default 10 MiB |
 | `inboxPath`, `chatSessionsPath` | Legacy-compatible inbox and chat-to-session map shared with `dsh-ming-interest` |
