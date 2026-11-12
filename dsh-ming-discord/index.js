@@ -3,7 +3,6 @@ import os from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, writeFile, appendFile } from 'node:fs/promises'
 import { Client, GatewayIntentBits, Partials } from 'discord.js'
-import { expandAssistantStream } from '@deepseek-ai/dsh-llm'
 
 export const name = 'ming-discord'
 export const inject = ['agents', 'attachments']
@@ -29,12 +28,11 @@ function splitMessage(text, limit = 1900) {
   if (rest) chunks.push(rest)
   return chunks
 }
-function streamText(stream) {
-  const parts = []
-  for (const item of expandAssistantStream(stream || [])) {
-    if (item?.chunk?.type === 'text-delta') parts.push(item.chunk.text || '')
-  }
-  return parts.join('')
+function messageText(message) {
+  return (Array.isArray(message?.content) ? message.content : [])
+    .filter(block => block?.type === 'text' && typeof block.text === 'string')
+    .map(block => block.text)
+    .join('')
 }
 function imageType(a) {
   const type = String(a.contentType || '').split(';')[0].toLowerCase()
@@ -173,7 +171,7 @@ export function apply(ctx, input = {}) {
         if (event?.type === 'assistant/message') {
           const channelId = sessionChannels.get(sessionId)
           if (!channelId) return
-          const text = streamText(event.data?.stream)
+          const text = messageText(event.data?.message)
           if (text.trim()) pendingReplies.set(sessionId, { channelId, text })
           return
         }
