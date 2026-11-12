@@ -43,7 +43,7 @@
 
 - Graph 面板调用 identity GET / POST route，但原先没有对应 route。
 - 在 Graph 注册受限的 GET / POST endpoint，资料保存于工作区 `live/identity.json`。
-- 使用者重启后确认设置页正常。
+- 使用者重启后确认设置页正常。GitHub 上的 route 实作已同步；由于这次仓库补入的是远端源码副本，需在本机拉取后再做一次语法检查与设置页回归，不能把该次远端同步本身标为已重新实测。
 
 ### 3. Interest 清单缺失
 
