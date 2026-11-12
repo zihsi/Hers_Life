@@ -76,6 +76,7 @@ export function apply(ctx, input = {}) {
     const handles = new Map()
     const creating = new Map()
     const sessionChannels = new Map()
+    const sessionIds = new Map()
     const pendingReplies = new Map()
     const client = new Client({
       intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages, GatewayIntentBits.MessageContent],
@@ -113,8 +114,11 @@ export function apply(ctx, input = {}) {
         }
         await mkdir(path.dirname(cfg.inboxPath), { recursive: true })
         await appendFile(cfg.inboxPath, JSON.stringify(line) + '\n', 'utf8')
-        sessionChannels.set(sessionIdFor(message), message.channelId)
-        await saveMap('group:' + groupId, sessionIdFor(message))
+        const chatKey = 'group:' + groupId
+        const sessionId = sessionIds.get(chatKey) || sessionIdFor(message)
+        sessionIds.set(chatKey, sessionId)
+        sessionChannels.set(sessionId, message.channelId)
+        await saveMap(chatKey, sessionId)
       })
       return inboxQueue
     }
@@ -126,8 +130,12 @@ export function apply(ctx, input = {}) {
           if (typeof sessionId !== 'string' || !sessionId) continue
           if (key.startsWith('group:discord:')) {
             const parts = key.split(':')
-            if (parts.length >= 4) sessionChannels.set(sessionId, parts.slice(3).join(':'))
+            if (parts.length >= 4) {
+              sessionIds.set(key, sessionId)
+              sessionChannels.set(sessionId, parts.slice(3).join(':'))
+            }
           } else if (key.startsWith('discord:dm:')) {
+            sessionIds.set(key, sessionId)
             const userId = key.slice('discord:dm:'.length)
             try {
               const user = await client.users.fetch(userId)
@@ -140,7 +148,30 @@ export function apply(ctx, input = {}) {
         }
       } catch {}
     }
-    void restoreRoutes()
+    let routeRestore = Promise.resolve()
+
+    const resolveSession = message => {
+      const isDm = !message.guildId
+      const chatKey = isDm
+        ? 'discord:dm:' + message.author.id
+        : 'group:discord:' + message.guildId + ':' + message.channelId
+      let id = sessionIds.get(chatKey) || sessionIdFor(message)
+      let archived = new Set()
+      try {
+        const ids = ctx.get('workspaceRegistry')?.archivedSessionIds
+        if (Array.isArray(ids)) archived = new Set(ids.map(String))
+      } catch {}
+      if (archived.has(id)) {
+        const base = sessionIdFor(message)
+        let suffix = 2
+        while (archived.has(base + '-' + suffix) || ctx.agents.get(base + '-' + suffix)) suffix += 1
+        id = base + '-' + suffix
+        sessionIds.set(chatKey, id)
+        void saveMap(chatKey, id).catch(error => log('warn', 'save rotated session mapping failed: ' + String(error)))
+      }
+      sessionIds.set(chatKey, id)
+      return { id, chatKey }
+    }
 
     const getRoute = () => {
       if (cfg.provider && cfg.model) return { provider: cfg.provider, model: cfg.model }
@@ -218,12 +249,13 @@ export function apply(ctx, input = {}) {
         if (cfg.allowedChannelIds.length && !cfg.allowedChannelIds.includes(message.channelId)) return
         const mentioned = Boolean(client.user && message.mentions.has(client.user))
         const shouldRespond = isDm || !cfg.mentionRequired || mentioned
+        await routeRestore
         await recordInbox(message).catch(error => log('warn', 'inbox write failed: ' + String(error)))
         if (!shouldRespond) return
 
-        const id = sessionIdFor(message)
+        const { id, chatKey } = resolveSession(message)
         sessionChannels.set(id, message.channelId)
-        if (isDm) await saveMap('discord:dm:' + message.author.id, id)
+        await saveMap(chatKey, id)
         const agent = await ensureAgent(id)
         const body = client.user
           ? message.content.replace(new RegExp('<@!?'+client.user.id+'>', 'g'), '').trim()
@@ -263,7 +295,11 @@ export function apply(ctx, input = {}) {
       }
     })
 
-    client.once('ready', () => log('info', '已連線 Discord：' + (client.user?.tag || client.user?.id)))
+    client.once('ready', () => {
+      routeRestore = restoreRoutes()
+      void routeRestore.catch(error => log('warn', 'restore routes failed: ' + String(error)))
+      log('info', '已連線 Discord：' + (client.user?.tag || client.user?.id))
+    })
     client.login(cfg.token).catch(error => log('error', 'login failed: ' + String(error)))
 
     return () => {
@@ -274,6 +310,7 @@ export function apply(ctx, input = {}) {
       }
       handles.clear()
       sessionChannels.clear()
+      sessionIds.clear()
       pendingReplies.clear()
     }
   })
