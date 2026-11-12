@@ -121,13 +121,14 @@ export function apply(ctx, input = {}) {
 
     const getRoute = () => {
       if (cfg.provider && cfg.model) return { provider: cfg.provider, model: cfg.model }
-      for (const agent of ctx.agents.list()) {
-        try {
-          const route = agent?.model?.current?.()
-          if (route?.provider && route?.model) return { provider: route.provider, model: route.model }
-        } catch {}
-      }
-      throw new Error('沒有可沿用的模型路由，請設定 provider 與 model')
+      try {
+        const route = ctx.get('agentDefaultModel')?.currentSelection?.()
+        if (route && typeof route.provider === 'string' && typeof route.model === 'string') {
+          return { provider: route.provider, model: route.model }
+        }
+      } catch {}
+      // 與 ming-browse 相同：未指定時交給 DSH 的 Agent 預設模型選擇。
+      return {}
     }
 
     const ensureAgent = async id => {
