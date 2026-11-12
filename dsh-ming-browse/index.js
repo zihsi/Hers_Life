@@ -94,6 +94,8 @@ const DEFAULTS = {
    * **必须是她的私聊会话（onebot-private-<这个号>）**，群的、别人的一律不动开关。
    */
   ownerQQ: process.env.MING_OWNER_QQ || '000000000',
+  ownerDiscordId: process.env.MING_OWNER_DISCORD_ID || '',
+  discordSessionPrefix: 'discord-',
   /**
    * 在哪个会话里叫醒我：
    *   'qq'   —— 正在使用的那个 QQ 会话（她 2026-10-20 定的：别另开会话，就在聊天里叫）
@@ -163,6 +165,8 @@ function normalize(config) {
     targetMode: str(c.targetMode, DEFAULTS.targetMode) === 'self' ? 'self' : 'qq',
     qqSessionPrefix: str(c.qqSessionPrefix, DEFAULTS.qqSessionPrefix),
     ownerQQ: str(c.ownerQQ, DEFAULTS.ownerQQ),
+    ownerDiscordId: str(c.ownerDiscordId, DEFAULTS.ownerDiscordId),
+    discordSessionPrefix: str(c.discordSessionPrefix, DEFAULTS.discordSessionPrefix),
     adbPath: str(c.adbPath, DEFAULTS.adbPath),
     socialApps: Array.isArray(c.socialApps) && c.socialApps.length
       ? c.socialApps.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim())
@@ -947,13 +951,20 @@ export function apply(ctx, config) {
     const m = /<user_message[^>]*\bqq\s*=\s*"(\d+)"/i.exec(String(text || ''))
     return m ? m[1] : ''
   }
+  const senderDiscord = (text) => {
+    const m = /<discord_user[^>]*\bid="(\d+)"[^>]*\bis_dm="true"/i.exec(String(text || ''))
+    return m ? m[1] : ''
+  }
   let strangerSwitchLoggedAt = 0
   ctx.on('session/event', (session, event) => {
     try {
       if (!event || event.type !== 'user/message') return
       // 这一轮还在冒事件，就说明它还活着（审计第 6 条：别把正在跑的活当卡死）。
       if (roundId && String(session?.id || '') === roundId) roundSeenAt = Date.now()
-      if (!String(session?.id || '').startsWith(cfg.qqSessionPrefix)) return
+      const sid = String(session?.id || '')
+      const isQQSession = sid.startsWith(cfg.qqSessionPrefix)
+      const isDiscordSession = sid.startsWith(cfg.discordSessionPrefix)
+      if (!isQQSession && !isDiscordSession) return
       if (!inWorkspace(session?.header?.cwd)) return
       const src = event.data && event.data.source
       if (src && src.kind === 'plugin') return
@@ -967,13 +978,15 @@ export function apply(ctx, config) {
       //   不剥的话，稍长一点的指令会被那句闸吃掉（自测里「随便刷吧」就是这么被吞的）。
       const body = raw
         .replace(/<\/?user_message[^>]*>/gi, ' ')
+        .replace(/<discord_user[^>]*>/gi, ' ')
+        .replace(/<\/discord_user>/gi, ' ')
         .replace(/^\s+|\s+$/g, '')
-      // ① 只认私聊：群里说的话一律不当指令（哪怕是她的号——群里有别人看着，容易看错主语）
-      const sid = String(session?.id || '')
-      if (!sid.startsWith('onebot-private-')) return
-      // ② 只认她的号
-      const qq = senderQQ(raw)
-      if (qq !== String(cfg.ownerQQ)) {
+      // 僅允許私訊控制；群聊訊息永遠不能更改自由活動開關。
+      if (isQQSession && !sid.startsWith('onebot-private-')) return
+      if (isDiscordSession && !sid.startsWith('discord-dm-')) return
+      const identity = isQQSession ? senderQQ(raw) : senderDiscord(raw)
+      const owner = isQQSession ? String(cfg.ownerQQ) : String(cfg.ownerDiscordId)
+      if (!owner || identity !== owner) {
         // 别人的私聊（白名单里基本没有，但万一有）不许开关我的额度；留一行日志，别闷着。
         if (Date.now() - strangerSwitchLoggedAt > 60_000) {
           strangerSwitchLoggedAt = Date.now()
@@ -995,12 +1008,12 @@ export function apply(ctx, config) {
       /* 不管 */
     }
   }
-  /** 找一个 live 的 QQ 会话（不管当前 targetMode 是什么，递话时要用）。 */
+  /** 找一条 live 的外部聊天会话（QQ 或 Discord），供自由活动结果回传。 */
   const findQQSession = () => {
     try {
       for (const agent of ctx.agents.list()) {
         const id = String(agent?.id || '')
-        if (!id.startsWith(cfg.qqSessionPrefix)) continue
+        if (!id.startsWith(cfg.qqSessionPrefix) && !id.startsWith(cfg.discordSessionPrefix)) continue
         if (!inWorkspace(agentCwd(agent))) continue
         return agent
       }
@@ -1014,7 +1027,7 @@ export function apply(ctx, config) {
   const shareToQQ = async () => {
     const target = findQQSession()
     if (target === null) {
-      log('info', 'no live QQ session to report to; result stays in files')
+      log('info', 'no live external chat session to report to; result stays in files')
       return
     }
     let doing = ''
@@ -1032,11 +1045,11 @@ export function apply(ctx, config) {
         role: 'user',
         content: [{
           type: 'text',
-          text: '【传话】下面这句是你出去玩手机那一轮的结果。用一两句在 QQ 里跟她讲，别复述全文、别用汇报腔：\n' + doing,
+          text: '【傳話】下面這句是你自由活動這一輪的結果。用一兩句在目前的聊天平台跟主人說，別複述全文、別用匯報腔：\n' + doing,
         }],
         source: { kind: 'plugin:ming-browse' },
       })
-      log('info', 'reported the browse result to ' + String(target.id))
+      log('info', 'reported the browse result to external chat ' + String(target.id))
     } catch (error) {
       log('warn', 'report failed: ' + String(error))
     }
