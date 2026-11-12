@@ -504,7 +504,7 @@ function NeuronPanel() {
 // 为什么放在这儿：原先挂在 dsh-ming-memory 的 client 上，靠它 apply 时 add，
 // 真机上那条路断了（inject 抛错 → 后面不执行）。改成「她的一生」自己的一页：
 // 组件就在本 bundle 里、apply 时同步 add，不赌别的插件加载顺序。
-// 数据走 memory 插件的 /_dsh/dsh-ming-memory/identity（GET 读、POST 写整份 json）。
+// 保留兼容路径 /_dsh/dsh-ming-memory/identity；实际 GET / POST 由本 bundle 的 index.js 注册。
 const IDENTITY_ROUTE = '/_dsh/dsh-ming-memory/identity'
 
 const ID_FIELDS = [
