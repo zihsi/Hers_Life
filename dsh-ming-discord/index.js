@@ -119,6 +119,29 @@ export function apply(ctx, input = {}) {
       return inboxQueue
     }
 
+    const restoreRoutes = async () => {
+      try {
+        const saved = JSON.parse(await readFile(cfg.chatSessionsPath, 'utf8'))
+        for (const [key, sessionId] of Object.entries(saved || {})) {
+          if (typeof sessionId !== 'string' || !sessionId) continue
+          if (key.startsWith('group:discord:')) {
+            const parts = key.split(':')
+            if (parts.length >= 4) sessionChannels.set(sessionId, parts.slice(3).join(':'))
+          } else if (key.startsWith('discord:dm:')) {
+            const userId = key.slice('discord:dm:'.length)
+            try {
+              const user = await client.users.fetch(userId)
+              const dm = await user.createDM()
+              sessionChannels.set(sessionId, dm.id)
+            } catch (error) {
+              log('warn', 'restore DM route failed: ' + String(error))
+            }
+          }
+        }
+      } catch {}
+    }
+    void restoreRoutes()
+
     const getRoute = () => {
       if (cfg.provider && cfg.model) return { provider: cfg.provider, model: cfg.model }
       try {
@@ -200,6 +223,7 @@ export function apply(ctx, input = {}) {
 
         const id = sessionIdFor(message)
         sessionChannels.set(id, message.channelId)
+        if (isDm) await saveMap('discord:dm:' + message.author.id, id)
         const agent = await ensureAgent(id)
         const body = client.user
           ? message.content.replace(new RegExp('<@!?'+client.user.id+'>', 'g'), '').trim()
