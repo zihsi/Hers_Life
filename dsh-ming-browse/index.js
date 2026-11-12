@@ -1011,12 +1011,18 @@ export function apply(ctx, config) {
   /** 找一条 live 的外部聊天会话（QQ 或 Discord），供自由活动结果回传。 */
   const findQQSession = () => {
     try {
+      let fallback = null
       for (const agent of ctx.agents.list()) {
         const id = String(agent?.id || '')
         if (!id.startsWith(cfg.qqSessionPrefix) && !id.startsWith(cfg.discordSessionPrefix)) continue
         if (!inWorkspace(agentCwd(agent))) continue
-        return agent
+        // Discord 的自由活動結果只送主人私訊，不送到任意伺服器頻道。
+        if (cfg.ownerDiscordId && id === 'discord-dm-' + cfg.ownerDiscordId) return agent
+        if (id.startsWith('discord-guild-')) continue
+        if (cfg.ownerQQ && id.startsWith('onebot-private-' + cfg.ownerQQ)) return agent
+        fallback ||= agent
       }
+      return fallback
     } catch {
       /* 拿不到就算了 */
     }
