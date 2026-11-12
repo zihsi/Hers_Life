@@ -4,6 +4,7 @@
 
 - 新增 Windows 11 / DSH Desktop 十二插件安装指南、配置参考、Discord Bot 设置、架构说明、故障排除与安装验证记录。
 - 修正根 README 的旧版 `C:/dsh/ming` 安装示例，改为链接到当前 Windows Profile 安装流程。
+- 将先前已在本机验证的 Graph 身份设置 GET / POST API 修复同步进 `dsh-ming-graph/index.js`，使用工作区 `live/identity.json`、64 KB 请求上限、字段白名单与原子写入。
 - 记录 DSH Desktop 0.2.2-rc.2 环境中 `discord.js` 的 link package 解析问题：Profile 可以解析，但插件真实源码目录无法解析。
 - 记录本机 Junction 修复步骤、双路径 Node 验证方式与不可提交的本机依赖目录边界。
 - 记录 Graph 空 `qqObservations` 路径、缺失 identity API、Interest 清单缺失等已确认问题与修复。
