@@ -284,8 +284,26 @@ export function apply(ctx, input = {}) {
           }
           const response = await fetch(attachmentUrl, { redirect: 'error' })
           if (!response.ok) throw new Error('下載 Discord 圖片失敗：HTTP ' + response.status)
-          const data = new Uint8Array(await response.arrayBuffer())
-          if (data.byteLength > cfg.maxAttachmentBytes) throw new Error('圖片超過大小上限')
+          if (!response.body) throw new Error('Discord 圖片回應沒有資料串流')
+          const reader = response.body.getReader()
+          const chunks = []
+          let total = 0
+          while (true) {
+            const part = await reader.read()
+            if (part.done) break
+            total += part.value.byteLength
+            if (total > cfg.maxAttachmentBytes) {
+              await reader.cancel().catch(() => {})
+              throw new Error('圖片超過大小上限')
+            }
+            chunks.push(part.value)
+          }
+          const data = new Uint8Array(total)
+          let offset = 0
+          for (const chunk of chunks) {
+            data.set(chunk, offset)
+            offset += chunk.byteLength
+          }
           const ref = await ctx.attachments.saveImage({ data, mediaType, name: attachment.name || 'discord-image' })
           content.push({ type: 'image', attachment: ref })
         }
