@@ -113,6 +113,7 @@ export function apply(ctx, input = {}) {
         }
         await mkdir(path.dirname(cfg.inboxPath), { recursive: true })
         await appendFile(cfg.inboxPath, JSON.stringify(line) + '\n', 'utf8')
+        sessionChannels.set(sessionIdFor(message), message.channelId)
         await saveMap('group:' + groupId, sessionIdFor(message))
       })
       return inboxQueue
