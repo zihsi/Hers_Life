@@ -252,7 +252,7 @@ export function apply(ctx, input = {}) {
           const channelId = sessionChannels.get(sessionId)
           const parts = Array.isArray(event.data?.message?.content) ? event.data.message.content : []
           const resultText = parts.filter(part => part?.type === 'text').map(part => part.text || '').join('\n')
-          const match = /\\bOK\\s+\\S+\\s+(.+\\.mp3)\\s*$/i.exec(resultText.trim())
+          const match = /\bOK\s+\S+\s+(.+\.mp3)\s*$/i.exec(resultText.trim())
           if (!channelId || !match) return
           void (async () => {
             try {
