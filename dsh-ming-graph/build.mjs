@@ -35,7 +35,7 @@ import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const ROOT = 'C:/dsh'
+const ROOT = path.resolve(here, '..')
 const OUT = path.join(here, 'client.js')
 const META = path.join(here, 'build.json')
 const checkOnly = process.argv.includes('--check')
