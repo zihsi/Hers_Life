@@ -278,7 +278,11 @@ export function apply(ctx, input = {}) {
             content.push({ type: 'text', text: '[圖片過大，未下載：' + (attachment.name || 'image') + ']' })
             continue
           }
-          const response = await fetch(attachment.url)
+          const attachmentUrl = new URL(attachment.url)
+          if (attachmentUrl.protocol !== 'https:' || !['cdn.discordapp.com', 'media.discordapp.net'].includes(attachmentUrl.hostname)) {
+            throw new Error('拒絕非 Discord CDN 的附件網址')
+          }
+          const response = await fetch(attachmentUrl, { redirect: 'error' })
           if (!response.ok) throw new Error('下載 Discord 圖片失敗：HTTP ' + response.status)
           const data = new Uint8Array(await response.arrayBuffer())
           if (data.byteLength > cfg.maxAttachmentBytes) throw new Error('圖片超過大小上限')
