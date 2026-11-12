@@ -160,8 +160,8 @@ export function apply(ctx, config) {
   ctx.tools.register({
     name: 'voice_say',
     description:
-      '把一段文字合成语音，返回 mp3 的本地路径。要发到 QQ 就用 qq_send_voice 把这个路径发出去。'
-      + '适合短句、情绪性的、想让她听见语气的话；长文和讲道理还是用字。',
+      '把一段文字合成语音，返回 mp3 的本地路径。要发到 QQ 就用 qq_send_voice；如果在 Discord Session 中调用，Discord bridge 会自动把生成的 mp3 上传到当前频道。'
+      + '适合短句、情绪性的、想让对方听见语气的话；长文和讲道理还是用字。',
     parameters: {
       type: 'object',
       additionalProperties: false,
