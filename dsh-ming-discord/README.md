@@ -20,6 +20,15 @@ Discord gateway for DeepSeek Harness. It connects Discord messages to DSH Agents
 4. Store the bot token as a Windows user environment variable named `DISCORD_BOT_TOKEN`.
 5. Restart the DSH process so it inherits the environment variable.
 
+PowerShell example (replace the placeholders locally; never paste the real token into chat or GitHub):
+
+```powershell
+[Environment]::SetEnvironmentVariable("DISCORD_BOT_TOKEN", "YOUR_BOT_TOKEN", "User")
+[Environment]::SetEnvironmentVariable("MING_OWNER_DISCORD_ID", "YOUR_DISCORD_USER_ID", "User")
+```
+
+The owner ID is optional for ordinary chatting, but needed if `dsh-ming-browse` should accept your private-message commands and send its activity report back to your DM. Server-channel messages never control those owner-only switches.
+
 Never paste the bot token into GitHub, chat logs or screenshots.
 
 ## Install
