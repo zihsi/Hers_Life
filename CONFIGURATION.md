@@ -67,9 +67,7 @@
         pollMs: 20000
         minGapMinutes: 20
         maxPerHour: 3
-        quietHours:
-          start: '01:00'
-          end: '08:00'
+        quietHours: '01:00-08:00'
         groups: []
 ```
 
