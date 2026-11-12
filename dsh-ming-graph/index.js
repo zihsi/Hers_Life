@@ -108,6 +108,7 @@ function withRoomLabels(data, cfg) {
 }
 
 const ROUTE = '/_dsh/dsh-ming-graph'
+const IDENTITY_ROUTE = '/_dsh/dsh-ming-memory/identity'
 
 // ---------- 读盘 / 算模型已经搬走（2026-11-08） ----------
 // 这批函数过去住在这儿，导致「记忆的实现」落在「展示的插件」里。
@@ -235,6 +236,139 @@ export function apply(ctx, config) {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
     res.end(JSON.stringify(body))
   }
+
+  // 身份与称呼设置由 Graph 自己提供 API，避免依赖 memory bundle 的加载顺序。
+  // 数据只写入工作区 live/identity.json；不把个人身份内容放进插件源码或仓库。
+  const identityDefaults = {
+    selfName: '大肥鱼',
+    selfFullName: '大肥鱼',
+    selfDesc: '',
+    userName: '主人',
+    qqName: '',
+    identity: true,
+  }
+  const identityFile = path.join(
+    cfg.skillsCwd || process.env.MING_WORKSPACE || process.cwd(),
+    'live',
+    'identity.json',
+  )
+  const identityFields = ['selfName', 'selfFullName', 'selfDesc', 'userName', 'qqName', 'identity']
+  const readIdentity = async () => {
+    try {
+      const saved = JSON.parse(await fs.readFile(identityFile, 'utf8'))
+      const identity = { ...identityDefaults }
+      for (const key of identityFields) {
+        if (key === 'identity') {
+          if (typeof saved?.[key] === 'boolean') identity[key] = saved[key]
+        } else if (typeof saved?.[key] === 'string') {
+          identity[key] = saved[key].slice(0, 2000)
+        }
+      }
+      return { identity, onboarded: true }
+    } catch (err) {
+      if (err?.code === 'ENOENT') return { identity: { ...identityDefaults }, onboarded: false }
+      throw err
+    }
+  }
+
+  ctx.inject(['connection', 'webServer'], (identityCtx) => {
+    identityCtx.effect(() => {
+      const dispose = identityCtx.webServer.register({
+        kind: 'prefix',
+        path: IDENTITY_ROUTE,
+        handler: async (req, res) => {
+          const send = (status, body) => {
+            res.writeHead(status, {
+              'content-type': 'application/json; charset=utf-8',
+              'cache-control': 'no-store',
+            })
+            res.end(JSON.stringify(body))
+          }
+          try {
+            if (identityCtx.connection && typeof identityCtx.connection.requestRejection === 'function') {
+              const rejection = identityCtx.connection.requestRejection(req)
+              if (rejection !== undefined) {
+                send(rejection || 403, { ok: false, error: 'rejected' })
+                return
+              }
+            }
+
+            const url = new URL(req.url || '/', 'http://localhost')
+            if (url.pathname !== IDENTITY_ROUTE) {
+              send(404, { ok: false, error: 'not found' })
+              return
+            }
+
+            if (req.method === 'GET') {
+              const result = await readIdentity()
+              send(200, { ok: true, ...result })
+              return
+            }
+
+            if (req.method !== 'POST') {
+              send(405, { ok: false, error: 'method not allowed' })
+              return
+            }
+
+            const declaredLength = Number(req.headers?.['content-length'] || 0)
+            if (declaredLength > 65536) {
+              send(413, { ok: false, error: 'payload too large (64 KB maximum)' })
+              return
+            }
+
+            const chunks = []
+            let size = 0
+            for await (const chunk of req) {
+              size += chunk.length
+              if (size > 65536) {
+                send(413, { ok: false, error: 'payload too large (64 KB maximum)' })
+                return
+              }
+              chunks.push(chunk)
+            }
+
+            let incoming
+            try {
+              incoming = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+            } catch {
+              send(400, { ok: false, error: 'invalid JSON' })
+              return
+            }
+            if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
+              send(400, { ok: false, error: 'expected a JSON object' })
+              return
+            }
+
+            const identity = { ...identityDefaults }
+            for (const key of identityFields) {
+              if (!Object.prototype.hasOwnProperty.call(incoming, key)) continue
+              if (key === 'identity') {
+                if (typeof incoming[key] === 'boolean') identity[key] = incoming[key]
+              } else if (typeof incoming[key] === 'string') {
+                identity[key] = incoming[key].slice(0, 2000)
+              }
+            }
+
+            await fs.mkdir(path.dirname(identityFile), { recursive: true })
+            const tempFile = identityFile + '.' + process.pid + '.' + Date.now() + '.tmp'
+            try {
+              await fs.writeFile(tempFile, JSON.stringify(identity, null, 2) + '\n', 'utf8')
+              await fs.rename(tempFile, identityFile)
+            } catch (error) {
+              await fs.rm(tempFile, { force: true }).catch(() => {})
+              throw error
+            }
+
+            send(200, { ok: true, identity, onboarded: true })
+          } catch (error) {
+            send(500, { ok: false, error: String(error?.message || error) })
+          }
+        },
+      })
+      return dispose
+    })
+  })
+
 
   ctx.inject(['connection', 'webServer'], (webCtx) => {
     webCtx.effect(() => {
