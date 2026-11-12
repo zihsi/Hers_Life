@@ -30,6 +30,9 @@
         # 在正在使用的 QQ 会话里叫醒，不另开会话（她 2026-10-20 定的）。
         targetMode: self
         qqSessionPrefix: onebot-
+        discordSessionPrefix: discord-
+        # Discord 私訊主人 ID；也可透過 Windows 環境變數 MING_OWNER_DISCORD_ID 設定。
+        ownerDiscordId: ''
         adbPath: 'D:\MuMuPlayer\nx_device\12.0\shell\adb.exe'
         # 她 2026-10-20 原话：除了 B站，其它社交平台不许点赞/评论/关注，但没说不让浏览。
         # 所以这里是一份「社交平台名单」：在前台是这些 App 时，点赞/评论/关注这类写操作被拒；
