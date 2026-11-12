@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const read = (p) => fs.readFile(path.join(here, p), 'utf8')
 
-const THEME_SRC = 'C:/dsh/dsh-ming-ui/src/theme.js'
+const THEME_SRC = path.resolve(here, '../dsh-ming-ui/src/theme.js')
 const theme = await fs.readFile(THEME_SRC, 'utf8')
 const panel = await read('src/panel.js')
 
