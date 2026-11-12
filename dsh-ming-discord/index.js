@@ -1,7 +1,7 @@
 import path from 'node:path'
 import os from 'node:os'
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, rename, writeFile, appendFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile, appendFile, stat } from 'node:fs/promises'
 import { Client, GatewayIntentBits, Partials } from 'discord.js'
 
 export const name = 'ming-discord'
@@ -79,6 +79,7 @@ export function apply(ctx, input = {}) {
     const sessionChannels = new Map()
     const sessionIds = new Map()
     const pendingReplies = new Map()
+    const pendingVoiceCalls = new Set()
     const client = new Client({
       intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages, GatewayIntentBits.MessageContent],
       partials: [Partials.Channel],
@@ -237,6 +238,44 @@ export function apply(ctx, input = {}) {
           if (!reply) return
           pendingReplies.delete(sessionId)
           void sendText(reply.channelId, reply.text)
+          return
+        }
+        if (event?.type === 'tool/call' && event.data?.name === 'voice_say') {
+          pendingVoiceCalls.add(sessionId + ':' + String(event.data.callId || ''))
+          return
+        }
+        if (event?.type === 'tool/result') {
+          const callId = String(event.data?.message?.toolCallId || '')
+          const key = sessionId + ':' + callId
+          if (!pendingVoiceCalls.has(key)) return
+          pendingVoiceCalls.delete(key)
+          const channelId = sessionChannels.get(sessionId)
+          const parts = Array.isArray(event.data?.message?.content) ? event.data.message.content : []
+          const resultText = parts.filter(part => part?.type === 'text').map(part => part.text || '').join('\\n')
+          const match = /\\bOK\\s+\\S+\\s+(.+\\.mp3)\\s*$/i.exec(resultText.trim())
+          if (!channelId || !match) return
+          void (async () => {
+            try {
+              const voiceRoot = path.resolve(cfg.workspacePath, 'live', 'voice')
+              const file = path.resolve(match[1].trim())
+              if (!file.startsWith(voiceRoot + path.sep) || path.extname(file).toLowerCase() !== '.mp3') {
+                log('warn', 'voice_say returned a path outside live/voice; not uploaded')
+                return
+              }
+              const info = await stat(file)
+              if (!info.isFile() || info.size > 8 * 1024 * 1024) {
+                log('warn', 'voice file missing or exceeds 8 MiB; not uploaded')
+                return
+              }
+              const data = await readFile(file)
+              const channel = await client.channels.fetch(channelId).catch(() => null)
+              if (!channel || typeof channel.send !== 'function') return
+              await channel.send({
+                files: [{ attachment: data, name: path.basename(file) }],
+                allowedMentions: { parse: [] },
+              })
+            } catch (error) { log('warn', 'Discord voice upload failed: ' + String(error)) }
+          })()
         }
       } catch (error) { log('warn', 'output event failed: ' + String(error)) }
     })
@@ -336,6 +375,7 @@ export function apply(ctx, input = {}) {
       sessionChannels.clear()
       sessionIds.clear()
       pendingReplies.clear()
+      pendingVoiceCalls.clear()
     }
   })
 }
