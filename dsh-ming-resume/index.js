@@ -9,12 +9,12 @@
  * 下一步多塞一条消息。所以「继续」不是机制问题，是记性问题：我要知道自己在干什么。
  *
  * 做法：agent/pre-step 里看一眼这一步进来的消息，如果里面有 QQ 通道的插话
- * （source.kind === 'plugin:dsh-onebot'，这是 bridge.steerMessage 的唯一写法），
+ * （source.kind 是 QQ 或 Discord bridge 的專屬來源），
  * 就追加一条极短指令：先答她，然后回到 live/status.json 里记着的那件事。
  *
  * 边界：
  *   · 找不到 status.json 就只说「回到你被打断前的事」，不编具体内容。
- *   · 只认 plugin:dsh-onebot 这个 source，别把普通 QQ 消息也当成插话。
+ *   · 只認 QQ / Discord bridge 的專屬 source，别把普通 QQ 消息也当成插话。
  *   · 任何异常都不影响这一步。
  */
 import { readFile, appendFile } from 'node:fs/promises'
@@ -24,7 +24,7 @@ import { randomUUID } from 'node:crypto'
 
 export const name = 'ming-resume'
 
-const STEER_SOURCE = 'plugin:dsh-onebot'
+const STEER_SOURCES = new Set(['plugin:dsh-onebot', 'plugin:ming-discord'])
 const DEFAULTS = {
   root: 'C:\\dsh\\workspace',
   adbPath: 'D:\\MuMuPlayer\\nx_device\\12.0\\shell\\adb.exe',
@@ -59,7 +59,7 @@ async function readStatus(cfg) {
 function isSteer(msg) {
   try {
     const src = msg && msg.source
-    return Boolean(src && src.kind === STEER_SOURCE)
+    return Boolean(src && STEER_SOURCES.has(src.kind))
   } catch {
     return false
   }
