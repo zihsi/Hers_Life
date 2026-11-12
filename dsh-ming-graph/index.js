@@ -277,42 +277,35 @@ export function apply(ctx, config) {
         kind: 'prefix',
         path: IDENTITY_ROUTE,
         handler: async (req, res) => {
-          const send = (status, body) => {
-            res.writeHead(status, {
-              'content-type': 'application/json; charset=utf-8',
-              'cache-control': 'no-store',
-            })
-            res.end(JSON.stringify(body))
-          }
           try {
             if (identityCtx.connection && typeof identityCtx.connection.requestRejection === 'function') {
               const rejection = identityCtx.connection.requestRejection(req)
               if (rejection !== undefined) {
-                send(rejection || 403, { ok: false, error: 'rejected' })
+                respond(res, rejection || 403, { ok: false, error: 'rejected' })
                 return
               }
             }
 
             const url = new URL(req.url || '/', 'http://localhost')
             if (url.pathname !== IDENTITY_ROUTE) {
-              send(404, { ok: false, error: 'not found' })
+              respond(res, 404, { ok: false, error: 'not found' })
               return
             }
 
             if (req.method === 'GET') {
               const result = await readIdentity()
-              send(200, { ok: true, ...result })
+              respond(res, 200, { ok: true, ...result })
               return
             }
 
             if (req.method !== 'POST') {
-              send(405, { ok: false, error: 'method not allowed' })
+              respond(res, 405, { ok: false, error: 'method not allowed' })
               return
             }
 
             const declaredLength = Number(req.headers?.['content-length'] || 0)
             if (declaredLength > 65536) {
-              send(413, { ok: false, error: 'payload too large (64 KB maximum)' })
+              respond(res, 413, { ok: false, error: 'payload too large (64 KB maximum)' })
               return
             }
 
@@ -321,7 +314,7 @@ export function apply(ctx, config) {
             for await (const chunk of req) {
               size += chunk.length
               if (size > 65536) {
-                send(413, { ok: false, error: 'payload too large (64 KB maximum)' })
+                respond(res, 413, { ok: false, error: 'payload too large (64 KB maximum)' })
                 return
               }
               chunks.push(chunk)
@@ -331,11 +324,11 @@ export function apply(ctx, config) {
             try {
               incoming = JSON.parse(Buffer.concat(chunks).toString('utf8'))
             } catch {
-              send(400, { ok: false, error: 'invalid JSON' })
+              respond(res, 400, { ok: false, error: 'invalid JSON' })
               return
             }
             if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
-              send(400, { ok: false, error: 'expected a JSON object' })
+              respond(res, 400, { ok: false, error: 'expected a JSON object' })
               return
             }
 
@@ -359,9 +352,9 @@ export function apply(ctx, config) {
               throw error
             }
 
-            send(200, { ok: true, identity, onboarded: true })
+            respond(res, 200, { ok: true, identity, onboarded: true })
           } catch (error) {
-            send(500, { ok: false, error: String(error?.message || error) })
+            respond(res, 500, { ok: false, error: String(error?.message || error) })
           }
         },
       })
