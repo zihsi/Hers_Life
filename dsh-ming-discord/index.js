@@ -78,6 +78,7 @@ export function apply(ctx, input = {}) {
     const handles = new Map()
     const creating = new Map()
     const sessionChannels = new Map()
+    const pendingReplies = new Map()
     const client = new Client({
       intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages, GatewayIntentBits.MessageContent],
       partials: [Partials.Channel],
@@ -168,11 +169,20 @@ export function apply(ctx, input = {}) {
 
     ctx.on('session/event', (session, event) => {
       try {
-        if (event?.type !== 'assistant/message') return
-        const channelId = sessionChannels.get(String(session?.id || ''))
-        if (!channelId) return
-        const text = streamText(event.data?.stream)
-        if (text.trim()) void sendText(channelId, text)
+        const sessionId = String(session?.id || '')
+        if (event?.type === 'assistant/message') {
+          const channelId = sessionChannels.get(sessionId)
+          if (!channelId) return
+          const text = streamText(event.data?.stream)
+          if (text.trim()) pendingReplies.set(sessionId, { channelId, text })
+          return
+        }
+        if (event?.type === 'turn/end') {
+          const reply = pendingReplies.get(sessionId)
+          if (!reply) return
+          pendingReplies.delete(sessionId)
+          void sendText(reply.channelId, reply.text)
+        }
       } catch (error) { log('warn', 'output event failed: ' + String(error)) }
     })
 
@@ -240,6 +250,7 @@ export function apply(ctx, input = {}) {
       }
       handles.clear()
       sessionChannels.clear()
+      pendingReplies.clear()
     }
   })
 }
