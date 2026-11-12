@@ -8,6 +8,7 @@ Discord gateway for DeepSeek Harness. It connects Discord messages to DSH Agents
 - Guild messages require an explicit bot mention by default. DMs are accepted when enabled.
 - Uses `ctx.agents` (`resume`, `create`, `followup`, and `steer`) and DSH session events.
 - Image attachments are downloaded with a size limit and stored through the DSH attachment service.
+- When `dsh-ming-voice` runs `voice_say` in a Discord Session, the bridge safely uploads the generated MP3 from the workspace `live/voice` folder to that same channel.
 - Guild messages are recorded in the legacy OneBot-compatible inbox format so `dsh-ming-interest` can match unmentioned messages.
 - Discord user, guild and channel IDs are passed in a message envelope. Configured owner IDs are explicitly marked.
 - Bot token is read from `DISCORD_BOT_TOKEN`; no secret belongs in this repository.
@@ -67,4 +68,5 @@ Different channels and DMs do not share conversation history. Discord threads ar
 
 - This first integration pass needs runtime verification against the exact DSH version installed in the user's profile.
 - Images are handed to the DSH attachment service; other files are passed as their Discord URL and filename for available tools to inspect.
+- Voice delivery only recognizes the `voice_say` tool result and only uploads `.mp3` files located inside the configured workspace `live/voice` directory (maximum 8 MiB).
 - It does not grant Discord members arbitrary host-command permissions. DSH tool permissions and plugin guardrails remain authoritative.
