@@ -53,6 +53,7 @@ export function apply(ctx, input = {}) {
     directMessages: input.directMessages !== false,
     allowedGuildIds: list(input.allowedGuildIds),
     allowedChannelIds: list(input.allowedChannelIds),
+    allowedUserIds: [...new Set([...list(input.allowedUserIds), ...(process.env.MING_DISCORD_ALLOWED_USER_IDS || '').split(',').map(x => x.trim()), process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
     ownerUserIds: [...new Set([...list(input.ownerUserIds), process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
     newMessagePolicy: input.newMessagePolicy === 'followup' ? 'followup' : 'steer',
     maxAttachmentBytes: Number.isFinite(Number(input.maxAttachmentBytes)) && Number(input.maxAttachmentBytes) > 0
@@ -245,6 +246,7 @@ export function apply(ctx, input = {}) {
         if (disposed || message.author?.bot) return
         const isDm = !message.guildId
         if (isDm && !cfg.directMessages) return
+        if (cfg.allowedUserIds.length && !cfg.allowedUserIds.includes(message.author.id)) return
         if (message.guildId && cfg.allowedGuildIds.length && !cfg.allowedGuildIds.includes(message.guildId)) return
         if (cfg.allowedChannelIds.length && !cfg.allowedChannelIds.includes(message.channelId)) return
         const mentioned = Boolean(client.user && message.mentions.has(client.user))
