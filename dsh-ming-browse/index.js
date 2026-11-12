@@ -990,7 +990,7 @@ export function apply(ctx, config) {
         // 别人的私聊（白名单里基本没有，但万一有）不许开关我的额度；留一行日志，别闷着。
         if (Date.now() - strangerSwitchLoggedAt > 60_000) {
           strangerSwitchLoggedAt = Date.now()
-          log('warn', 'ignore switch words from ' + (qq || '(认不出号)') + ' — 开关只认 ' + cfg.ownerQQ)
+          log('warn', 'ignore switch words from ' + (identity || '(认不出号)') + ' — owner identity check failed')
         }
         return
       }
