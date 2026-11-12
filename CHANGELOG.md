@@ -1,5 +1,13 @@
 # CHANGELOG
 
+
+## 2026-11-12 — Graph / Memory 建置產物同步
+
+- Graph 重新建置成功，包含 12 個單元，build hash 為 `aff205130ade3e15`。
+- Graph `build.mjs --check` 通過；Memory 與 Graph 的 Node 語法檢查通過。
+- Graph build metadata 改用相對於倉庫根目錄的路徑，不再記錄開發者本機絕對路徑。
+- Graph 與 Memory 的 `client.js` 已依目前 source 重新產生，清除舊建置產物中不屬於目前 source 的殘留程式碼。
+- 本次建置與依賴驗證不代表 Discord Bot 已完成上線；Discord link package 的依賴解析仍待修復。
 ## 2026-11-12 — Windows DSH Desktop 安装与 Discord link 依赖修复
 
 - 新增 Windows 11 / DSH Desktop 十二插件安装指南、配置参考、Discord Bot 设置、架构说明、故障排除与安装验证记录。

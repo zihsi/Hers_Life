@@ -22,12 +22,12 @@
 | 十二个 DSH bundles | 已安装 | Profile dependencies 与 bundles 已加入，原有条目保留 |
 | pnpm install | 已完成 | 安装命令 exit 0 |
 | dsh-ming-memory build | 已完成 | client.js build 成功 |
-| dsh-ming-graph build | 已完成 | client.js build 成功，构建记录 77bfbfa65acbc318 |
+| dsh-ming-graph build | 已完成 | 12 個單元；build `aff205130ade3e15`；`build.mjs --check` 通過 |
 | Cordis peer | 已完成 | 安装 4.1.0，peer 检查无问题 |
 | discord.js | 已安装 | Profile 依赖解析到 14.28.1 |
-| Discord link package 解析 | 已验证 | 建立 Junction 后 Profile 与插件源码目录均可解析 |
-| Discord Bot 上线 | 使用者已确认 | 使用者回报「有了」 |
-| Discord 消息收发端到端 | 待补充完整验证 | 已确认 Bot 上线；仍需按 Discord_SETUP 步骤验证 Guild、DM、interest 等各路径 |
+| Discord link package 解析 | 待修復 | Profile 可解析 discord.js 14.28.1，但插件真實原始碼目錄仍無法解析 |
+| Discord Bot 上線 | 未完成 | 插件尚未成功啟動，尚未確認 Bot 上線 |
+| Discord 訊息收發端到端 | 待驗證 | Bot 尚未確認上線，Guild、DM、interest 等路徑均待測試 |
 | QQ Interest inbox | 依赖外部 AstrBot | 需要 AstrBot recorder 与群组配置 |
 | 未 @ Discord 图片兴趣识别 | 未实现 | 当前 inbox 只记录文字 |
 
@@ -53,20 +53,27 @@
 
 ### 4. Discord dependency resolution
 
-- Profile 解析成功，但 link 插件源码目录解析失败。
-- 确认是 pnpm link 依赖安装位置与 Node ESM realpath resolution 的差异。
-- 在本机插件目录建立指向 Profile `node_modules` 的 Junction。
-- 使用者执行修复后确认 Bot 上线。
-- Junction 是本机安装步骤，不属于仓库追踪内容。
-
+- Profile 的 `createRequire()` 可以解析 `discord.js` 14.28.1。
+- 從插件真實原始碼目錄 `D:\Hers_Life\dsh-ming-discord` 使用 `createRequire()` 仍得到 `Cannot find module 'discord.js'`。
+- 問題與 pnpm `link:` 本機套件的依賴安裝位置及 Node ESM realpath resolution 有關。
+- 目前尚未完成插件真實路徑的依賴解析修復，Discord Bot 也尚未確認上線。
+- 後續應先選擇可持久且不破壞 Profile 或其他插件的依賴部署方式，再驗證插件載入與 Bot ready 事件。
+- 不提交 Token、node_modules 或本機 Junction。
 ### 5. 共享 UI build 路径
 
 - Graph / Memory build 中原本存在硬编码 `C:/dsh` 路径。
 - 改为相对于各自源码位置解析共享 UI 文件。
 - 已纳入分支前一笔提交。
 
-## 备份
+### 6. Graph / Memory 建置產物
 
+- Graph `build.mjs` 輸出 `build.json` 時，來源路徑改為相對於倉庫根目錄的路徑，避免記錄開發者本機絕對路徑。
+- Graph 重新建置成功：12 個單元，build hash `aff205130ade3e15`，產物 209001 bytes。
+- Graph `build.mjs --check` 通過。
+- Graph 與 Memory 的 `client.js` 均由目前倉庫 source 重新產生。
+- Graph `build.json` 已確認不含 Windows 磁碟絕對路徑。
+- 本次 Git 差異檢查通過；以上是本機建置驗證，不代表所有插件功能均已完成端到端測試。
+## 备份
 安装与配置修改前曾在用户机器建立本机备份。备份路径、用户目录与实际配置内容不公开、不提交至仓库。恢复时应使用使用者本机的备份副本，不要从 GitHub 下载覆盖个人 profile。
 
 ## 尚待验证

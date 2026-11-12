@@ -241,14 +241,6 @@ function MemoryPanel() {
   const [openFile, setOpenFile] = useState('')
   const [body, setBody] = useState('')
 
-  // 完整版检测（2026-11-10）：单独装这个插件时，顶上挂一条「完整版在 Hers_Life」
-  const [solo, setSolo] = useState(false)
-  useEffect(() => {
-    fetch('/dsh-ming-mousepet/api/pet-status', { cache: 'no-store' })
-      .then((r) => { if (!r.ok) setSolo(true) })
-      .catch(() => setSolo(true))
-  }, [])
-
   const load = useCallback(() => {
     setBusy(true)
     setErr('')
@@ -282,10 +274,6 @@ function MemoryPanel() {
   if (openFile) {
     const it = items.find((x) => x.file === openFile) || {}
     return h('div', { className: 'ming-page' },
-      solo ? h('div', { style: { margin: '0 0 10px', padding: '8px 12px', border: '1px solid rgba(217,164,65,.45)', borderRadius: '8px', fontSize: '12px', lineHeight: '1.7', color: 'var(--dsw-alias-label-secondary, #b8b8c4)' } },
-        '这是单独安装的版本。完整版在 ',
-        h('a', { href: 'https://github.com/Chess12333/Hers_Life', target: '_blank', rel: 'noreferrer', style: { color: 'var(--dsw-alias-brand-primary, #6aa9ff)' } }, 'Hers_Life'),
-        ' 更新（含桌宠、光标、浏览器）。') : null,
       h('div', { className: 'ming-ph' },
         h('button', { className: 'ming-btn', onClick: () => { setOpenFile(''); setBody('') } }, '← 返回'),
         h('div', { className: 'ming-ph-tx' },
@@ -308,10 +296,6 @@ function MemoryPanel() {
   }
 
   return h('div', { className: 'ming-page' },
-      solo ? h('div', { style: { margin: '0 0 10px', padding: '8px 12px', border: '1px solid rgba(217,164,65,.45)', borderRadius: '8px', fontSize: '12px', lineHeight: '1.7', color: 'var(--dsw-alias-label-secondary, #b8b8c4)' } },
-        '这是单独安装的版本。完整版在 ',
-        h('a', { href: 'https://github.com/Chess12333/Hers_Life', target: '_blank', rel: 'noreferrer', style: { color: 'var(--dsw-alias-brand-primary, #6aa9ff)' } }, 'Hers_Life'),
-        ' 更新（含桌宠、光标、浏览器）。') : null,
     h('div', { className: 'ming-ph' },
       h('div', { className: 'ming-ph-ic' }, h(MemoryIcon)),
       h('div', { className: 'ming-ph-tx' },

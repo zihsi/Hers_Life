@@ -223,7 +223,7 @@ fs.writeFileSync(META, JSON.stringify({
   hash: digest,
   at: new Date().toISOString(),
   bytes: out.length,
-  units: parts.map((p) => ({ label: p.label, path: p.path.replace(/\\/g, '/'), chars: p.text.length })),
+  units: parts.map((p) => ({ label: p.label, path: path.relative(ROOT, p.path).replace(/\\/g, '/'), chars: p.text.length })),
 }, null, 2) + '\n', 'utf8')
 
 console.log('✓ client.js 写好：' + out.length + ' 字节，' + parts.length + ' 个单元，build ' + digest)

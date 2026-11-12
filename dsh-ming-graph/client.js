@@ -3,7 +3,7 @@
  *
  * ⚠ 生成物，别手改：改 src/*.js 或各插件的 src/panel.js，然后 `node build.mjs`。
  *   现在是不是最新的：`node build.mjs --check`
- *   build f2af03751fa4719e
+ *   build aff205130ade3e15
  *
  * 入口：左侧图标栏一个图标（sidebar.panellist），点开占满主区域（main 面板 key = ming-graph）。
  * 数据来自 Host 半端 /_dsh/dsh-ming-graph/neurons，自己拉、自己画，不经过模型。
@@ -2304,26 +2304,6 @@ function BrowsePanel() {
     读的: 'linear-gradient(155deg,#27333f 0%,#161d25 100%)',
   }
   const fileTone = (r) => FILE_TONE[r.label] || 'linear-gradient(155deg,#2a2f38 0%,#171a20 100%)'
-  // 2026-11-10 11:5x（她贴出两张只有一个 🌐 的卡）：没有封面时别再飘一个大地球。
-  // 改成跟文件卡一个语族：按域名挑一个底色，中间写域名、下面写「网页」。
-  // 知乎/贴吧/百度学术这些站抓不到 og:image（正文是 JS 渲染的），所以在数据那头补不齐，
-  // 只能在这里给它一块好看的底。
-  const TONES = [
-    'linear-gradient(155deg,#1c2f45 0%,#111a26 100%)',
-    'linear-gradient(155deg,#243240 0%,#131a23 100%)',
-    'linear-gradient(155deg,#2e2a3f 0%,#191622 100%)',
-    'linear-gradient(155deg,#1f342e 0%,#121d1a 100%)',
-    'linear-gradient(155deg,#3a2f22 0%,#211a12 100%)',
-  ]
-  const hostOf = (r) => {
-    if (r.host) return String(r.host)
-    try { return new URL(r.url).hostname.replace(/^www\./, '') } catch { return '' }
-  }
-  const toneOf = (s) => {
-    let h = 0
-    for (const ch of String(s || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0
-    return TONES[h % TONES.length]
-  }
   const card = (r, i) => {
     const d = String(r.at || '')
     const kindName = r.label || (r.kind === 'video' ? '视频' : (r.kind === 'web' || r.kind === 'page') ? '网页' : r.kind === 'book' ? '书籍' : '其它')
@@ -2423,20 +2403,10 @@ function BrowsePanel() {
     !r.pic && r.kind !== 'book' && r.kind !== 'file'
       ? h('div', {
         style: {
-          position: 'absolute', inset: 0, background: toneOf(hostOf(r)),
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          padding: '12px 16px', gap: 6,
-          boxShadow: 'inset 3px 0 0 rgba(255,255,255,.06)',
+          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', fontSize: 26, opacity: 0.35,
         },
-      },
-      h('div', {
-        style: {
-          fontSize: 12.5, lineHeight: 1.35, color: 'rgba(226,238,255,.88)',
-          textAlign: 'center', wordBreak: 'break-all',
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        },
-      }, hostOf(r) || (r.kind === 'video' ? '视频' : '网页')),
-      h('div', { style: { fontSize: 10, color: 'rgba(150,180,215,.48)' } }, r.kind === 'video' ? '视频' : '网页'))
+      }, '🌐')
       : null,
     r.duration
       ? h('span', {
@@ -4388,7 +4358,7 @@ function NeuronPanel() {
 // 为什么放在这儿：原先挂在 dsh-ming-memory 的 client 上，靠它 apply 时 add，
 // 真机上那条路断了（inject 抛错 → 后面不执行）。改成「她的一生」自己的一页：
 // 组件就在本 bundle 里、apply 时同步 add，不赌别的插件加载顺序。
-// 数据走 memory 插件的 /_dsh/dsh-ming-memory/identity（GET 读、POST 写整份 json）。
+// 保留兼容路径 /_dsh/dsh-ming-memory/identity；实际 GET / POST 由本 bundle 的 index.js 注册。
 const IDENTITY_ROUTE = '/_dsh/dsh-ming-memory/identity'
 
 const ID_FIELDS = [
