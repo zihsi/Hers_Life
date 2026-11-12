@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Unreleased — Discord integration
+
+- 新增 `dsh-ming-discord`：Discord 伺服器頻道與私訊各自使用持久 DSH Session；支援 @ Bot 門控、圖片附件、回覆路由與舊 OneBot inbox 相容紀錄。
+- `dsh-ming-interest` 可透過相容 inbox 觀察 Discord 未 @ Bot 的群訊息，命中興趣後在對應 Discord Session 喚醒。
+- `dsh-ming-browse` 支援 Discord 私訊主人身份辨識與活動結果回傳；`dsh-ming-resume` 支援 Discord steer 插話後接續原任務。
+- Discord Bot Token 使用 `DISCORD_BOT_TOKEN` 環境變數，不提交密鑰。
+
 ## 1.1.0 — 2026-11-11
 
 十二个包齐全之后的第一个正式版本号。
