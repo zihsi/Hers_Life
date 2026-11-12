@@ -74,7 +74,8 @@ cd dsh-ming-memory && node build.mjs
 |---|---|
 | `MING_WORKSPACE` | 工作区目录（放人设、日记、见闻的那个夹子） |
 | `MING_OWNER_QQ` | 谁的 QQ 私聊算「本人指令」（`dsh-ming-browse` 的开关只认这个号） |
-| `MING_OWNER_DISCORD_ID` | 谁的 Discord 私讯算「本人指令」；Discord 服务器频道不能控制自由活动开关 |
+| `MING_OWNER_DISCORD_ID` | 谁的 Discord 私訊算「本人指令」；也會自動加入 Discord 使用者白名單 |
+| `MING_DISCORD_ALLOWED_USER_IDS` | 可選的 Discord 使用者 ID 白名單，多個 ID 用逗號分隔 |
 | `DISCORD_BOT_TOKEN` | Discord Bot Token；只放在 Windows 用户环境变量，不要写进仓库 |
 | `USERPROFILE` | 本机路径默认从它拼，不用改 |
 | `MING_FFPLAY` | 试听用的 ffplay，默认走 `PATH` |
