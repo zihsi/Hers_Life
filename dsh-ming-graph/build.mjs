@@ -96,6 +96,10 @@ for (const p of PANELS) {
   if (body) push(p.name, p.file, body)
 }
 
+// B 站扫码 QR 编码器（MIT）：在本机 WebView 生成，不调用第三方 QR 服务。
+const QR_ENCODER = path.join(ROOT, 'dsh-ming-bilibili-account/src/vendor/qrcode.js')
+push('B站 QR 编码器', QR_ENCODER, read(QR_ENCODER, 'B站 QR 编码器'))
+
 // 壳自己的 extras（接续面板等，没有独立插件的写这里）
 const EXTRA = path.join(here, 'src/panels.js')
 push('壳 extras', EXTRA, read(EXTRA, '壳 extras（src/panels.js）'))
