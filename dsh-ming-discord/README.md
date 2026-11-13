@@ -66,7 +66,7 @@ Different channels and DMs do not share conversation history. Discord threads ar
 
 ## Current limitations
 
-- This first integration pass needs runtime verification against the exact DSH version installed in the user's profile.
+- The target Windows DSH Desktop profile has been confirmed by the user to load this bundle and connect the Discord Gateway. Verify each optional route (Guild, DM, attachments, Interest, Resume, Voice) separately when deploying to another profile or DSH version.
 - Images are handed to the DSH attachment service; other files are passed as their Discord URL and filename for available tools to inspect.
 - Voice delivery only recognizes the `voice_say` tool result and only uploads `.mp3` files located inside the configured workspace `live/voice` directory (maximum 8 MiB).
 - It does not grant Discord members arbitrary host-command permissions. DSH tool permissions and plugin guardrails remain authoritative.
