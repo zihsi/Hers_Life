@@ -283,8 +283,7 @@ async function manageInterest(file, args = {}) {
 export function apply(ctx, config) {
   const cfg = normalize(config)
 
-  // ---- 面板用的只读口（2026-11-07）----
-  // 列关注什么、现在叫不叫得醒。只读，不改关键词、不写状态。
+  // ---- 面板 API：状态、兴趣清单与开关 ----
   ctx.inject(['connection', 'webServer'], (webCtx) => {
     webCtx.effect(() => webCtx.webServer.register({
       kind: 'prefix',
@@ -294,11 +293,25 @@ export function apply(ctx, config) {
           res.writeHead(st, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
           res.end(JSON.stringify(body))
         }
+        const readBody = async () => {
+          const chunks = []
+          let size = 0
+          for await (const chunk of req) {
+            size += chunk.length
+            if (size > 65536) throw new Error('request body too large')
+            chunks.push(Buffer.from(chunk))
+          }
+          return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+        }
         try {
+          if (webCtx.connection && typeof webCtx.connection.requestRejection === 'function') {
+            const rejection = webCtx.connection.requestRejection(req)
+            if (rejection) { send(rejection, { ok: false, error: 'rejected' }); return }
+          }
           const url = new URL(req.url || '/', 'http://localhost')
-          const what = url.pathname.replace('/_dsh/dsh-ming-interest', '').replace(/^\//, '')
-          // 2026-11-07 18:3x：她原话「能看不能调」。开关还是原来那个 live/interest-off，
-          // 这里只给它一个按钮，不另立一套状态。
+          const what = url.pathname.replace('/_dsh/dsh-ming-interest', '').replace(/^\\//, '')
+          const interestsPath = path.join(cfg.workspacePath, cfg.interestsFile)
+
           if (what === 'toggle' && req.method === 'POST') {
             const { rm, writeFile: wf } = await import('node:fs/promises')
             const flag = path.join(cfg.workspacePath, cfg.offFlag)
@@ -311,26 +324,39 @@ export function apply(ctx, config) {
             send(200, { ok: true, off: !wasOff })
             return
           }
-          if (what !== 'state') { send(404, { error: 'not found' }); return }
 
-          let topics = []
-          try {
-            const j = JSON.parse(await readFile(path.join(cfg.workspacePath, cfg.interestsFile), 'utf8'))
-            topics = Array.isArray(j.topics) ? j.topics : []
-          } catch {}
+          if (what === 'update' && req.method === 'POST') {
+            const body = await readBody()
+            const result = await manageInterest(interestsPath, body)
+            send(result.ok ? 200 : 400, result)
+            return
+          }
 
+          if (what !== 'state' || req.method !== 'GET') { send(404, { error: 'not found' }); return }
+
+          const doc = await readInterestDocument(interestsPath)
           let st = {}
-          try {
-            st = JSON.parse(await readFile(path.join(cfg.workspacePath, cfg.stateFile), 'utf8'))
-          } catch {}
+          try { st = JSON.parse(await readFile(path.join(cfg.workspacePath, cfg.stateFile), 'utf8')) } catch {}
 
           send(200, {
             ok: true,
-            topics: topics.map((t) => ({
-              name: String(t.name || ''),
-              keywords: Array.isArray(t.keywords) ? t.keywords : [],
-              mute: Array.isArray(t.mute) ? t.mute : [],
-            })),
+            topics: doc.topics,
+            candidates: doc.candidates,
+            mute: doc.mute,
+            settings: {
+              observeEnabled: cfg.observeEnabled,
+              observePrivate: cfg.observePrivate,
+              autoCreateSession: cfg.autoCreateSession,
+              groups: cfg.groups,
+              pollMs: cfg.pollMs,
+              minGapMinutes: cfg.minGapMinutes,
+              maxPerHour: cfg.maxPerHour,
+              quietHours: cfg.quietHours,
+              minChars: cfg.minChars,
+              contextLines: cfg.contextLines,
+              pendingMax: cfg.pendingMax,
+              pendingTtlMinutes: cfg.pendingTtlMinutes,
+            },
             state: {
               at: String(st.at || ''),
               quiet: !!st.quiet,
@@ -338,6 +364,8 @@ export function apply(ctx, config) {
               maxPerHour: Number(st.maxPerHour || 0),
               sinceWakeMs: Number(st.sinceWakeMs || 0),
               skip: String(st.skip || ''),
+              pending: Number(st.pending || 0),
+              observed: Number(st.observed || 0),
               off: existsSync(path.join(cfg.workspacePath, cfg.offFlag)),
             },
           })
