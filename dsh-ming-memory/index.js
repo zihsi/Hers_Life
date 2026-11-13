@@ -21,9 +21,11 @@ import path from 'node:path'
 
 export const name = 'ming-memory'
 
+const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
+
 const DEFAULTS = {
-  // 工作区根目录；留空 = 不注入。真实值写在 ~/.dsh/ming-memory.json 或 config.root
-  root: '',
+  // 统一工作区：显式 config.root 优先，其次 MING_WORKSPACE；都没有则不开启工作区注入。
+  root: process.env.MING_WORKSPACE || '',
   personaFiles: ['persona/人设.md', 'persona/名字.md', 'persona/约定.md'],
   diaryDir: 'diary',
   diaryCount: 3,
@@ -162,7 +164,7 @@ function warnOnce(msg) {
 }
 
 export function loadLocalConfig(file) {
-  const f = file || process.env.MING_MEMORY_CONFIG || path.join(os.homedir(), '.dsh', 'ming-memory.json')
+  const f = file || process.env.MING_MEMORY_CONFIG || path.join(DSH_HOME, 'ming-memory.json')
   try {
     const raw = readFileSync(f, 'utf8').replace(/^\uFEFF/, '')
     const j = JSON.parse(raw)
