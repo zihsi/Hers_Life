@@ -20,7 +20,7 @@
 
 import path from 'node:path'
 import { existsSync } from 'node:fs'
-import { appendFile, mkdir, open, readFile, stat, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, open, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 
 export const name = 'ming-interest'
@@ -204,12 +204,12 @@ async function writeInterestDocument(file, doc) {
   await mkdir(path.dirname(file), { recursive: true })
   const temp = file + '.' + randomUUID() + '.tmp'
   await writeFile(temp, JSON.stringify({ ...doc, updatedAt: new Date().toISOString() }, null, 2) + '\n', 'utf8')
-  await (await import('node:fs/promises')).rename(temp, file)
+  await rename(temp, file)
 }
 
 async function manageInterest(file, args = {}) {
   const action = String(args.action || 'list').trim().toLowerCase()
-  const name = String(args.name || '').trim()
+  const name = String(args.name || args.word || '').trim()
   const key = name.toLowerCase()
   const keywords = [...new Set((Array.isArray(args.keywords) ? args.keywords : [])
     .filter((x) => typeof x === 'string' && x.trim())
