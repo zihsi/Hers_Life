@@ -9,6 +9,7 @@
 import { readFile, writeFile, appendFile, mkdir, rename, unlink } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
+import { homedir } from 'node:os'
 
 export const name = 'ming-wake'
 
@@ -17,7 +18,8 @@ export const name = 'ming-wake'
 // 这个常量实际是 'C:workspace'（19 字符）——一个不存在的路径。
 // 2026-11-08 安菲（卡米安菲家的工程师）把它单独 eval 了一遍抓出来的；
 // 三个兄弟包（voice / browse / skill-isolate）写的都是双反斜杠，只有这里漏了。
-const DEFAULT_ROOT = 'C:/dsh/workspace'
+const DSH_HOME = process.env.DSH_HOME || path.join(homedir(), '.dsh')
+const DEFAULT_ROOT = process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace')
 const TICK_MS = 15_000
 
 function norm(cfg) {
