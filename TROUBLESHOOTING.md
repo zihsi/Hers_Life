@@ -1,6 +1,6 @@
 # 故障排除与已知问题
 
-本文记录本次 Windows 11 + DSH Desktop 安装中实际遇到的问题，以及可复现的根因 / 处理方式。请先备份单个配置文件，不要用删除整个 Profile 或清空 node_modules 的方式排错。
+本文记录 Windows 11 + DSH Desktop 安装中遇到的问题，以及可复现的根因 / 处理方式。状态更新至 2026-11-13。Discord 插件目前已由使用者确认正常载入并连接；下列 Discord 排错步骤仅供新环境或问题复发时使用。请先备份单个配置文件，不要用删除整个 Profile 或清空 node_modules 的方式排错。
 
 ## 1. Discord 插件页面显示「未运行」，Bot 不在线
 
@@ -12,11 +12,12 @@
 - 插件是通过 pnpm `link:` 加入 Profile；Node ESM 从插件真实源码目录解析模块。
 - Profile 的 `node_modules` 有 `discord.js`，但 link 包旁没有自己的依赖目录。
 
-修复：
-- Profile 安装 `discord.js@^14.19.3`（本次解析到 14.28.1）。
-- 在 `dsh-ming-discord/node_modules` 建立指向 Profile `node_modules` 的 NTFS Junction。
-- 再从 Profile 与 Plugin 两个目录分别用 `createRequire().resolve('discord.js')` 验证。
-- 两边都解析成功后，完全重启 DSH Desktop；使用者确认 Bot 已成功上线。
+已验证状态：使用者于 2026-11-12 确认 Discord 插件修改后正常运行，日志显示 `apply() 已进入`、`tokenPresent=true`，并确认 Bot 连接正常。此结果证明当前目标环境可用，不代表所有安装布局都相同。
+
+若新环境复现：
+- 在 Profile 与插件真实源码目录分别用 `createRequire().resolve('discord.js')` 验证。
+- Profile 能解析但 Plugin 不能解析时，检查 `link:` 真实路径与 `node_modules` 解析位置；只有确认需要时才建立指向 Profile `node_modules` 的 NTFS Junction。
+- 两边都解析成功后，完全重启 DSH Desktop，再检查 Gateway ready 日志。
 
 完整命令见 [INSTALL.md 第 7–8 节](INSTALL.md)。
 
@@ -29,7 +30,7 @@
 5. 确认 Developer Portal 已启用 Message Content Intent。
 6. 查看 DSH 日志中的 `[ming-discord]` 警告 / ready / login error。
 
-`MING_OWNER_DISCORD_ID` 是可选项；未设置不会阻止 Bot 普通启动。
+`MING_OWNER_DISCORD_ID` 是可选项；未设置不会阻止 Bot 普通启动。正式使用仍应配置 `allowedUserIds` / `MING_DISCORD_ALLOWED_USER_IDS`，避免把 DM 开放给所有使用者。
 
 ## 2. PowerShell Node 测试出现 SyntaxError
 
