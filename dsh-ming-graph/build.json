@@ -1,7 +1,7 @@
 {
-  "hash": "42113a01c739aefc",
-  "at": "2026-11-13T17:00:49.892Z",
-  "bytes": 220647,
+  "hash": "62df3e00327668a1",
+  "at": "2026-11-13T17:09:52.849Z",
+  "bytes": 228819,
   "units": [
     {
       "label": "主题",
@@ -21,17 +21,22 @@
     {
       "label": "兴趣",
       "path": "dsh-ming-interest/src/panel.js",
-      "chars": 14842
+      "chars": 14742
+    },
+    {
+      "label": "Discord",
+      "path": "dsh-ming-discord/src/panel.js",
+      "chars": 8489
     },
     {
       "label": "声音",
       "path": "dsh-ming-voice/src/panel.js",
-      "chars": 4724
+      "chars": 4438
     },
     {
       "label": "自己玩",
       "path": "dsh-ming-browse/src/panel.js",
-      "chars": 24865
+      "chars": 24724
     },
     {
       "label": "壳 extras",
@@ -61,7 +66,7 @@
     {
       "label": "主面板",
       "path": "dsh-ming-graph/src/panel.js",
-      "chars": 29333
+      "chars": 29541
     }
   ]
 }
