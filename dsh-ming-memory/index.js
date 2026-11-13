@@ -394,13 +394,10 @@ function surfaceOf(session) {
 }
 
 /**
- * 会话属于哪个「房间」。跨会话共享只在这个房间里流动，不越界。
- *   group:<群号> —— QQ 群各自的会话（id 形如 onebot-group-123456789）
- *   dm           —— 私聊和网页窗口，这些本来就是她一个人的地方，算同一个房间
- *
- * 为什么必须分：群是公开场合，别处的私聊内容漏进去就是把她的私下话摆到人前；
- * 反过来，群里的闲聊也不该污染私聊。2026-10-20 她问「会不会串到群聊」，答案是「会」，
- * 所以在这里堵住。
+ * 会话来源标签。它只用于标注消息来自哪个平台/群，不再作为记忆隔离边界。
+ * 用户明确希望「同一个人、同一颗大脑」：QQ、Discord、网页、私讯与群聊
+ * 都能读取同一工作区内其他会话的共享上下文，避免人格与认知分裂。
+ * 注意：这意味着私讯内容也可能作为上下文出现在群聊会话中；这是用户明确选择的行为。
  */
 function scopeOf(sessionOrId) {
   const id = String(typeof sessionOrId === 'string' ? sessionOrId : (sessionOrId && sessionOrId.id) || '')
@@ -413,10 +410,10 @@ function scopeOf(sessionOrId) {
 /** 谁能看到谁（2026-10-30 她定：群 → 私聊单向）。
  *  群会话只看到自己这个群；dm（私聊 + 网页）额外能看到所有群的最近内容。
  *  反过来不行：私聊内容绝不进群。 */
-function canSee(myScope, otherScope) {
-  if (myScope === otherScope) return true
-  if (myScope === 'dm' && String(otherScope).startsWith('group:')) return true
-  return false
+function canSee(_myScope, _otherScope) {
+  // 同一工作区就是同一个「我」：所有平台、私讯、群聊共享会话记忆。
+  // scope 仍保留在 feed 中用于来源标记与诊断，不再限制可见性。
+  return true
 }
 
 // ---------- 双向对话缓冲 ----------
