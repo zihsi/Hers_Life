@@ -94,12 +94,14 @@ function ResumePanel() {
 
 
 
-// B 站账号设置：登录态只通过 DSH 本机 Credentials 服务读写，界面永远不回显 Cookie。
+// B 站账号设置：登入連結與 QR 均在本機瀏覽器端處理，不把臨時登入 URL 傳給第三方。
 const MING_BILI_API = '/_dsh/dsh-ming-bilibili-account'
 
 function MingBilibiliPanel() {
   const [status, setStatus] = useState(null)
   const [loginUrl, setLoginUrl] = useState('')
+  const [qrDataUrl, setQrDataUrl] = useState('')
+  const [expiresAt, setExpiresAt] = useState(0)
   const [busy, setBusy] = useState('')
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
@@ -130,15 +132,29 @@ function MingBilibiliPanel() {
 
   useEffect(() => { load() }, [load])
 
+  const clearLoginCode = () => {
+    setLoginUrl('')
+    setQrDataUrl('')
+    setExpiresAt(0)
+  }
+
   const start = async () => {
     setBusy('start')
     setError('')
     setNote('')
+    clearLoginCode()
     try {
       const data = await request('/login/start', 'POST')
-      setLoginUrl(data.url || '')
-      setNote(data.url ? '登入連結已建立。請用手機 B 站開啟連結並確認，完成後回來按「檢查登入」。' : (data.message || '無法建立登入連結。'))
+      if (!data.url) throw new Error(data.message || 'B 站沒有回傳登入連結。')
+      const qr = qrcode(0, 'M')
+      qr.addData(data.url)
+      qr.make()
+      setLoginUrl(data.url)
+      setQrDataUrl(qr.createDataURL(6, 4))
+      setExpiresAt(Number(data.expiresAt) || Date.now() + 180000)
+      setNote('請用手機 B 站掃描此 QR Code，並在手機上確認登入。')
     } catch (e) {
+      clearLoginCode()
       setError(String((e && e.message) || e))
     } finally {
       setBusy('')
@@ -152,10 +168,10 @@ function MingBilibiliPanel() {
       const data = await request('/login/poll', 'POST')
       setNote(data.message || '登入狀態：' + data.state)
       if (data.state === 'logged_in') {
-        setLoginUrl('')
+        clearLoginCode()
         await load()
       } else if (data.state === 'expired' || data.state === 'invalid_cookie') {
-        setLoginUrl('')
+        clearLoginCode()
       }
     } catch (e) {
       setError(String((e && e.message) || e))
@@ -170,7 +186,7 @@ function MingBilibiliPanel() {
     try {
       const data = await request('/logout', 'POST')
       setNote(data.message || '已登出。')
-      setLoginUrl('')
+      clearLoginCode()
       await load()
     } catch (e) {
       setError(String((e && e.message) || e))
@@ -210,16 +226,25 @@ function MingBilibiliPanel() {
       h('div', { className: 'ming-sec' },
         h('div', { className: 'ming-sec-h' },
           h('span', { className: 'ming-sec-t' }, '帳號登入'),
-          h('span', { className: 'ming-sec-n' }, '手機掃碼確認'),
+          h('span', { className: 'ming-sec-n' }, '本機產生 QR Code'),
         ),
         h('div', { className: 'ming-sec-b' },
-          loginUrl
+          qrDataUrl
             ? h('div', null,
-                h('a', { href: loginUrl, target: '_blank', rel: 'noreferrer', style: { color: 'var(--dsw-alias-text-primary)', textDecoration: 'underline' } }, '開啟 B 站登入連結'),
-                h('div', { className: 'ming-note', style: { marginTop: '8px' } }, '請在手機 B 站完成確認，再回來檢查登入。'),
-                h('button', { className: 'ming-btn on', disabled: !!busy, onClick: poll, style: { marginTop: '10px' } }, busy === 'poll' ? '檢查中…' : '檢查登入'),
+                h('div', { style: { display: 'flex', justifyContent: 'center', padding: '12px', background: '#fff', borderRadius: 10, width: 'fit-content', margin: '0 auto' } },
+                  h('img', { src: qrDataUrl, alt: 'B 站登入 QR Code', width: 216, height: 216, style: { display: 'block', imageRendering: 'pixelated' } }),
+                ),
+                h('div', { className: 'ming-note', style: { textAlign: 'center', marginTop: '8px' } }, '請使用手機 B 站掃描，並在手機上確認登入。'),
+                h('div', { className: 'ming-note', style: { textAlign: 'center' } }, '連結有效期限：' + new Date(expiresAt).toLocaleTimeString()),
+                h('div', { style: { display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 10 } },
+                  h('button', { className: 'ming-btn on', disabled: !!busy, onClick: poll }, busy === 'poll' ? '檢查中…' : '我已確認，檢查登入'),
+                  h('button', { className: 'ming-btn', disabled: !!busy, onClick: start }, '重新產生 QR'),
+                ),
+                h('div', { style: { textAlign: 'center', marginTop: 8 } },
+                  h('a', { href: loginUrl, target: '_blank', rel: 'noreferrer', style: { color: 'var(--dsw-alias-text-primary)', textDecoration: 'underline', fontSize: 12 } }, '無法掃描？改用登入連結'),
+                ),
               )
-            : h('button', { className: 'ming-btn on', disabled: !!busy || !!(status && status.loggedIn), onClick: start }, busy === 'start' ? '建立登入連結…' : '開始登入'),
+            : h('button', { className: 'ming-btn on', disabled: !!busy || !!(status && status.loggedIn), onClick: start }, busy === 'start' ? '建立登入 QR…' : '開始登入並顯示 QR Code'),
         ),
       ),
       status && (status.loggedIn || status.source === 'clear-failed')
@@ -235,7 +260,7 @@ function MingBilibiliPanel() {
         : null,
       note ? h('div', { className: 'ming-note', style: { padding: '8px 2px' } }, note) : null,
       h('div', { className: 'ming-note', style: { padding: '8px 2px' } },
-        '安全說明：Cookie 不會顯示在面板、不會寫入聊天輸出，也不會進入日記。舊版 credentialFile 只在首次啟動時嘗試遷移。'),
+        '安全說明：QR Code 在本機瀏覽器端產生，臨時登入網址不會送到第三方 QR 服務；Cookie 不會顯示在面板、不會寫入聊天輸出，也不會進入日記。'),
     ),
   )
 }
