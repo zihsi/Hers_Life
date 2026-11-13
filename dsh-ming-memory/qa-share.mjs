@@ -51,12 +51,25 @@ m.user(grpS, '【兴趣唤醒 · 系统生成】这不是主人说的话。', 'p
 m.user(grpS, '【插话·先答再回去】这也不是主人说的话。', 'plugin:ming-resume')
 m.user(otherS, '这句来自 trpg_web，绝对不该被记录')
 
+const observedDiscord = {
+  workspacePath: ROOT,
+  sessionId: 'discord-guild-987654321-channel-556',
+  sourceId: 'discord-message-unmentioned-556',
+  source: 'discord',
+  role: '群友A',
+  text: '未 @ Bot 的 Discord 群聊消息也要进入共同记忆。',
+  at: Date.now(),
+}
+m.emit('ming-memory/observe', observedDiscord)
+m.emit('ming-memory/observe', observedDiscord) // 同一 message_id 重送不能重复保存
+
 await m.preStep(webA.agent)
 const t1 = webA.text()
 check('Web 看得见 QQ 私訊', t1.includes('别的会话里的对话') && t1.includes('她在 QQ 私訊说的第一句话'))
 check('也看得见 AI 在 QQ 私訊回的那句', t1.includes('AI在 QQ 私訊回的第一句'))
 check('Web 看得见两个不同 QQ 群', t1.includes('QQ 群 123 里说的话') && t1.includes('QQ 群 456 里说的话'))
 check('Web 看得见同一伺服器的两个 Discord 频道', t1.includes('Discord 频道 555') && t1.includes('Discord 频道 556'))
+check('未 @ Bot 的 Discord 群消息也进入共享记忆', t1.includes('未 @ Bot 的 Discord 群聊消息'))
 check('Web 看得见 Discord 私訊', t1.includes('Discord 私訊里说的话'))
 check('不同频道来源标签保留', /群 987654321:555/.test(t1) && /群 987654321:556/.test(t1))
 check('其他工程目录不会被记录进共享 feed', !t1.includes('trpg_web'))
@@ -139,6 +152,7 @@ check('feed.json 落盘', !!feed['onebot-private-10001'])
 check('feed 里两边原话都在', qqItems.some((i) => i.r === '她') && qqItems.some((i) => i.r === 'AI'))
 check('不同 QQ 群都保存独立来源标签', feed['onebot-group-123456789']?.scope === 'group:123456789' && feed['onebot-group-456789123']?.scope === 'group:456789123')
 check('两个 Discord 频道都保存独立会话记录', !!feed['discord-guild-987654321-channel-555'] && !!feed['discord-guild-987654321-channel-556'])
+check('inbox 同一 message_id 重送不会重复写入', (feed['discord-guild-987654321-channel-556']?.items || []).filter((i) => i.id === 'discord-message-unmentioned-556').length === 1)
 check('插件生成的兴趣／接续提示不会伪装成用户发言', !JSON.stringify(feed).includes('系统生成') && !JSON.stringify(feed).includes('这也不是主人说的话'))
 check('不同工程目录没进 feed', !feed['trpg'])
 check('超过七天的 feed 记录会清理', !feed['web-ancient'])
