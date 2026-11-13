@@ -50,7 +50,8 @@ Token、Discord / QQ 使用者 ID、群号、私人聊天、个人工作区内�
 
 | 变量 / 位置 | 说明 |
 |---|---|
-| `MING_WORKSPACE` | 工作区目录（放人设、日记、见闻的目录） |
+| `MING_WORKSPACE` | **统一工作区根目录**；Memory、Interest、Discord 未显式指定 `root` / `workspacePath` 时共用此路径 |
+| `DSH_HOME` | DSH 主目录；未设置时使用 `%USERPROFILE%\\.dsh`，用于插件本机配置、Discord inbox / session map 等默认路径 |
 | `MING_OWNER_QQ` | 本人 QQ ID；部分本人指令需要 |
 | `MING_OWNER_DISCORD_ID` | 本人 Discord ID；可选，启用本人私讯指令时设置 |
 | `MING_DISCORD_ALLOWED_USER_IDS` | 可选 Discord 使用者 ID 白名单，逗号分隔 |
