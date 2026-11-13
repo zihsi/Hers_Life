@@ -53,8 +53,10 @@ const DEFAULTS = {
   quietHours: '01:00-08:00',
   /** 太短的消息（「嗯」「哈哈」）不参与匹配。 */
   minChars: 6,
-  /** 只认这些群；空 = 不限制。 */
+  /** 自主参与白名单；空 = 所有群。 */
   groups: [],
+  /** 被动观察白名单；空 = 观察所有群。与参与白名单分开。 */
+  observeGroups: [],
   /** 唤醒时附带的上下文条数（同一群人最近几句）。 */
   contextLines: 4,
   /** 观察 inbox 并写入同工作区共享记忆；与是否唤醒 Agent 分开。 */
@@ -94,6 +96,7 @@ function normalize(config) {
     quietHours: str(c.quietHours, DEFAULTS.quietHours),
     minChars: Math.floor(num(c.minChars, DEFAULTS.minChars, 1)),
     groups: list(c.groups, DEFAULTS.groups),
+    observeGroups: list(c.observeGroups, DEFAULTS.observeGroups),
     contextLines: Math.floor(num(c.contextLines, DEFAULTS.contextLines, 0)),
     observeEnabled: c.observeEnabled !== false,
     observePrivate: c.observePrivate !== false,
@@ -354,6 +357,7 @@ export function apply(ctx, config) {
               observePrivate: cfg.observePrivate,
               autoCreateSession: cfg.autoCreateSession,
               groups: cfg.groups,
+              observeGroups: cfg.observeGroups,
               pollMs: cfg.pollMs,
               minGapMinutes: cfg.minGapMinutes,
               maxPerHour: cfg.maxPerHour,
@@ -411,6 +415,7 @@ export function apply(ctx, config) {
     observePrivate: cfg.observePrivate,
     autoCreateSession: cfg.autoCreateSession,
     groups: cfg.groups,
+    observeGroups: cfg.observeGroups,
     minGapMinutes: cfg.minGapMinutes,
     maxPerHour: cfg.maxPerHour,
     quietHours: cfg.quietHours,
@@ -425,6 +430,7 @@ export function apply(ctx, config) {
       if (typeof raw[key] === 'boolean') out[key] = raw[key]
     }
     if (Array.isArray(raw.groups)) out.groups = [...new Set(raw.groups.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()))]
+    if (Array.isArray(raw.observeGroups)) out.observeGroups = [...new Set(raw.observeGroups.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()))]
     const bounded = (key, min, max) => {
       if (raw[key] === undefined) return
       const n = Number(raw[key])
@@ -700,8 +706,6 @@ export function apply(ctx, config) {
   }
 
   /** 防重入：ctx.interval 的回调是同步返回的，两个 poll 可能叠在一起读同一批新行。 */
-  let polling = false
-
   const poll = async () => {
     if (polling) return
     polling = true
@@ -735,7 +739,7 @@ export function apply(ctx, config) {
         if (isPrivate && !cfg.observePrivate) continue
         const groupId = String(frame.group_id ?? '')
         if (isGroup && !groupId) continue
-        if (isGroup && cfg.groups.length > 0 && !cfg.groups.includes(groupId)) continue
+        if (isGroup && cfg.observeGroups.length > 0 && !cfg.observeGroups.includes(groupId)) continue
         const userId = String(frame.user_id ?? '')
         if (String(frame.self_id ?? '') !== '' && userId === String(frame.self_id ?? '')) continue
         const text = renderSegments(frame.message).trim()
@@ -758,6 +762,7 @@ export function apply(ctx, config) {
         if (sessionId) emitObservation(line, frame, item, sessionId)
 
         if (!isGroup) continue
+        if (cfg.groups.length > 0 && !cfg.groups.includes(groupId)) continue
         recent.push(item)
         if (recent.length > 80) recent.shift()
         if (paused || !interests || interests.topics.length === 0) continue
