@@ -3,7 +3,7 @@
  *
  * ⚠ 生成物，别手改：改 src/*.js 或各插件的 src/panel.js，然后 `node build.mjs`。
  *   现在是不是最新的：`node build.mjs --check`
- *   build d109e32ef32d9122
+ *   build 42113a01c739aefc
  *
  * 入口：左侧图标栏一个图标（sidebar.panellist），点开占满主区域（main 面板 key = ming-graph）。
  * 数据来自 Host 半端 /_dsh/dsh-ming-graph/neurons，自己拉、自己画，不经过模型。
@@ -1947,9 +1947,11 @@ function InterestPanel() {
 
   const saveSettings = useCallback(() => {
     if (!settings) return
+    const observeText = settings.observeGroupsText !== undefined ? settings.observeGroupsText : (settings.observeGroups || []).join('\n')
+    const groupsText = settings.groupsText !== undefined ? settings.groupsText : (settings.groups || []).join('\n')
     const next = Object.assign({}, settings, {
-      observeGroups: String(settings.observeGroupsText || '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
-      groups: String(settings.groupsText || '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
+      observeGroups: String(observeText).split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
+      groups: String(groupsText).split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
     })
     delete next.observeGroupsText
     delete next.groupsText
@@ -1996,13 +1998,13 @@ function InterestPanel() {
     h('span', null,
       h('span', { style: { display: 'block', fontSize: 13 } }, label),
       help ? h('span', { style: { display: 'block', fontSize: 11, color: 'var(--dsw-alias-label-tertiary)' } }, help) : null))
-  const section = (title, sub, body) => h('section', {
+  const section = (title, sub, ...body) => h('section', {
     className: 'ming-sec', style: { border: '1px solid var(--dsw-alias-border-l1)', borderRadius: 12, overflow: 'hidden' },
   },
     h('div', { className: 'ming-sec-h' },
       h('span', { className: 'ming-sec-t' }, title),
       sub ? h('span', { className: 'ming-sec-n' }, sub) : null),
-    h('div', { className: 'ming-sec-b' }, body))
+    h('div', { className: 'ming-sec-b' }, ...body))
   const button = (text, fn, disabled, primary) => h('button', {
     className: 'ming-btn', onClick: fn, disabled: !!disabled,
     'data-primary': primary ? '1' : undefined,
@@ -2046,7 +2048,7 @@ function InterestPanel() {
           h('div', { className: 'ming-kpi-c' }, h('span', { className: 'ming-kpi-n' }, String(st.observed || 0)), h('span', { className: 'ming-kpi-l' }, '本次运行观察消息')),
           h('div', { className: 'ming-kpi-c' }, h('span', { className: 'ming-kpi-n' }, String(st.pending || 0)), h('span', { className: 'ming-kpi-l' }, '待处理候选')),
           h('div', { className: 'ming-kpi-c' }, h('span', { className: 'ming-kpi-n' }, String(st.wakesLastHour || 0) + ' / ' + String(st.maxPerHour || 0)), h('span', { className: 'ming-kpi-l' }, '过去一小时参与次数')),
-          h('div', { className: 'ming-kpi-c' }, h('span', { className: 'ming-kpi-n' }, fmtAgo(st.sinceWakeMs)), h('span', { className: 'ming-kpi-l' }, '距上次参与'))),
+          h('div', { className: 'ming-kpi-c' }, h('span', { className: 'ming-kpi-n' }, st.sinceWakeMs ? fmtAgo(st.sinceWakeMs) : '—'), h('span', { className: 'ming-kpi-l' }, '距上次参与'))),
         h('div', { className: 'ming-note' }, st.skip || '目前没有阻止参与的原因'),
         h('div', { className: 'ming-note' }, '状态更新时间：' + (st.at || '—'))),
 
