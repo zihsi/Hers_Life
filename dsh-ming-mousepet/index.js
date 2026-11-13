@@ -21,6 +21,7 @@ export const name = 'ming-mousepet'
 export const inject = ['tools', 'attachments', 'webServer']
 
 const PLUGIN_DIR = dirname(fileURLToPath(import.meta.url))
+const DSH_HOME = process.env.DSH_HOME || join(homedir(), '.dsh')
 const PREVIEW_DIR = join(PLUGIN_DIR, 'assets', 'previews')
 const SETTINGS_FILE = join(DSH_HOME, 'ming-mousepet', 'settings.json')
 // 2026-11-08：用户自己加的皮肤。内置那十五只只读，这里的是可增可删的。
