@@ -77,7 +77,7 @@
 检查：
 - inbox 文件是否有新行。
 - Discord / AstrBot 是否写入同一个 inbox 路径。
-- `groups` 是否包含目标 QQ / Discord 群组标识（空数组时没有指定群组）。
+- `groups` 非空时必须包含目标 QQ / Discord 群组标识；**空数组代表不筛选群组，会匹配所有符合其他条件的群组**，不是关闭监控。
 - `interests.json` 主题关键词是否匹配消息。
 - quiet hours、`minGapMinutes`、`maxPerHour` 是否挡住本次触发。
 - `chat-sessions.json` 是否有对应 chat → session 映射。
