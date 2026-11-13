@@ -324,7 +324,7 @@ function fileChars(p) {
 function indexChars() {
   // 归档索引：core-memory 取最新 12 条，这里按 mtime 数同样 12 个文件（近似，报的时候标「约」）
   try {
-    const dir = path.join(os.homedir(), '.dsh', 'memory', 'notes')
+    const dir = path.join(DSH_HOME, 'memory', 'notes')
     const files = readdirSync(dir)
       .filter((f) => f.endsWith('.md'))
       .map((f) => ({ f, t: statSync(path.join(dir, f)).mtimeMs }))
@@ -339,7 +339,7 @@ function indexChars() {
 function accountBlock(cfg, personaChars, diaryChars) {
   const total = Number.isInteger(cfg.totalChars) ? cfg.totalChars : DEFAULTS.totalChars
   const agents = fileChars(path.join(cfg.root, 'AGENTS.md'))
-  const core = fileChars(path.join(os.homedir(), '.dsh', 'memory', 'MEMORY.md'))
+  const core = fileChars(path.join(DSH_HOME, 'memory', 'MEMORY.md'))
   const idx = indexChars()
   const sum = personaChars + diaryChars + agents + core + idx
   const over = sum > total
