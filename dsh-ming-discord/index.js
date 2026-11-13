@@ -164,10 +164,11 @@ export function apply(ctx, input = {}) {
         const groupId = 'discord:' + message.guildId + ':' + message.channelId
         const responded = !cfg.mentionRequired || Boolean(client.user && message.mentions.has(client.user))
         const line = {
-          ts: Date.now(), kind: 'message',
+          ts: Date.now(), kind: 'message', message_id: String(message.id || ''),
           decision: { ok: responded, stage: 'discord-mention-gate', reason: responded ? 'accepted by Discord bridge' : 'unmentioned message for interest matching' },
           source: 'discord',
           frame: {
+            message_id: String(message.id || ''),
             message_type: 'group', group_id: groupId,
             user_id: String(message.author.id), self_id: String(client.user?.id || ''),
             sender: { card: message.member?.displayName || message.author.globalName || message.author.username, nickname: message.author.username },
