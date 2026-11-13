@@ -16,6 +16,7 @@
 import { execFile } from 'node:child_process'
 import { mkdir, stat, readdir, unlink } from 'node:fs/promises'
 import path from 'node:path'
+import { homedir } from 'node:os'
 
 export const name = 'ming-voice'
 // 2026-10-24（AI）：原来没声明 inject，apply 里直接 ctx.tools.register(...)，
