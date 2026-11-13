@@ -48,7 +48,8 @@ const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 
 const DEFAULTS = {
   enabled: true,
-  workspacePath: 'C:\\dsh\\workspace',
+  // 与 Memory / Interest / Discord 共用同一工作区默认规则。
+  workspacePath: process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace'),
   /**
    * 只在 live/browse-state.json 里报个数。
    * 2026-10-23 她改的：不再当闸用——她说可以一边聊天一边逛，不用等安静。
