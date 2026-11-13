@@ -9,11 +9,13 @@
  * 依赖只用 node 内置 + 同目录的 wbi.js / types.js。
  */
 import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { BilibiliError } from './types.js'
 import { wbiSign } from './wbi.js'
 
 /** 凭证文件默认位置；配置项 credentialFile 覆盖它。 */
-export const SOCIAL_DEFAULT_CREDENTIAL_FILE = (process.env.USERPROFILE || '') + '/.dsh/bili-duty/bili_credential.json'
+const SOCIAL_DSH_HOME = process.env.DSH_HOME || path.join(process.env.USERPROFILE || process.env.HOME || '', '.dsh')
+export const SOCIAL_DEFAULT_CREDENTIAL_FILE = path.join(SOCIAL_DSH_HOME, 'bili-duty', 'bili_credential.json')
 /** 相邻两次请求的最小间隔（ms）。B 站 -412 风控就是被连打出来的。 */
 export const SOCIAL_MIN_INTERVAL_MS = 1500
 /** 工具层默认超时。 */
@@ -154,7 +156,10 @@ export class SocialClient {
           this.credentialCache = fresh
           return fresh
         }
-      } catch { /* 读不到时只退回本实例上次拿到的凭证 */ }
+      } catch {
+        // 统一凭证服务读失败时 fail closed：不能继续使用旧 Cookie 缓存。
+        return { cookie: '', csrf: '', uid: '' }
+      }
       return this.credentialCache ?? { cookie: '', csrf: '', uid: '' }
     }
     const fresh = readCredential(this.credentialFile)
