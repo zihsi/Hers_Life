@@ -1683,7 +1683,7 @@ export function registerArchiveRoutes(ctx) {
         try {
           const url = new URL(req.url || '/', 'http://localhost')
           const what = url.pathname.slice(ARCHIVE_ROUTE.length).replace(/^\//, '')
-          const dir = path.join(os.homedir(), '.dsh', 'memory', 'notes')
+          const dir = path.join(DSH_HOME, 'memory', 'notes')
 
           if (what === 'list') {
             const files = await readdir(dir)
