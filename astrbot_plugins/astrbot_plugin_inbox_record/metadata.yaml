@@ -1,5 +1,5 @@
 name: astrbot_plugin_inbox_record
-desc: 把入站消息写进 qq-inbox.jsonl，供 dsh-ming-interest 读取（AstrBot 时代的消息源）
-version: 0.1.0
+desc: 把入站消息写进共享 qq-inbox.jsonl，供 dsh-ming-interest 读取；路径跟随 DSH_HOME，也可由 inboxPath 覆盖
+version: 0.2.0
 author: 溟
 repo: ""
