@@ -52,7 +52,7 @@ Token、Discord / QQ 使用者 ID、群号、私人聊天、个人工作区内�
 
 | 变量 / 位置 | 说明 |
 |---|---|
-| `MING_WORKSPACE` | **统一工作区根目录**；Memory、Interest、Discord、Browse、Voice 未显式指定 `root` / `workspacePath` 时共用此路径 |
+| `MING_WORKSPACE` | **统一工作区根目录**；Memory、Interest、Discord、Browse、Voice、Wake、Resume、Skill Isolate 未显式指定 `root` / `workspacePath` 时共用此路径 |
 | `DSH_HOME` | DSH 主目录；未设置时使用 `%USERPROFILE%\\.dsh`，用于插件本机配置、Discord inbox / session map、Mousepet 资料，以及 Voice 默认工作区等路径 |
 | Bilibili Cookie | 存在 DSH Credentials 的 `MING_BILI_COOKIE`；账号、字幕与社交工具共用，不写入仓库或聊天记录 |
 | `MING_OWNER_QQ` | 本人 QQ ID；部分本人指令需要 |
