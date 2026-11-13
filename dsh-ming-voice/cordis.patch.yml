@@ -2,6 +2,7 @@
     - id: ming-voice
       name: 'dsh-ming-voice'
       config:
-        root: '<DSH>\workspace'
+        # 留空时依序使用 MING_WORKSPACE、DSH_HOME/workspace。
+        root: ''
         voice: 'zh-CN-XiaoxiaoNeural'
         rate: '+0%'
