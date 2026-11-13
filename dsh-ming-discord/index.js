@@ -171,7 +171,7 @@ export function apply(ctx, input = {}) {
         const embedText = (message.embeds || []).map((e) =>
           [e.title, e.description, e.url].filter(Boolean).join(' ')
         ).filter(Boolean)
-        const observedText = [message.content || '', ...embedText, ...attachmentText].filter(Boolean).join('\\n')
+        const observedText = [message.content || '', ...embedText, ...attachmentText].filter(Boolean).join('\n')
         const line = {
           ts: Date.now(), kind: 'message', message_id: String(message.id || ''),
           decision: { ok: responded, stage: 'discord-mention-gate', reason: responded ? 'accepted by Discord bridge' : 'unmentioned message for interest matching' },
