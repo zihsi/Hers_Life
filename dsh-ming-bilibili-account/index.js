@@ -73,7 +73,7 @@ function buildCookieHeader(raw) {
 async function readCredentialCookie(file) {
   if (typeof file !== 'string' || file.length === 0) return ''
   try {
-    const text = (await readFile(file, 'utf8')).replace(/^\\uFEFF/, '').trim()
+    const text = (await readFile(file, 'utf8')).replace(/^\uFEFF/, '').trim()
     try {
       return buildCookieHeader(JSON.parse(text)) || (text.includes('=') ? text : '')
     } catch {
