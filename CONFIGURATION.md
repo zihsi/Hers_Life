@@ -8,8 +8,8 @@
 - 本机工作区建议统一用绝对路径，避免不同启动目录导致相对路径漂移。
 - Profile 的 `cordis.patch.yml` 是部署配置；不要把含个人 ID、Token 或私人路径的实际文件提交到仓库。
 - `<DSH_HOME>` 代表 DSH 主目录，`<WORKSPACE>` 代表你的工作区，`<REPO>` 代表本仓 clone 目录。
-- `MING_WORKSPACE` 是 Memory、Interest、Discord 共用的工作区默认值；插件自身显式 `root` / `workspacePath` 优先于它。
-- `DSH_HOME` 是 DSH 主目录默认值；未设置时回退到 `%USERPROFILE%\\.dsh`。Interest 与 Discord 的 inbox / session map 都从这里解析，避免一个写入自订 DSH_HOME、另一个却读旧的 `.dsh`。
+- `MING_WORKSPACE` 是 Memory、Interest、Discord、Browse 共用的工作区默认值；插件自身显式 `root` / `workspacePath` 优先于它。
+- `DSH_HOME` 是 DSH 主目录默认值；未设置时回退到 `%USERPROFILE%\\.dsh`。Interest 与 Discord 的 inbox / session map，以及 Browse 的默认工作区，都会从这里解析，避免自订 DSH_HOME 后仍读写旧路径。
 - Bilibili 登录 Cookie 存在 DSH Credentials（引用名 `MING_BILI_COOKIE`），不写入仓库或聊天记录；旧版 `bili_credential.json` 只在迁移时读取，默认位置跟随 `DSH_HOME`，并兼容旧 `%USERPROFILE%\\.dsh` 位置。登出会写入 Credentials 墓碑，防止旧文件在下次启动时把账号重新登录回来。
 - 具体字段请对照对应包的 `cordis.patch.yml`；不要把本文概览当成完整 schema。
 
