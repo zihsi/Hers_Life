@@ -22,6 +22,7 @@
  */
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises'
 import path from 'node:path'
+import { homedir } from 'node:os'
 
 export const name = 'ming-skill-isolate'
 export const inject = ['skills', 'tools']
