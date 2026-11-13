@@ -79,7 +79,7 @@ export function apply(ctx, input = {}) {
     observeUnmentioned: raw.observeUnmentioned !== false,
     allowedGuildIds: cleanIds(raw.allowedGuildIds),
     allowedChannelIds: cleanIds(raw.allowedChannelIds),
-    configuredAllowedUserIds: cleanIds(raw.allowedUserIds),
+    configuredAllowedUserIds: cleanIds(raw.allowedUserIds ?? raw.configuredAllowedUserIds),
     newMessagePolicy: raw.newMessagePolicy === 'followup' ? 'followup' : 'steer',
     maxAttachmentBytes: Math.max(1024 * 1024, Math.min(50 * 1024 * 1024, Math.floor(Number(raw.maxAttachmentBytes) || cfg.maxAttachmentBytes))),
   })
