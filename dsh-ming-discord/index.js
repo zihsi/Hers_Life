@@ -70,8 +70,8 @@ export function apply(ctx, input = {}) {
   const settingsFile = path.join(settingsDir, 'settings.json')
   let gatewayStatus = cfg.enabled ? (cfg.token ? 'starting' : 'missing-token') : 'disabled'
   const cleanIds = value => {
-    const values = Array.isArray(value) ? value : String(value || '').split(/[\\n,;]+/)
-    return [...new Set(values.map(x => String(x).trim()).filter(x => /^\\d{5,25}$/.test(x)))].slice(0, 200)
+    const values = Array.isArray(value) ? value : String(value || '').split(/[\n,;]+/)
+    return [...new Set(values.map(x => String(x).trim()).filter(x => /^\d{5,25}$/.test(x)))].slice(0, 200)
   }
   const normalizeUiSettings = raw => ({
     mentionRequired: raw.mentionRequired !== false,
