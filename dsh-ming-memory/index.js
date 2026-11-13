@@ -9,8 +9,9 @@
  * 自动捕获天生违反这一条。所以这里只做单向读取：文件 → 提示词，永不回写。
  *
  * 边界：
- *   · 只读，不写任何文件；
- *   · 会话工作目录不在 root 下就完全不动作（别的工程会话不会被塞日记）；
+ *   · persona / diary / QQ 归档只读；跨会话 feed 会把同一工作区的最近对话写入 live/feed.json；
+ *   · feed 注入期限为 2 小时，本机记录保留 7 天；私讯与群聊内容都会进入该文件；
+ *   · 工作区外会话只拿轻量身份，不读取工作区私讯、群聊、状态或共享 feed；
  *   · 任何异常都只让本段消失，不影响会话本身。
  */
 import { readFile, readdir, stat, mkdir, writeFile, rename } from 'node:fs/promises'
@@ -1510,13 +1511,14 @@ function readCwd(agent) {
 export function apply(ctx, config) {
   const cfg = normalize(config)
   registerArchiveRoutes(ctx)
-  loadShared(cfg).catch(() => {})
+  if (cfg.root) loadShared(cfg).catch(() => {})
 
   // 记录本工作区里「她说的话」，供别的会话读取。范围严格限制在 root 下：
   // 别的工程会话（比如真正的开发目录）一条都不记、一条都不读。
   ctx.on('session/event', (session, event) => {
     try {
       if (!event) return
+      if (!cfg.root) return
       const cwd = readSessionCwd(session)
       if (!insideRoot(cwd, cfg.root)) return
       const src = event.data && event.data.source
@@ -1525,7 +1527,6 @@ export function apply(ctx, config) {
       // 所以从事件里捡最后一次的区间，挂在系统提示上（不大动会话，不占轮次）。
       if (event.type === 'compaction/summary') noteCompact(session, event)
       if (event.type === 'user/message') {
-        if (src && src.kind === 'plugin') return
         const text = extractUserText(event.data)
         if (text) recordShared(cfg, session, text)
       } else if (event.type === 'assistant/message') {
