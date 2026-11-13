@@ -184,6 +184,102 @@ function matchText(text, interests) {
   return hits.length > 0 ? { hits } : {}
 }
 
+/** 读取兴趣文档的完整结构，保留 reason / evidence / candidates 等元数据。 */
+async function readInterestDocument(file) {
+  try {
+    const doc = JSON.parse(await readFile(file, 'utf8'))
+    return {
+      version: Number(doc.version) || 1,
+      topics: Array.isArray(doc.topics) ? doc.topics.filter((x) => x && typeof x === 'object') : [],
+      candidates: Array.isArray(doc.candidates) ? doc.candidates.filter((x) => x && typeof x === 'object') : [],
+      mute: Array.isArray(doc.mute) ? doc.mute.filter((x) => typeof x === 'string') : [],
+      updatedAt: doc.updatedAt || '',
+    }
+  } catch {
+    return { version: 1, topics: [], candidates: [], mute: [], updatedAt: '' }
+  }
+}
+
+async function writeInterestDocument(file, doc) {
+  await mkdir(path.dirname(file), { recursive: true })
+  const temp = file + '.' + randomUUID() + '.tmp'
+  await writeFile(temp, JSON.stringify({ ...doc, updatedAt: new Date().toISOString() }, null, 2) + '\n', 'utf8')
+  await (await import('node:fs/promises')).rename(temp, file)
+}
+
+async function manageInterest(file, args = {}) {
+  const action = String(args.action || 'list').trim().toLowerCase()
+  const name = String(args.name || '').trim()
+  const key = name.toLowerCase()
+  const keywords = [...new Set((Array.isArray(args.keywords) ? args.keywords : [])
+    .filter((x) => typeof x === 'string' && x.trim())
+    .map((x) => x.trim().toLowerCase()))]
+  const reason = String(args.reason || '').trim().slice(0, 500)
+  const evidenceText = String(args.evidence || '').trim().slice(0, 500)
+  const source = String(args.source || 'conversation').trim().slice(0, 80)
+  const doc = await readInterestDocument(file)
+  const find = (arr) => arr.findIndex((x) => String(x.name || '').trim().toLowerCase() === key)
+  const evidence = evidenceText ? [{ source, summary: evidenceText, at: new Date().toISOString() }] : []
+
+  if (action === 'list') return { ok: true, topics: doc.topics, candidates: doc.candidates, mute: doc.mute }
+  if (!name) return { ok: false, message: '这个操作需要提供兴趣名称 name。' }
+
+  if (action === 'add' || action === 'propose') {
+    const target = action === 'add' ? doc.topics : doc.candidates
+    const idx = find(target)
+    const item = idx >= 0 ? target[idx] : { name }
+    item.name = name
+    item.keywords = [...new Set([...(Array.isArray(item.keywords) ? item.keywords : []), ...(keywords.length ? keywords : [key])])]
+    if (reason) item.reason = reason
+    if (evidence.length) item.evidence = [...(Array.isArray(item.evidence) ? item.evidence : []), ...evidence].slice(-12)
+    item.updatedAt = new Date().toISOString()
+    if (!item.createdAt) item.createdAt = item.updatedAt
+    if (idx >= 0) target[idx] = item
+    else target.push(item)
+    if (action === 'add') {
+      doc.candidates = doc.candidates.filter((x) => String(x.name || '').trim().toLowerCase() !== key)
+    }
+    await writeInterestDocument(file, doc)
+    return { ok: true, message: action === 'add' ? '已加入主动兴趣清单。' : '已加入待确认兴趣候选。', item }
+  }
+
+  if (action === 'remove' || action === 'reject') {
+    const targetKey = action === 'remove' ? 'topics' : 'candidates'
+    const before = doc[targetKey].length
+    doc[targetKey] = doc[targetKey].filter((x) => String(x.name || '').trim().toLowerCase() !== key)
+    if (before === doc[targetKey].length) return { ok: false, message: '找不到这个兴趣项目。' }
+    await writeInterestDocument(file, doc)
+    return { ok: true, message: action === 'remove' ? '已从主动兴趣清单移除。' : '已拒绝这个兴趣候选。' }
+  }
+
+  if (action === 'accept') {
+    const idx = find(doc.candidates)
+    if (idx < 0) return { ok: false, message: '找不到这个兴趣候选。' }
+    const candidate = doc.candidates.splice(idx, 1)[0]
+    const existing = find(doc.topics)
+    if (existing >= 0) {
+      const old = doc.topics[existing]
+      old.keywords = [...new Set([...(old.keywords || []), ...(candidate.keywords || [])])]
+      old.evidence = [...(old.evidence || []), ...(candidate.evidence || [])].slice(-12)
+      old.reason = candidate.reason || old.reason
+      old.updatedAt = new Date().toISOString()
+    } else doc.topics.push({ ...candidate, updatedAt: new Date().toISOString() })
+    await writeInterestDocument(file, doc)
+    return { ok: true, message: '已将候选转为主动兴趣。' }
+  }
+
+  if (action === 'mute' || action === 'unmute') {
+    const word = String(args.word || name).trim().toLowerCase()
+    if (!word) return { ok: false, message: '需要提供要静音的词。' }
+    if (action === 'mute' && !doc.mute.includes(word)) doc.mute.push(word)
+    if (action === 'unmute') doc.mute = doc.mute.filter((x) => x.toLowerCase() !== word)
+    await writeInterestDocument(file, doc)
+    return { ok: true, message: action === 'mute' ? '已加入静音词。' : '已移除静音词。' }
+  }
+
+  return { ok: false, message: 'action 仅支持 list / add / remove / propose / accept / reject / mute / unmute。' }
+}
+
 export function apply(ctx, config) {
   const cfg = normalize(config)
 
