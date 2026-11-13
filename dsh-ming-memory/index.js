@@ -138,7 +138,8 @@ function warnOnce(msg) {
 export function loadLocalConfig(file) {
   const f = file || process.env.MING_MEMORY_CONFIG || path.join(os.homedir(), '.dsh', 'ming-memory.json')
   try {
-    const j = JSON.parse(readFileSync(f, 'utf8'))
+    const raw = readFileSync(f, 'utf8').replace(/^\uFEFF/, '')
+    const j = JSON.parse(raw)
     return j && typeof j === 'object' ? j : {}
   } catch { return {} }
 }
@@ -390,7 +391,9 @@ function foldInto(digest, chunk) {
 
 function surfaceOf(session) {
   const id = String((session && session.id) || '')
-  return id.startsWith('onebot') ? 'qq' : 'web'
+  if (id.startsWith('onebot')) return 'qq'
+  if (id.startsWith('discord-')) return 'discord'
+  return 'web'
 }
 
 /**
@@ -404,6 +407,11 @@ function scopeOf(sessionOrId) {
   const group = /^onebot-group-(\d+)/.exec(id)
   if (group) return 'group:' + group[1]
   if (id.startsWith('onebot-group-')) return 'group:' + id.slice('onebot-group-'.length)
+
+  const discordGroup = /^discord-guild-(\d+)-channel-(\d+)$/.exec(id)
+  if (discordGroup) return 'group:' + discordGroup[1] + ':' + discordGroup[2]
+  if (id.startsWith('discord-dm-')) return 'dm'
+
   return 'dm'
 }
 
@@ -445,19 +453,30 @@ let sharedMtime = -1
 
 /** 重读 feed.json。别的会话写了新内容才会变；本地更新的条目不会被旧盘覆盖。 */
 async function loadShared(cfg, force = false) {
+  sharedDiag(cfg, 'LOAD_BEGIN', { file: sharedPath(cfg), force, sharedMtime })
   try {
     const st = await tryStat(sharedPath(cfg))
     const mtime = st ? st.mtimeMs : -1
-    if (!force && mtime === sharedMtime) return false
+    if (!force && mtime === sharedMtime) {
+      sharedDiag(cfg, 'LOAD_DONE', { result: 'unchanged', mtime, entries: SHARED.size })
+      return false
+    }
     sharedMtime = mtime
-    if (!st) return false
+    if (!st) {
+      sharedDiag(cfg, 'LOAD_DONE', { result: 'missing', mtime, entries: SHARED.size })
+      return false
+    }
     const raw = await readFile(sharedPath(cfg), 'utf8')
     const parsed = JSON.parse(raw)
+    let loaded = 0
     for (const [k, v] of Object.entries(parsed || {})) {
       if (!v || typeof v !== 'object') continue
       const at = Number(v.at) || 0
+      const mineAt = Number(v.mineAt) || 0
       const prev = SHARED.get(k)
-      if (prev && (prev.at || 0) > at) continue // 本地比盘上新，保留本地
+      const incomingActivity = Math.max(at, mineAt)
+      const localActivity = prev ? Math.max(Number(prev.at) || 0, Number(prev.mineAt) || 0) : 0
+      if (prev && localActivity > incomingActivity) continue // 本地更新，保留本地
       SHARED.set(k, {
         surface: String(v.surface || 'web'),
         scope: String(v.scope || scopeOf(k)),
@@ -465,12 +484,17 @@ async function loadShared(cfg, force = false) {
         digest: String(v.digest || ''),
         at,
         mine: String(v.mine || ''),
-        mineAt: Number(v.mineAt) || 0,
+        mineAt,
         items: Array.isArray(v.items) ? v.items.filter((x) => x && typeof x.t === 'string') : [],
       })
+      loaded++
     }
+    sharedDiag(cfg, 'LOAD_DONE', { result: 'loaded', mtime, loaded, entries: SHARED.size })
     return true
-  } catch { return false }
+  } catch (e) {
+    sharedDiag(cfg, 'LOAD_ERROR', { error: String(e), stack: e && e.stack })
+    return false
+  }
 }
 
 function saveSharedSoon(cfg) {
@@ -534,7 +558,10 @@ function renderDialog(e) {
   const out = []
   if (e.digest) out.push('更早：' + e.digest)
   for (const it of items) {
-    const t = it.t.length > DIALOG_LINE ? it.t.slice(0, DIALOG_LINE) + '…' : it.t
+    const raw = String(it.t)
+      .replace(/<discord_user\b[^>]*>\s*([\s\S]*?)\s*<\/discord_user>/g, '$1')
+      .trim()
+    const t = raw.length > DIALOG_LINE ? raw.slice(0, DIALOG_LINE) + '…' : raw
     out.push(roleLabel(it.r) + t)
   }
   return out.join(' / ')
@@ -546,24 +573,70 @@ function recordMine(cfg, session, text) {
   if (!sid || IGNORED_SESSIONS.has(sid)) return
   const clean = String(text).replace(/\s+/g, ' ').trim()
   if (!clean) return
+
+  const now = Date.now()
   const prev = SHARED.get(sid) || { surface: surfaceOf(session), tail: '', digest: '', at: 0 }
   const turn = pushTurn(prev, 'AI', clean)
+
   SHARED.set(sid, {
     surface: prev.surface || surfaceOf(session),
     scope: scopeOf(session),
     tail: prev.tail || '',
     digest: turn ? turn.digest : (prev.digest || ''),
     at: prev.at || 0,
-    mine: prev.mine || '',
-    mineAt: Date.now(),
+    mine: clean,
+    mineAt: now,
     items: turn ? turn.items : (prev.items || []),
   })
+
   saveSharedSoon(cfg)
 }
 
 // 每个会话「已经读过哪一句」：agentId -> (别的会话 id -> 上次读到的 at)
 // 只注新增，读过的不再重复——不然每一步都把同样的几行重新塞进提示词。
 const SHARED_SEEN = new Map()
+// 已准备、但尚未经 sp.context() 交付的共享讯息。
+const SHARED_PENDING = new Map()
+
+let SHARED_DIAG_QUEUE = Promise.resolve()
+
+function sharedDiag(cfg, event, data) {
+  if (!cfg || !cfg.root) return
+  const file = path.join(cfg.root, 'live', 'shared-diagnostic.log')
+  const line = JSON.stringify({
+    time: new Date().toISOString(),
+    event,
+    ...data,
+  }) + '\n'
+
+  SHARED_DIAG_QUEUE = SHARED_DIAG_QUEUE.then(async () => {
+    await mkdir(path.dirname(file), { recursive: true })
+    await writeFile(file, line, { encoding: 'utf8', flag: 'a' })
+  }).catch((e) => {
+    try { console.warn('[MING_SHARED_DIAG_WRITE_FAILED]', String(e)) } catch {}
+  })
+}
+function commitShared(agentId, cfg) {
+  const pending = SHARED_PENDING.get(agentId)
+  if (!pending || !pending.length) return
+
+  let seen = SHARED_SEEN.get(agentId)
+  if (!seen) {
+    seen = new Map()
+    SHARED_SEEN.set(agentId, seen)
+  }
+
+  sharedDiag(cfg, "COMMIT", { agentId, sources: pending.map(x => ({ sid: x.sid, activityAt: x.activityAt })) })
+  try { console.warn("[MING_SHARED_COMMIT]", JSON.stringify({ agentId, sources: pending.map(x => ({ sid: x.sid, activityAt: x.activityAt })) })) } catch {}
+  for (const item of pending) {
+    const last = seen.get(item.sid) || 0
+    if (item.activityAt > last) {
+      seen.set(item.sid, item.activityAt)
+    }
+  }
+
+  SHARED_PENDING.delete(agentId)
+}
 
 /** 只返回「这一步新出现的」别的会话的话；读过的不再给。 */
 function labelOf(e) {
@@ -575,40 +648,147 @@ function labelOf(e) {
 async function sharedDelta(cfg, selfId) {
   try {
     await loadShared(cfg)
+
     const now = Date.now()
     const myScope = scopeOf(selfId)
+
     let seen = SHARED_SEEN.get(selfId)
-    if (!seen) { seen = new Map(); SHARED_SEEN.set(selfId, seen) }
-    const rows = []
-    for (const [sid, e] of SHARED) {
-      if (sid === String(selfId)) continue
-      if (!canSee(myScope, e.scope || scopeOf(sid))) continue
-      if (!e || (!e.tail && !(e.items && e.items.length))) continue
-      if (now - (e.at || 0) > SHARED_AGE_MS) continue
-      const last = seen.get(sid) || 0
-      if ((e.at || 0) <= last) continue
-      rows.push([sid, e, last === 0])
+    if (!seen) {
+      seen = new Map()
+      SHARED_SEEN.set(selfId, seen)
     }
-    if (!rows.length) return ''
-    rows.sort((a, b) => (b[1].at || 0) - (a[1].at || 0))
+
+    sharedDiag(cfg, 'DELTA_AFTER_LOAD', {
+      agentId: String(selfId),
+      sharedEntries: SHARED.size,
+      seenSources: seen.size,
+      now,
+      ageLimit: SHARED_AGE_MS
+    })
+
+    const rows = []
+    const counts = {
+      total: 0,
+      invalid: 0,
+      self: 0,
+      scope: 0,
+      empty: 0,
+      expired: 0,
+      alreadySeen: 0,
+      selected: 0
+    }
+
+    for (const [sid, e] of SHARED) {
+      counts.total++
+
+      if (!e) {
+        counts.invalid++
+        continue
+      }
+      if (sid === String(selfId)) {
+        counts.self++
+        continue
+      }
+      if (!canSee(myScope, e.scope || scopeOf(sid))) {
+        counts.scope++
+        continue
+      }
+      if (!e.tail && !(e.items && e.items.length)) {
+        counts.empty++
+        continue
+      }
+
+      const activityAt = Math.max(
+        Number(e.at) || 0,
+        Number(e.mineAt) || 0
+      )
+
+      if (now - activityAt > SHARED_AGE_MS) {
+        counts.expired++
+        continue
+      }
+
+      const last = seen.get(sid) || 0
+      if (activityAt <= last) {
+        counts.alreadySeen++
+        continue
+      }
+
+      rows.push([sid, e, activityAt])
+      counts.selected++
+    }
+
+    sharedDiag(cfg, 'DELTA_SCAN_DONE', {
+      agentId: String(selfId),
+      counts,
+      candidates: rows.map(([sid, e, activityAt]) => ({
+        sid,
+        activityAt,
+        items: Array.isArray(e.items) ? e.items.length : 0,
+        tailLength: String(e.tail || '').length
+      }))
+    })
+
+    if (!rows.length) {
+      sharedDiag(cfg, 'DELTA_EMPTY', {
+        agentId: String(selfId),
+        seenSources: seen.size
+      })
+      return ''
+    }
+
+    rows.sort((a, b) => b[2] - a[2])
+
     const lines = ['', '', '【别的会话里的对话 · 新增】']
+    const pending = []
     let used = 0
-    for (const [sid, e, first] of rows.slice(0, SHARED_MAX_ENTRIES)) {
-      let line = '- [' + labelOf(e) + ' ' + stamp(e.at) + '] ' + renderDialog(e)
+
+    for (const [sid, e, activityAt] of rows.slice(0, SHARED_MAX_ENTRIES)) {
+      const line = '- [' + labelOf(e) + ' ' + stamp(activityAt) + '] ' + renderDialog(e)
+
       if (used + line.length > SHARED_BUDGET) break
+
       used += line.length
-      seen.set(sid, e.at || 0)
+      pending.push({ sid, activityAt })
       lines.push(line)
     }
-    if (lines.length <= 2) return '' // 一条都没塞进去
+
+    if (lines.length <= 2) {
+      sharedDiag(cfg, 'DELTA_BUDGET_EMPTY', {
+        agentId: String(selfId),
+        candidates: rows.length,
+        budget: SHARED_BUDGET
+      })
+      return ''
+    }
+
     lines.push('（只给新的一句；更早的已经在前几步给过，细节不知道就说不知道，别替她补。）')
+
+    SHARED_PENDING.set(String(selfId), pending)
+
+    sharedDiag(cfg, 'DELTA', {
+      agentId: String(selfId),
+      candidates: rows.map(([sid, e, activityAt]) => ({
+        sid,
+        activityAt
+      })),
+      selected: pending.map(x => ({
+        sid: x.sid,
+        activityAt: x.activityAt
+      })),
+      budgetUsed: used
+    })
+
     return lines.join('\n')
-  } catch {
+  } catch (e) {
+    sharedDiag(cfg, 'DELTA_ERROR', {
+      agentId: String(selfId),
+      error: String(e),
+      stack: e && e.stack
+    })
     return ''
   }
 }
-
-/** 给当前会话挂上「别的会话刚说了什么」；自己的会话不算。 */
 function sharedSuffix(cfg, selfId) {
   try {
     const now = Date.now()
@@ -1191,6 +1371,54 @@ async function refresh(cfg) {
   return snap
 }
 
+
+// PLUGIN_FS_PROBE: temporary diagnostic
+async function probePluginFileAccess(cfg, agentId) {
+  const workspaceFile = path.join(
+    cfg.root,
+    'live',
+    'ming-sandbox-probe.txt'
+  )
+
+  const tempDir = process.env.TEMP || process.env.TMP || ''
+  const outsideFile = tempDir
+    ? path.join(tempDir, 'ming-sandbox-probe.txt')
+    : ''
+
+  async function test(file) {
+    if (!file) {
+      return { ok: false, error: 'TEMP/TMP path unavailable' }
+    }
+
+    try {
+      const content = await readFile(file, 'utf8')
+      return {
+        ok: true,
+        content: content.replace(/^\uFEFF/, '').trim(),
+      }
+    } catch (e) {
+      return {
+        ok: false,
+        code: e.code || '',
+        error: String(e.message || e),
+      }
+    }
+  }
+
+  const [workspace, outside] = await Promise.all([
+    test(workspaceFile),
+    test(outsideFile),
+  ])
+
+  sharedDiag(cfg, 'PLUGIN_FS_PROBE', {
+    agentId: String(agentId),
+    workspaceFile,
+    outsideFile,
+    workspace,
+    outside,
+  })
+}
+
 function attach(cfg, agent, mode) {
   const id = agent && agent.id
   if (!id || ATTACHED.has(id)) return
@@ -1214,7 +1442,10 @@ function attach(cfg, agent, mode) {
       interpolate: false,
       text: () => {
         const rec = PER_AGENT.get(id)
-        return rec ? rec.text : ''
+        const value = rec ? rec.text : ''
+
+
+        return value
       },
     })
     // 会变的那几块改走 context：它每步materialize 成一条排在最后的 user 消息，
@@ -1229,9 +1460,29 @@ function attach(cfg, agent, mode) {
         text: () => {
           const rec = PER_AGENT.get(id)
           if (!rec) return ''
+
           const live = (rec.when || '') + (rec.status || '') + (rec.heavy || '') + (rec.shared || '') +
             (rec.qq || '') + (rec.rooms || '') + compactFlag(sid) + readResumeBlock(cfg)
-          return live.trim() ? live : ''
+
+          const result = live.trim() ? live : ''
+
+          if (rec.shared && result) {
+            sharedDiag(cfg, "CONTEXT_READ", {
+              agentId: id,
+              sharedLength: rec.shared.length,
+              pending: (SHARED_PENDING.get(id) || []).map(x => x.sid)
+            })
+            try {
+              console.warn("[MING_SHARED_CONTEXT_READ]", JSON.stringify({
+                agentId: id,
+                sharedLength: rec.shared.length,
+                pending: (SHARED_PENDING.get(id) || []).map(x => x.sid)
+              }))
+            } catch {}
+            commitShared(id, cfg)
+          }
+
+          return result
         },
       })
     } catch (e) {
@@ -1247,7 +1498,13 @@ function attach(cfg, agent, mode) {
 function readCwd(agent) {
   try {
     const s = agent && agent.session
-    return (s && s.header && s.header.cwd) || (s && s.cwd) || ''
+    return (
+      (s && s.header && s.header.cwd) ||
+      (s && s.identity && s.identity.cwd) ||
+      (s && s.record && s.record.identity && s.record.identity.cwd) ||
+      (s && s.cwd) ||
+      ''
+    )
   } catch {
     return ''
   }
@@ -1266,11 +1523,11 @@ export function apply(ctx, config) {
       const cwd = session && session.header && session.header.cwd
       if (!insideRoot(cwd, cfg.root)) return
       const src = event.data && event.data.source
-      if (src && src.kind === 'plugin') return // 插件自己注入的话不算「她说的」
       // 压缩门牌：压完留一句「这是压缩，不是失忆」。compaction/* 只落日志、不上台面，
       // 所以从事件里捡最后一次的区间，挂在系统提示上（不大动会话，不占轮次）。
       if (event.type === 'compaction/summary') noteCompact(session, event)
       if (event.type === 'user/message') {
+        if (src && src.kind === 'plugin') return
         const text = extractUserText(event.data)
         if (text) recordShared(cfg, session, text)
       } else if (event.type === 'assistant/message') {
@@ -1285,6 +1542,43 @@ export function apply(ctx, config) {
     try {
       const agent = payload && payload.agent
       if (!agent) return
+      // TEMP: Discord persona loading diagnostics
+      let runtimeDiag = {}
+      try {
+        const s = agent.session
+        const p = payload
+        runtimeDiag = {
+          agentId: agent.id,
+          agentKeys: Object.keys(agent),
+          payloadKeys: Object.keys(p || {}),
+          payloadSessionId: p && p.sessionId,
+          sessionType: s === null ? 'null' : typeof s,
+          sessionKeys: s && typeof s === 'object' ? Object.keys(s) : [],
+          headerKeys: s && s.header ? Object.keys(s.header) : [],
+          identityKeys: s && s.identity ? Object.keys(s.identity) : [],
+          recordKeys: s && s.record ? Object.keys(s.record) : [],
+          headerCwd: s && s.header && s.header.cwd,
+          identityCwd: s && s.identity && s.identity.cwd,
+          recordIdentityCwd: s && s.record && s.record.identity && s.record.identity.cwd,
+          sessionCwd: s && s.cwd,
+          resolvedCwd: readCwd(agent),
+          sessionId: sessionIdOf(agent)
+        }
+      } catch (e) {
+        runtimeDiag = { error: String(e) }
+      }
+      try {
+        const diagFile = path.join(cfg.root, 'live', 'persona-debug.log')
+        await mkdir(path.dirname(diagFile), { recursive: true })
+        await writeFile(
+          diagFile,
+          '[' + new Date().toISOString() + '] ' + JSON.stringify(runtimeDiag) + '\n',
+          { encoding: 'utf8', flag: 'a' }
+        )
+      } catch (e) {
+        console.warn('[MING_MEMORY_DIAG_WRITE_FAILED]', String(e))
+      }
+
       const cwd = readCwd(agent)
       if (!cwd) return
       // 没配 root 就什么都不做：空字符串在 POSIX 上会让每个 cwd 都算「在档案目录里」，
@@ -1295,8 +1589,39 @@ export function apply(ctx, config) {
       const rec = { mode, text: mode === 'full' ? snap.full : snap.light, shared: '', when: mode === 'full' ? await readWhenBlock(cfg, agent.id) : '', status: await readStatusBlock(cfg), heavy: await readHeavyBlock(cfg), qq: await readQqBlock(cfg), rooms: await readOtherRoomsBlock(cfg) }
       PER_AGENT.set(agent.id, rec)
       attach(cfg, agent, mode)
-      // 开场先把「别的会话此刻说过什么」给一次，之后只给新增
-      rec.shared = await sharedDelta(cfg, agent.id)
+
+      try {
+        const sp = agent.ctx && agent.ctx.systemPrompt
+        const diag = {
+          type: 'PERSONA_ATTACH_DIAG',
+          agentId: agent.id,
+          cwd: cwd,
+          root: cfg.root,
+          mode: mode,
+          personaFiles: cfg.personaFiles,
+          fullLength: snap.full ? snap.full.length : 0,
+          lightLength: snap.light ? snap.light.length : 0,
+          personaMarkers: cfg.personaFiles.map(rel => ({
+            file: rel,
+            included: !!(snap.full && snap.full.includes('### ' + rel))
+          })),
+          attached: ATTACHED.has(agent.id),
+          systemPromptAvailable: !!sp,
+          sectionFunction: !!(sp && typeof sp.section === 'function'),
+          contextFunction: !!(sp && typeof sp.context === 'function'),
+          recTextLength: rec.text ? rec.text.length : 0
+        }
+
+        const diagFile = path.join(cfg.root, 'live', 'persona-debug.log')
+        await writeFile(
+          diagFile,
+          '[' + new Date().toISOString() + '] ' + JSON.stringify(diag) + '\n',
+          { encoding: 'utf8', flag: 'a' }
+        )
+      } catch (e) {
+        console.warn('[MING_MEMORY_ATTACH_DIAG_FAILED]', String(e))
+      }
+      // shared 统一由 agent/pre-step 读取，避免重复消费。
       // 顺手把「这边最近」写给 QQ 那边（有节流，不会每次都写）
       writeWebForQq(cfg).catch(() => {})
     } catch (e) {
@@ -1309,10 +1634,12 @@ export function apply(ctx, config) {
     try {
       const agent = payload && payload.agent
       const rec = agent && PER_AGENT.get(agent.id)
+      if (rec) await probePluginFileAccess(cfg, agent.id)
       if (rec) {
         // 2026-10-28 那一版的做法是「把时间窗拉长，窗内不重算」，靠少改字来少断缓存；
         // 那是拿「我看到的现在是几点」去换钱。11-05 之后不用换了：会变的块搬出系统提示（见上面的 sp.context）。
         // shared（别的会话的话）必须每步读：它的语义是「读完就划掉」，压进窗口会重复塞（qa-share 会红）。
+        sharedDiag(cfg, 'PRE_STEP', { agentId: String(agent.id) })
         rec.shared = await sharedDelta(cfg, agent.id)
         // ★ 2026-11-05：会变的那几块（时间感 / 状态 / 重活 / 别处的话 / QQ 的话 / 房间）
         //   已经挪进 sp.context()，排在历史后面，改它们不再打断前缀缓存 —— 所以每步都刷，
@@ -1344,6 +1671,7 @@ export function apply(ctx, config) {
     PER_AGENT.delete(id)
     ATTACHED.delete(id)
     SHARED_SEEN.delete(id)
+    SHARED_PENDING.delete(id)
   })
 }
 
