@@ -44,7 +44,7 @@ function DiscordPanel() {
     setSaving(true)
     setError('')
     setNotice('')
-    const ids = (value) => String(value || '').split(/\\r?\\n|[,;]/).map((x) => x.trim()).filter(Boolean)
+    const ids = (value) => String(value || '').split(/\r?\n|[,;]/).map((x) => x.trim()).filter(Boolean)
     const body = {
       mentionRequired: draft.mentionRequired,
       directMessages: draft.directMessages,
