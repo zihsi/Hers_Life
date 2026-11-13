@@ -8,8 +8,8 @@
 - 本机工作区建议统一用绝对路径，避免不同启动目录导致相对路径漂移。
 - Profile 的 `cordis.patch.yml` 是部署配置；不要把含个人 ID、Token 或私人路径的实际文件提交到仓库。
 - `<DSH_HOME>` 代表 DSH 主目录，`<WORKSPACE>` 代表你的工作区，`<REPO>` 代表本仓 clone 目录。
-- `MING_WORKSPACE` 是 Memory、Interest、Discord、Browse、Voice 共用的工作区默认值；插件自身显式 `root` / `workspacePath` 优先于它。
-- `DSH_HOME` 是 DSH 主目录默认值；未设置时回退到 `%USERPROFILE%\\.dsh`。Graph 的记忆目录与本机设置、Interest 与 Discord 的 inbox / session map、Browse 的默认工作区、Mousepet 的设置与运行资料，以及 Voice 的默认工作区，都会从这里解析，避免自订 DSH_HOME 后仍读写旧路径。
+- `MING_WORKSPACE` 是 Memory、Interest、Discord、Browse、Voice、Wake、Resume、Skill Isolate 共用的工作区默认值；插件自身显式 `root` / `workspacePath` 优先于它。
+- `DSH_HOME` 是 DSH 主目录默认值；未设置时回退到 `%USERPROFILE%\\.dsh`。Graph 的记忆目录与本机设置、Interest 与 Discord 的 inbox / session map、Browse 的默认工作区、Mousepet 的设置与运行资料，以及 Voice、Wake、Resume、Skill Isolate 的默认工作区，都会从这里解析，避免自订 DSH_HOME 后仍读写旧路径。
 - Bilibili 登录 Cookie 存在 DSH Credentials（引用名 `MING_BILI_COOKIE`），不写入仓库或聊天记录；旧版 `bili_credential.json` 只在迁移时读取，默认位置跟随 `DSH_HOME`，并兼容旧 `%USERPROFILE%\\.dsh` 位置。登出会写入 Credentials 墓碑，防止旧文件在下次启动时把账号重新登录回来。
 - 具体字段请对照对应包的 `cordis.patch.yml`；不要把本文概览当成完整 schema。
 
@@ -25,10 +25,10 @@
 | `dsh-ming-bilibili-account` | B 站帐号与内容工具 | 扫码登录写入 DSH Credentials；账号、字幕与社交 API 共用 `MING_BILI_COOKIE`；旧 `credentialFile` 仅作迁移来源 |
 | `dsh-ming-browse` | 浏览器自主浏览与受限操作 | `enabled`、`workspacePath`、ADB 路径 / serial、社交平台安全名单 |
 | `dsh-ming-interest` | 兴趣 inbox 监测与自主唤醒 | `enabled`、`workspacePath`、`interestsFile`、日志 / 状态文件、限流、quiet hours、groups；被动观察白名单另设 `observeGroups` |
-| `dsh-ming-wake` | Agent 自行安排下一次唤醒 | 工作区 root；由 Agent 调用 `ming_wake_arm` 并提供明确 sessionId |
-| `dsh-ming-resume` | 插话后恢复先前任务 | root、ADB 路径 / serial、`pauseMediaOnInterrupt` |
+| `dsh-ming-wake` | Agent 自行安排下一次唤醒 | root 默认使用 `MING_WORKSPACE`，否则 `DSH_HOME/workspace`；由 Agent 调用 `ming_wake_arm` 并提供明确 sessionId |
+| `dsh-ming-resume` | 插话后恢复先前任务 | root 默认使用 `MING_WORKSPACE`，否则 `DSH_HOME/workspace`；ADB 路径 / serial、`pauseMediaOnInterrupt` |
 | `dsh-ming-discord` | Discord ↔ DSH bridge | `enabled`、`workspacePath`、`mentionRequired`、`directMessages`、allowlists、`newMessagePolicy`、附件上限与 inbox 路径 |
-| `dsh-ming-skill-isolate` | 工作区 skill 隔离 | root 与 Graph 共用的 `skills-off.json` |
+| `dsh-ming-skill-isolate` | 工作区 skill 隔离 | root 默认使用 `MING_WORKSPACE`，否则 `DSH_HOME/workspace`；与 Graph 共用的 `skills-off.json` |
 
 ## 已验证的工作区配置形状
 
@@ -122,7 +122,7 @@ Discord bridge 的完整字段表、权限与安全建议见 [DISCORD_SETUP.md](
 | `MING_OWNER_DISCORD_ID` | 标记主人身份并允许本人私讯指令 | 可选 |
 | `MING_DISCORD_ALLOWED_USER_IDS` | 额外 Discord 用户白名单，逗号分隔 | 可选 |
 | `MING_OWNER_QQ` | QQ 本人身份识别 | 依 QQ 功能而定 |
-| `MING_WORKSPACE` | Memory、Interest、Discord、Browse、Voice 的工作区覆盖值 | 可选 |
+| `MING_WORKSPACE` | Memory、Interest、Discord、Browse、Voice、Wake、Resume、Skill Isolate 的工作区覆盖值 | 可选 |
 | `MING_FFPLAY` | ffplay 可执行文件位置 | 可选 |
 
 Windows 使用者环境变量设定方式：
