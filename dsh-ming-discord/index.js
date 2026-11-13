@@ -163,6 +163,15 @@ export function apply(ctx, input = {}) {
       inboxQueue = inboxQueue.catch(() => {}).then(async () => {
         const groupId = 'discord:' + message.guildId + ':' + message.channelId
         const responded = !cfg.mentionRequired || Boolean(client.user && message.mentions.has(client.user))
+        const attachmentText = [...(message.attachments?.values?.() || [])].map((a) => {
+          const name = String(a.name || a.filename || 'attachment')
+          const kind = String(a.contentType || '')
+          return '[附件 ' + name + (kind ? ' · ' + kind : '') + '] ' + String(a.url || '')
+        })
+        const embedText = (message.embeds || []).map((e) =>
+          [e.title, e.description, e.url].filter(Boolean).join(' ')
+        ).filter(Boolean)
+        const observedText = [message.content || '', ...embedText, ...attachmentText].filter(Boolean).join('\\n')
         const line = {
           ts: Date.now(), kind: 'message', message_id: String(message.id || ''),
           decision: { ok: responded, stage: 'discord-mention-gate', reason: responded ? 'accepted by Discord bridge' : 'unmentioned message for interest matching' },
@@ -172,7 +181,7 @@ export function apply(ctx, input = {}) {
             message_type: 'group', group_id: groupId,
             user_id: String(message.author.id), self_id: String(client.user?.id || ''),
             sender: { card: message.member?.displayName || message.author.globalName || message.author.username, nickname: message.author.username },
-            message: [{ type: 'text', data: { text: message.content || '' } }],
+            message: [{ type: 'text', data: { text: observedText } }],
           },
         }
         await mkdir(path.dirname(cfg.inboxPath), { recursive: true })
