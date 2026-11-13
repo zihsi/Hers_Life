@@ -403,11 +403,102 @@ export function apply(ctx, config) {
   /** 防重入：ctx.interval 的回调是同步返回的，两个 poll 可能叠在一起读同一批新行。 */
   let polling = false
 
+  const pendingCandidates = []
+  const pendingKeys = new Set()
+  const agentHandles = new Map()
+  const creatingAgents = new Map()
+  let observedCount = 0
+
+  const deriveSessionId = (chatId, frame, line) => {
+    const userId = String(frame?.user_id ?? '')
+    if (String(frame?.message_type || '') === 'private') {
+      return String(line?.source || '').toLowerCase().includes('discord')
+        ? 'discord-dm-' + userId
+        : 'onebot-private-' + userId
+    }
+    const groupId = String(frame?.group_id ?? '')
+    if (groupId.startsWith('discord:')) {
+      const [, guildId, channelId] = groupId.split(':')
+      if (guildId && channelId) return 'discord-guild-' + guildId + '-channel-' + channelId
+    }
+    if (groupId) return 'onebot-group-' + groupId
+    if (String(chatId || '').startsWith('group:')) return 'onebot-group-' + String(chatId).slice(6)
+    return ''
+  }
+
+  const ensureAgent = async (sessionId) => {
+    const current = ctx.agents.get(sessionId)
+    if (current) return current
+    if (!cfg.autoCreateSession) return null
+    if (creatingAgents.has(sessionId)) return creatingAgents.get(sessionId)
+    const task = (async () => {
+      const route = (() => {
+        try { return ctx.get('agentDefaultModel')?.currentSelection?.() || null } catch { return null }
+      })()
+      const agentOptions = {}
+      if (route?.provider) agentOptions.provider = route.provider
+      if (route?.model) agentOptions.model = route.model
+      const setup = async (agentCtx) => {
+        try {
+          const presets = ctx.get('agentPresets')
+          if (cfg.agentPreset && presets?.mount) await presets.mount(agentCtx, cfg.agentPreset)
+        } catch (error) {
+          log('warn', 'mount agent preset failed: ' + String(error))
+        }
+      }
+      let handle
+      try {
+        handle = await ctx.agents.resume({ resumeSessionId: sessionId, agentOptions, setup })
+      } catch {
+        handle = await ctx.agents.create({
+          sessionId,
+          meta: { cwd: cfg.workspacePath },
+          agentOptions,
+          setup,
+        })
+      }
+      if (handle?.agent) agentHandles.set(sessionId, handle)
+      return handle?.agent || ctx.agents.get(sessionId) || null
+    })().finally(() => creatingAgents.delete(sessionId))
+    creatingAgents.set(sessionId, task)
+    return task
+  }
+
+  const emitObservation = (line, frame, item, sessionId) => {
+    if (!cfg.observeEnabled || typeof ctx.emit !== 'function') return
+    if (line?.decision?.ok === true) return // 已经正常进入 Agent 回合，不重复从 inbox 导入。
+    const sourceId = String(
+      line?.message_id ||
+      frame?.message_id ||
+      [line?.source || 'inbox', sessionId, item.userId, item.ts, item.text.slice(0, 80)].join(':'),
+    )
+    try {
+      ctx.emit('ming-memory/observe', {
+        workspacePath: cfg.workspacePath,
+        sessionId,
+        sourceId,
+        source: String(line?.source || 'inbox'),
+        role: item.nick || '群友',
+        text: item.text,
+        at: item.ts,
+      })
+      observedCount++
+    } catch (error) {
+      log('warn', 'shared memory observation emit failed: ' + String(error))
+    }
+  }
+
+  /** 防重入：ctx.interval 的回调是同步返回的，两个 poll 可能叠在一起读同一批新行。 */
+  let polling = false
+
   const poll = async () => {
     if (polling) return
     polling = true
     try {
       const now = new Date()
+      const { lines, note: readNote } = await readNewLines()
+      const interests = await readInterests(interestsPath)
+      const paused = existsSync(offPath)
       const base = {
         at: now.toISOString(),
         quiet: inQuiet(quiet, now),
@@ -416,77 +507,117 @@ export function apply(ctx, config) {
         wakesLastHour: wakeTimes.filter((t) => now.getTime() - t < 3_600_000).length,
         maxPerHour: cfg.maxPerHour,
         running: [...running],
+        pending: pendingCandidates.length,
+        observed: observedCount,
       }
-      if (existsSync(offPath)) return note({ ...base, skip: 'paused by ' + cfg.offFlag })
 
-      const interests = await readInterests(interestsPath)
-      if (interests === null) return note({ ...base, skip: '读不到兴趣清单 live/interests.json' })
-      if (interests.topics.length === 0) return note({ ...base, skip: '兴趣清单是空的' })
-
-      const { lines, note: readNote } = await readNewLines()
-      if (lines.length === 0) return note({ ...base, skip: readNote })
-
-      // 收集候选：只认「被门控丢掉」的群消息——那才是本来我看不见的部分。
-      const candidates = []
+      // 先观察并写入共享 feed；是否命中兴趣、是否暂停唤醒，都不影响记忆记录。
       for (const line of lines) {
         if (line?.kind !== 'message') continue
         const frame = line.frame ?? {}
-        if (frame.message_type !== 'group') continue
-        if (line.decision === undefined || line.decision.ok !== false) continue
+        const messageType = String(frame.message_type || (frame.group_id ? 'group' : 'private'))
+        const isGroup = messageType === 'group'
+        const isPrivate = messageType === 'private'
+        if (!isGroup && !isPrivate) continue
+        if (isPrivate && !cfg.observePrivate) continue
         const groupId = String(frame.group_id ?? '')
-        if (!groupId) continue
-        if (cfg.groups.length > 0 && !cfg.groups.includes(groupId)) continue
-        if (String(frame.self_id ?? '') !== '' && String(frame.user_id ?? '') === String(frame.self_id ?? '')) continue
+        if (isGroup && !groupId) continue
+        if (isGroup && cfg.groups.length > 0 && !cfg.groups.includes(groupId)) continue
+        const userId = String(frame.user_id ?? '')
+        if (String(frame.self_id ?? '') !== '' && userId === String(frame.self_id ?? '')) continue
         const text = renderSegments(frame.message).trim()
-        if (text.length < cfg.minChars) continue
+        if (!text) continue
         const sender = frame.sender ?? {}
-        const nick = String(sender.card || sender.nickname || frame.user_id || '')
+        const nick = String(sender.card || sender.nickname || userId || '群友')
+        const chatId = isGroup ? 'group:' + groupId : 'private:' + userId
+        const ts = Number(line.ts) || Date.now()
         const item = {
           groupId,
-          chatId: 'group:' + groupId,
-          userId: String(frame.user_id ?? ''),
+          chatId,
+          userId,
           nick,
           text,
-          time: hhmm(new Date(Number(line.ts) || Date.now())),
-          ts: Number(line.ts) || Date.now(),
-          reason: String(line.decision.reason ?? line.decision.stage ?? ''),
+          time: hhmm(new Date(ts)),
+          ts,
+          reason: String(line.decision?.reason ?? line.decision?.stage ?? ''),
         }
+        const sessionId = await sessionForChat(chatId) || deriveSessionId(chatId, frame, line)
+        if (sessionId) emitObservation(line, frame, item, sessionId)
+
+        if (!isGroup) continue
         recent.push(item)
-        if (recent.length > 40) recent.shift()
-        const m = matchText(text, interests)
-        if (m.muted) continue
-        if (!m.hits) continue
-        candidates.push({ item, hits: m.hits })
+        if (recent.length > 80) recent.shift()
+        if (paused || !interests || interests.topics.length === 0) continue
+        if (line.decision?.ok !== false) continue
+        if (text.length < cfg.minChars) continue
+        const match = matchText(text, interests)
+        if (match.muted || !match.hits) continue
+        const sourceId = String(line?.message_id || frame?.message_id || [sessionId, userId, ts, text.slice(0, 80)].join(':'))
+        if (pendingKeys.has(sourceId)) continue
+        pendingKeys.add(sourceId)
+        pendingCandidates.push({ item, hits: match.hits, sourceId, queuedAt: Date.now() })
       }
-      if (candidates.length === 0) return note({ ...base, skip: readNote + '（没有命中兴趣的）' })
 
-      const best = candidates[candidates.length - 1]
-      const entry = { ...best.item, hits: best.hits }
+      const ttl = cfg.pendingTtlMinutes * 60_000
+      for (let i = pendingCandidates.length - 1; i >= 0; i--) {
+        if (now.getTime() - pendingCandidates[i].queuedAt > ttl) {
+          pendingKeys.delete(pendingCandidates[i].sourceId)
+          pendingCandidates.splice(i, 1)
+        }
+      }
+      while (pendingCandidates.length > cfg.pendingMax) {
+        const dropped = pendingCandidates.shift()
+        if (dropped) pendingKeys.delete(dropped.sourceId)
+      }
 
-      if (inQuiet(quiet, now)) return note({ ...base, skip: '静默时段', hit: entry.text.slice(0, 40) })
+      const latestBase = { ...base, pending: pendingCandidates.length, observed: observedCount }
+      if (paused) return note({ ...latestBase, skip: 'paused by ' + cfg.offFlag })
+      if (interests === null) return note({ ...latestBase, skip: '读不到兴趣清单 live/interests.json' })
+      if (interests.topics.length === 0) {
+        pendingCandidates.length = 0
+        pendingKeys.clear()
+        return note({ ...latestBase, skip: '兴趣清单是空的；仍持续观察消息并同步记忆' })
+      }
+      if (inQuiet(quiet, now)) return note({ ...latestBase, skip: '静默时段，候选保留排队' })
       if (now.getTime() - lastWake < cfg.minGapMinutes * 60_000) {
-        return note({ ...base, skip: '离上次唤醒太近', hit: entry.text.slice(0, 40) })
+        return note({ ...latestBase, skip: '离上次唤醒太近，候选保留排队' })
       }
       const hourAgo = now.getTime() - 3_600_000
       while (wakeTimes.length > 0 && wakeTimes[0] < hourAgo) wakeTimes.shift()
-      if (wakeTimes.length >= cfg.maxPerHour) return note({ ...base, skip: '这一小时叫醒够多了' })
+      if (wakeTimes.length >= cfg.maxPerHour) return note({ ...latestBase, skip: '这一小时叫醒够多了，候选保留排队' })
+      if (pendingCandidates.length === 0) return note({ ...latestBase, skip: readNote + '（没有命中兴趣的）' })
 
-      const sessionId = await sessionForChat(entry.chatId)
-      if (!sessionId) return note({ ...base, skip: '这个群还没有会话（先在群里 @ 我一次）', hit: entry.text.slice(0, 40) })
-      const agent = ctx.agents.get(sessionId)
-      if (!agent) return note({ ...base, skip: '群的会话不在（可能已经闲到被回收）', sessionId })
-      if (running.has(sessionId) || agent.status === 'running') {
-        return note({ ...base, skip: '那个会话正在跑', sessionId })
+      let selected = null
+      for (let i = 0; i < pendingCandidates.length; i++) {
+        const candidate = pendingCandidates[i]
+        const sessionId = await sessionForChat(candidate.item.chatId) || deriveSessionId(candidate.item.chatId, {
+          message_type: 'group',
+          group_id: candidate.item.groupId,
+          user_id: candidate.item.userId,
+        }, { source: 'onebot' })
+        if (!sessionId) continue
+        let agent = ctx.agents.get(sessionId)
+        if (!agent && cfg.autoCreateSession) agent = await ensureAgent(sessionId)
+        if (!agent) continue
+        if (running.has(sessionId) || agent.status === 'running') continue
+        selected = { index: i, candidate, sessionId, agent }
+        break
       }
+      if (!selected) return note({ ...latestBase, skip: '目标会话尚未就绪或正在运行，候选保留排队' })
 
-      const context = recent.filter((m) => m.chatId === entry.chatId).slice(-(cfg.contextLines || 1))
-      agent.followup({
+      const { index, candidate, sessionId, agent } = selected
+      const entry = { ...candidate.item, hits: candidate.hits }
+      const context = cfg.contextLines > 0
+        ? recent.filter((m) => m.chatId === entry.chatId).slice(-cfg.contextLines)
+        : []
+      await agent.followup({
         id: randomUUID(),
         role: 'user',
         content: [{ type: 'text', text: buildPrompt(entry, context) }],
-        // 必须是非空且不等于裸 'plugin' 的 kind，否则 format v4 会整回合拒收。
         source: { kind: 'plugin:ming-interest' },
       })
+      pendingCandidates.splice(index, 1)
+      pendingKeys.delete(candidate.sourceId)
       lastWake = now.getTime()
       wakeTimes.push(lastWake)
       void recordLog({
@@ -497,7 +628,7 @@ export function apply(ctx, config) {
         hits: entry.hits,
       })
       log('info', 'woke ' + sessionId + ' for ' + entry.hits.map((h) => h.topic).join('/'))
-      return note({ ...base, skip: 'woke', sessionId, hits: entry.hits.map((h) => h.topic) })
+      return note({ ...latestBase, skip: 'woke', sessionId, hits: entry.hits.map((h) => h.topic), pending: pendingCandidates.length })
     } catch (error) {
       log('warn', 'poll failed: ' + String(error))
       note({ at: new Date().toISOString(), error: String(error) })
