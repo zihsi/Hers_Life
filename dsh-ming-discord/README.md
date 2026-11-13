@@ -6,6 +6,9 @@ Discord gateway for DeepSeek Harness. It connects Discord messages to DSH Agents
 
 - One persistent DSH Session per Discord server channel; DMs use one Session per Discord user.
 - Guild messages require an explicit bot mention by default. DMs are accepted when enabled.
+- Unmentioned guild messages can be recorded into the shared inbox for passive memory / interest observation without triggering a direct reply.
+- The Discord settings page in the Hers Life dashboard controls mention gating, DMs, passive observation, server/channel/user allowlists, message queue policy and image attachment size. Changes are saved locally under `DSH_HOME/ming-discord/settings.json` and apply to incoming messages without restarting the gateway.
+- The settings API never returns or persists the Bot token; it remains in `DISCORD_BOT_TOKEN`.
 - Uses `ctx.agents` (`resume`, `create`, `followup`, and `steer`) and DSH session events.
 - Image attachments are downloaded with a size limit and stored through the DSH attachment service.
 - When `dsh-ming-voice` runs `voice_say` in a Discord Session, the bridge safely uploads the generated MP3 from the workspace `live/voice` folder to that same channel.
