@@ -1,67 +1,67 @@
 {
-  "hash": "aff205130ade3e15",
-  "at": "2026-11-12T15:12:18.653Z",
-  "bytes": 209001,
+  "hash": "cac95a5cb4c55631",
+  "at": "2026-11-13T16:41:57.271Z",
+  "bytes": 210466,
   "units": [
     {
       "label": "主题",
       "path": "dsh-ming-ui/src/theme.js",
-      "chars": 8190
+      "chars": 8014
     },
     {
       "label": "神经元",
       "path": "dsh-ming-graph/src/neuron-view.js",
-      "chars": 56197
+      "chars": 54973
     },
     {
       "label": "星图",
       "path": "dsh-ming-graph/src/star-view.js",
-      "chars": 19845
+      "chars": 19390
     },
     {
       "label": "兴趣",
       "path": "dsh-ming-interest/src/panel.js",
-      "chars": 5365
+      "chars": 5236
     },
     {
       "label": "声音",
       "path": "dsh-ming-voice/src/panel.js",
-      "chars": 4548
+      "chars": 4438
     },
     {
       "label": "自己玩",
       "path": "dsh-ming-browse/src/panel.js",
-      "chars": 25269
+      "chars": 24724
     },
     {
       "label": "壳 extras",
       "path": "dsh-ming-graph/src/panels.js",
-      "chars": 3835
+      "chars": 9080
     },
     {
       "label": "主面板·公共",
       "path": "dsh-ming-graph/src/panels/common.js",
-      "chars": 15748
+      "chars": 15532
     },
     {
       "label": "主面板·记忆",
       "path": "dsh-ming-graph/src/panels/memory.js",
-      "chars": 10632
+      "chars": 10406
     },
     {
       "label": "主面板·费用技能",
       "path": "dsh-ming-graph/src/panels/cost.js",
-      "chars": 9708
+      "chars": 9492
     },
     {
       "label": "主面板·桌宠",
       "path": "dsh-ming-graph/src/panels/pet.js",
-      "chars": 19647
+      "chars": 19226
     },
     {
       "label": "主面板",
       "path": "dsh-ming-graph/src/panel.js",
-      "chars": 29395
+      "chars": 29333
     }
   ]
 }
