@@ -12,9 +12,12 @@
 import { spawn, execFile } from 'node:child_process'
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
+import { homedir } from 'node:os'
 
 const FFPLAY = process.env.MING_FFPLAY || 'ffplay'
-const ROOT = 'C:\\dsh\\workspace\\live\\voice'
+const DSH_HOME = process.env.DSH_HOME || path.join(homedir(), '.dsh')
+const WORKSPACE = process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace')
+const ROOT = path.join(WORKSPACE, 'live', 'voice')
 
 const text = (process.argv[2] || '').trim()
 const voice = (process.argv[3] || 'zh-CN-XiaoxiaoNeural').trim()
