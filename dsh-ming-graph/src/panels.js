@@ -92,3 +92,147 @@ function ResumePanel() {
   )
 }
 
+
+
+// B 站账号设置：登录态只通过 DSH 本机 Credentials 服务读写，界面永远不回显 Cookie。
+const MING_BILI_API = '/_dsh/dsh-ming-bilibili-account'
+
+function MingBilibiliPanel() {
+  const [status, setStatus] = useState(null)
+  const [loginUrl, setLoginUrl] = useState('')
+  const [busy, setBusy] = useState('')
+  const [note, setNote] = useState('')
+  const [error, setError] = useState('')
+
+  const request = useCallback(async (path, method = 'GET') => {
+    const res = await fetch(MING_BILI_API + path, {
+      method,
+      headers: { 'content-type': 'application/json' },
+      credentials: 'same-origin',
+    })
+    const data = await res.json()
+    if (!res.ok || data.ok === false) throw new Error(data.message || data.error || '请求失败（HTTP ' + res.status + '）')
+    return data
+  }, [])
+
+  const load = useCallback(async () => {
+    try {
+      const data = await request('/status')
+      setStatus(data)
+      setError('')
+    } catch (e) {
+      setError(String((e && e.message) || e))
+    }
+  }, [request])
+
+  useEffect(() => { load() }, [load])
+
+  const start = async () => {
+    setBusy('start')
+    setError('')
+    setNote('')
+    try {
+      const data = await request('/login/start', 'POST')
+      setLoginUrl(data.url || '')
+      setNote(data.url ? '登入連結已建立。請用手機 B 站開啟連結並確認，完成後回來按「檢查登入」。' : (data.message || '無法建立登入連結。'))
+    } catch (e) {
+      setError(String((e && e.message) || e))
+    } finally {
+      setBusy('')
+    }
+  }
+
+  const poll = async () => {
+    setBusy('poll')
+    setError('')
+    try {
+      const data = await request('/login/poll', 'POST')
+      setNote(data.message || '登入狀態：' + data.state)
+      if (data.state === 'logged_in') {
+        setLoginUrl('')
+        await load()
+      } else if (data.state === 'expired' || data.state === 'invalid_cookie') {
+        setLoginUrl('')
+      }
+    } catch (e) {
+      setError(String((e && e.message) || e))
+    } finally {
+      setBusy('')
+    }
+  }
+
+  const logout = async () => {
+    setBusy('logout')
+    setError('')
+    try {
+      const data = await request('/logout', 'POST')
+      setNote(data.message || '已登出。')
+      setLoginUrl('')
+      await load()
+    } catch (e) {
+      setError(String((e && e.message) || e))
+    } finally {
+      setBusy('')
+    }
+  }
+
+  return h('div', { className: 'ming-page' },
+    h('div', { className: 'ming-ph' },
+      h('div', { className: 'ming-ph-t' }, 'B 站帳號'),
+      h('div', { className: 'ming-ph-d' }, '帳號登入、字幕存取與社交工具共用同一份本機 Cookie'),
+      h('div', { className: 'ming-ph-a' },
+        h('span', { className: 'ming-pill' }, status && status.loggedIn ? '已登入' : '未登入'),
+        h('button', { className: 'ming-btn', disabled: !!busy, onClick: load }, busy === 'load' ? '讀取中…' : '刷新'),
+      ),
+    ),
+    h('div', { className: 'ming-wrap ming-scroll' },
+      error ? h('div', { className: 'ming-empty' }, '△ ' + error) : null,
+      h('div', { className: 'ming-sec' },
+        h('div', { className: 'ming-sec-h' },
+          h('span', { className: 'ming-sec-t' }, '登入狀態'),
+          h('span', { className: 'ming-sec-n' }, status && status.persisted ? '已保存到本機' : '尚未確認本機保存'),
+        ),
+        h('div', { className: 'ming-sec-b' },
+          status && status.loggedIn
+            ? h('div', null,
+                h('div', { style: { fontWeight: 600 } }, status.user || '已登入帳號'),
+                h('div', { className: 'ming-note' }, 'UID：' + (status.uid || '未知')),
+                h('div', { className: 'ming-note' }, status.persisted
+                  ? 'Cookie 已保存於 DSH 本機憑證庫；重啟後會自動恢復。'
+                  : '目前登入只在這次執行有效，請檢查 DSH Credentials 服務。'),
+              )
+            : h('div', { className: 'ming-empty' }, '尚未登入。登入一次後，B 站字幕、帳號資訊、評論與其他社交功能會共用這份登入狀態。'),
+        ),
+      ),
+      h('div', { className: 'ming-sec' },
+        h('div', { className: 'ming-sec-h' },
+          h('span', { className: 'ming-sec-t' }, '帳號登入'),
+          h('span', { className: 'ming-sec-n' }, '手機掃碼確認'),
+        ),
+        h('div', { className: 'ming-sec-b' },
+          loginUrl
+            ? h('div', null,
+                h('a', { href: loginUrl, target: '_blank', rel: 'noreferrer', className: 'ming-link' }, '開啟 B 站登入連結'),
+                h('div', { className: 'ming-note', style: { marginTop: '8px' } }, '請在手機 B 站完成確認，再回來檢查登入。'),
+                h('button', { className: 'ming-btn on', disabled: !!busy, onClick: poll, style: { marginTop: '10px' } }, busy === 'poll' ? '檢查中…' : '檢查登入'),
+              )
+            : h('button', { className: 'ming-btn on', disabled: !!busy || !!(status && status.loggedIn), onClick: start }, busy === 'start' ? '建立登入連結…' : '開始登入'),
+        ),
+      ),
+      status && status.loggedIn
+        ? h('div', { className: 'ming-sec' },
+            h('div', { className: 'ming-sec-h' },
+              h('span', { className: 'ming-sec-t' }, '登出'),
+              h('span', { className: 'ming-sec-n' }, '會清除共用憑證'),
+            ),
+            h('div', { className: 'ming-sec-b' },
+              h('button', { className: 'ming-btn danger', disabled: !!busy, onClick: logout }, busy === 'logout' ? '登出中…' : '登出 B 站'),
+            ),
+          )
+        : null,
+      note ? h('div', { className: 'ming-note', style: { padding: '8px 2px' } }, note) : null,
+      h('div', { className: 'ming-note', style: { padding: '8px 2px' } },
+        '安全說明：Cookie 不會顯示在面板、不會寫入聊天輸出，也不會進入日記。舊版 credentialFile 只在首次啟動時嘗試遷移。'),
+    ),
+  )
+}
