@@ -11,7 +11,7 @@
 | 包 | 干什么 |
 |---|---|
 | `dsh-ming-core-memory` | 核心记忆 + 归档记忆。核心常驻注入，归档按意思检索；写入政策只收机器/环境/项目事实，不写关于人的判断 |
-| `dsh-ming-memory` | 开场记忆：把人设文件与最近几篇日记拼进系统提示词，只读不回写 |
+| `dsh-ming-memory` | 开场记忆：把人设文件与最近几篇日记拼进系统提示词；persona / diary 来源只读，但会维护运行时衍生资料 |
 | `dsh-ming-graph` | 记忆神经元与星图 |
 | `dsh-ming-mousepet` | 桌宠、AI 光标、截图、连拍、常态看屏、气泡说话与 UIA/窗口消息输入 |
 | `dsh-ming-voice` | 文字转语音，落成 mp3 |
@@ -46,7 +46,7 @@ Discord 由 `dsh-ming-discord` 直接接入 DSH：服务器频道与私讯各自
 
 ## 隐私
 
-Token、Discord / QQ 使用者 ID、群号、私人聊天、个人工作区内容、环境变量值、备份、`node_modules`、pnpm store 和运行缓存都不应提交到仓库。仓库只保存通用配置范例与不含秘密的安装说明。
+Token、Discord / QQ 使用者 ID、群号、私人聊天、个人工作区内容、环境变量值、备份、`node_modules`、pnpm store、运行日志与测试输出都不应提交到仓库。仓库只保存通用配置范例与不含秘密的安装说明。
 
 | 变量 / 位置 | 说明 |
 |---|---|
