@@ -61,6 +61,15 @@ const DEFAULTS = {
   groups: [],
   /** 唤醒时附带的上下文条数（同一群人最近几句）。 */
   contextLines: 4,
+  /** 观察 inbox 并写入同工作区共享记忆；与是否唤醒 Agent 分开。 */
+  observeEnabled: true,
+  /** 同时记录 QQ 私讯；私讯不通过兴趣规则主动唤醒。 */
+  observePrivate: true,
+  /** 群会话不存在时，按原会话 ID 自动恢复或建立。 */
+  autoCreateSession: true,
+  /** Agent 忙碌时保留候选的最大数量与过期时间。 */
+  pendingMax: 100,
+  pendingTtlMinutes: 30,
 }
 
 function normalize(config) {
@@ -90,6 +99,11 @@ function normalize(config) {
     minChars: Math.floor(num(c.minChars, DEFAULTS.minChars, 1)),
     groups: list(c.groups, DEFAULTS.groups),
     contextLines: Math.floor(num(c.contextLines, DEFAULTS.contextLines, 0)),
+    observeEnabled: c.observeEnabled !== false,
+    observePrivate: c.observePrivate !== false,
+    autoCreateSession: c.autoCreateSession !== false,
+    pendingMax: Math.floor(num(c.pendingMax, DEFAULTS.pendingMax, 10)),
+    pendingTtlMinutes: num(c.pendingTtlMinutes, DEFAULTS.pendingTtlMinutes, 1),
   }
 }
 
