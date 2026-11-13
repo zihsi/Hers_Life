@@ -60,7 +60,7 @@ try {
   console.log('PASS  logout clears the social client credential cache')
   console.log('PASS  credential service failures fail closed instead of using stale cookies')
   console.log('PASS  Cookie is not sent to external CDN hosts')
-  console.log('★ qa-auth: 4/4')
+  console.log('★ qa-auth: 5/5')
 } finally {
   globalThis.fetch = originalFetch
 }
