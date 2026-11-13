@@ -68,8 +68,10 @@
         minGapMinutes: 20
         maxPerHour: 3
         quietHours: '01:00-08:00'
-        groups: []
+        groups: [] # 空数组代表不筛选群组；会观察所有符合其他条件的群组
 ```
+
+`groups` 只有在数组非空时才会筛选指定群组；**空数组不是关闭监控，而是不限制群组**。如果只允许特定群组，请明确填入对应的 `group_id`。
 
 如果插件版本的 schema 与示例不一致，以该版本源码中的 DEFAULTS / config 读取逻辑为准。特别是 `quietHours` 的具体结构，应与所安装版本的 `dsh-ming-interest/cordis.patch.yml` 保持一致。
 
