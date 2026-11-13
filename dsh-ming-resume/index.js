@@ -21,13 +21,16 @@ import { readFile, appendFile } from 'node:fs/promises'
 import { execFile } from 'node:child_process'
 import path from 'node:path'
 import { homedir } from 'node:os'
+import { homedir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 
 export const name = 'ming-resume'
 
 const STEER_SOURCES = new Set(['plugin:dsh-onebot', 'plugin:ming-discord'])
+const DSH_HOME = process.env.DSH_HOME || path.join(homedir(), '.dsh')
+const DEFAULT_ROOT = process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace')
 const DEFAULTS = {
-  root: 'C:\\dsh\\workspace',
+  root: DEFAULT_ROOT,
   adbPath: 'D:\\MuMuPlayer\\nx_device\\12.0\\shell\\adb.exe',
   serial: '127.0.0.1:7555',
   /** 插话时把正在播的视频暂停，答完再接着播（2026-10-20 她定的）。 */
