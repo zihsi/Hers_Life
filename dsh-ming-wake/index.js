@@ -17,7 +17,7 @@ export const name = 'ming-wake'
 // 原来这里写成单反斜杠 '\d'、'\h'、'\w' 都不是有效转义，JS 会把反斜杠吞掉，
 // 这个常量实际是 'C:workspace'（19 字符）——一个不存在的路径。
 // 2026-11-08 安菲（卡米安菲家的工程师）把它单独 eval 了一遍抓出来的；
-// 三个兄弟包（voice / browse / skill-isolate）写的都是双反斜杠，只有这里漏了。
+// 工作区默认跟随 MING_WORKSPACE；未设置时落在 DSH_HOME/workspace。
 const DSH_HOME = process.env.DSH_HOME || path.join(homedir(), '.dsh')
 const DEFAULT_ROOT = process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace')
 const TICK_MS = 15_000
