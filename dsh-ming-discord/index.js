@@ -133,7 +133,7 @@ export function apply(ctx, input = {}) {
           }
           await settingsReady
           const url = new URL(req.url || '/', 'http://localhost')
-          const action = url.pathname.replace('/_dsh/dsh-ming-discord', '').replace(/^\\//, '')
+          const action = url.pathname.replace('/_dsh/dsh-ming-discord', '').replace(/^\//, '')
           if (action === 'state' && req.method === 'GET') {
             send(200, {
               ok: true,
@@ -165,7 +165,7 @@ export function apply(ctx, input = {}) {
             const next = normalizeUiSettings(body)
             await mkdir(settingsDir, { recursive: true })
             const temp = settingsFile + '.' + randomUUID() + '.tmp'
-            await writeFile(temp, JSON.stringify(next, null, 2) + '\\n', 'utf8')
+            await writeFile(temp, JSON.stringify(next, null, 2) + '\n', 'utf8')
             await rename(temp, settingsFile)
             applyUiSettings(next)
             send(200, { ok: true, settings: next })
