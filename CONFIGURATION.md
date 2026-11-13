@@ -10,6 +10,7 @@
 - `<DSH_HOME>` 代表 DSH 主目录，`<WORKSPACE>` 代表你的工作区，`<REPO>` 代表本仓 clone 目录。
 - `MING_WORKSPACE` 是 Memory、Interest、Discord 共用的工作区默认值；插件自身显式 `root` / `workspacePath` 优先于它。
 - `DSH_HOME` 是 DSH 主目录默认值；未设置时回退到 `%USERPROFILE%\\.dsh`。Interest 与 Discord 的 inbox / session map 都从这里解析，避免一个写入自订 DSH_HOME、另一个却读旧的 `.dsh`。
+- Bilibili 登录 Cookie 存在 DSH Credentials（引用名 `MING_BILI_COOKIE`），不写入仓库或聊天记录；旧版 `bili_credential.json` 只在迁移时读取，默认位置跟随 `DSH_HOME`，并兼容旧 `%USERPROFILE%\\.dsh` 位置。登出会写入 Credentials 墓碑，防止旧文件在下次启动时把账号重新登录回来。
 - 具体字段请对照对应包的 `cordis.patch.yml`；不要把本文概览当成完整 schema。
 
 ## 十二个 bundles
@@ -21,7 +22,7 @@
 | `dsh-ming-graph` | 神经元、星图、记忆面板与 skill 关系 | `syncSeconds`、`qqObservations`、`skillsCwd`、`skillsOffFile` |
 | `dsh-ming-mousepet` | 桌宠、屏幕观察、光标与输入 | Sidecar 使用 Windows PowerShell / WinForms；编辑 `sidecar.ps1` 后按包 README 的 BOM/CRLF 修复流程检查 |
 | `dsh-ming-voice` | TTS 与 MP3 输出 | 可配置 Python / FFmpeg；缺少 edge-tts 环境时可能回退 Windows SAPI |
-| `dsh-ming-bilibili-account` | B 站帐号与内容工具 | 按包的 Cordis patch 与登录流程设置；登录态和 Cookie 不要提交 |
+| `dsh-ming-bilibili-account` | B 站帐号与内容工具 | 扫码登录写入 DSH Credentials；账号、字幕与社交 API 共用 `MING_BILI_COOKIE`；旧 `credentialFile` 仅作迁移来源 |
 | `dsh-ming-browse` | 浏览器自主浏览与受限操作 | `enabled`、`workspacePath`、ADB 路径 / serial、社交平台安全名单 |
 | `dsh-ming-interest` | 兴趣 inbox 监测与自主唤醒 | `enabled`、`workspacePath`、`interestsFile`、日志 / 状态文件、限流、quiet hours、groups |
 | `dsh-ming-wake` | Agent 自行安排下一次唤醒 | 工作区 root；由 Agent 调用 `ming_wake_arm` 并提供明确 sessionId |
