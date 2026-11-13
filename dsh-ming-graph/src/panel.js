@@ -643,6 +643,24 @@ return {
         }
       }
     } catch (e) { /* 页签挂了也别影响面板本身 */ }
+    // B 站账号页：由 B 站插件提供本机凭证 API，壳只负责显示设置界面。
+    try {
+      if (typeof window !== 'undefined') {
+        const biliDesc = {
+          id: 'ming-bilibili',
+          label: 'B站',
+          order: 85,
+          title: 'B 站账号、字幕与社交功能共用的本机登录状态',
+          render: MingBilibiliPanel,
+        }
+        if (window.__MING_TAB_HOST && typeof window.__MING_TAB_HOST.add === 'function') {
+          window.__MING_TAB_HOST.add(biliDesc)
+        } else {
+          ;(window.__MING_TABS_PENDING || (window.__MING_TABS_PENDING = [])).push(biliDesc)
+        }
+      }
+    } catch (e) { /* B 站页签挂了也不影响主面板 */ }
+
     ctx.slots.inject('main', () => ctx.slots.register({
       name: 'main',
       key: 'ming-graph',
