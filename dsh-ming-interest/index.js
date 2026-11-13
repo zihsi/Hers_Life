@@ -399,6 +399,57 @@ export function apply(ctx, config) {
   const logPath = path.join(cfg.workspacePath, cfg.logFile)
   const offPath = path.join(cfg.workspacePath, cfg.offFlag)
 
+  const settingsPath = path.join(cfg.workspacePath, 'live', 'interest-settings.json')
+  const settingsSnapshot = () => ({
+    observeEnabled: cfg.observeEnabled,
+    observePrivate: cfg.observePrivate,
+    autoCreateSession: cfg.autoCreateSession,
+    groups: cfg.groups,
+    minGapMinutes: cfg.minGapMinutes,
+    maxPerHour: cfg.maxPerHour,
+    quietHours: cfg.quietHours,
+    minChars: cfg.minChars,
+    contextLines: cfg.contextLines,
+    pendingMax: cfg.pendingMax,
+    pendingTtlMinutes: cfg.pendingTtlMinutes,
+  })
+  const sanitizeSettings = (raw = {}) => {
+    const out = {}
+    for (const key of ['observeEnabled', 'observePrivate', 'autoCreateSession']) {
+      if (typeof raw[key] === 'boolean') out[key] = raw[key]
+    }
+    if (Array.isArray(raw.groups)) out.groups = [...new Set(raw.groups.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()))]
+    const bounded = (key, min, max) => {
+      if (raw[key] === undefined) return
+      const n = Number(raw[key])
+      if (Number.isFinite(n)) out[key] = Math.max(min, Math.min(max, n))
+    }
+    bounded('minGapMinutes', 1, 1440)
+    bounded('maxPerHour', 0, 60)
+    bounded('minChars', 1, 500)
+    bounded('contextLines', 0, 20)
+    bounded('pendingMax', 10, 500)
+    bounded('pendingTtlMinutes', 1, 240)
+    if (typeof raw.quietHours === 'string') out.quietHours = raw.quietHours.trim().slice(0, 32)
+    return out
+  }
+  const loadSettings = async () => {
+    try {
+      const saved = JSON.parse(await readFile(settingsPath, 'utf8'))
+      Object.assign(cfg, sanitizeSettings(saved))
+    } catch { /* 尚未建立設定檔，使用 DSH 插件預設值 */ }
+    return settingsSnapshot()
+  }
+  const saveSettings = async (raw) => {
+    const patch = sanitizeSettings(raw)
+    Object.assign(cfg, patch)
+    await mkdir(path.dirname(settingsPath), { recursive: true })
+    const temp = settingsPath + '.' + randomUUID() + '.tmp'
+    await writeFile(temp, JSON.stringify(settingsSnapshot(), null, 2) + '\n', 'utf8')
+    await rename(temp, settingsPath)
+    return settingsSnapshot()
+  }
+
   // 同一工作区共用一份兴趣清单；所有会话都能让助手自行新增、候选、确认或移除。
   try {
     ctx.tools.register({
