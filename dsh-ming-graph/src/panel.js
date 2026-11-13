@@ -331,7 +331,7 @@ function NeuronPanel() {
       // tab 分两组：竖线左边是记下来的，右边是我干活用的。
       h('div', { className: 'mg-seg' },
         [['neuron', '神经元'], ['star', '星图'], ['memory', '记忆'], ['|'],
-          ['browse', '自己玩'], ['interest', '兴趣'], ['voice', '声音'],
+          ['browse', '自己玩'], ['interest', '兴趣'], ['voice', '声音'], ['discord', 'Discord'],
           // 2026-11-10 她定的：「桌宠也去掉吧，就保留光标就可以了」。
           // 桌宠那页是本机专用的，光标页才是"谁装谁有"的那一个——自己用和发出去要同一套。
           ['cost', '费用'], ['|']]
@@ -444,6 +444,9 @@ function NeuronPanel() {
     ),
     h('div', { key: 'voice' + reloadTick, className: 'mg-holder', style: view === 'voice' ? null : { display: 'none' } },
       view === 'voice' ? h(VoicePanel) : null,
+    ),
+    h('div', { key: 'discord' + reloadTick, className: 'mg-holder', style: view === 'discord' ? null : { display: 'none' } },
+      view === 'discord' ? h(DiscordPanel) : null,
     ),
     // 2026-11-10 她定的：桌宠页拿掉，功能并进「光标」页（外部插件挂进来的那个）。
     // 这里保留 PetPage 的定义和 import，别删——并回去的时候不用从头写。
