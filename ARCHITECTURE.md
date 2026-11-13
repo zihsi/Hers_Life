@@ -103,5 +103,5 @@ Graph 与 Memory 有共享 UI 构建步骤。共享 UI source 在 `dsh-ming-ui`�
 - Message Content Intent 必须在 Developer Portal 启用。
 - Guild / Channel / User allowlists 建议正式使用时明确配置。
 - Bot 可使用的 DSH tools 仍由 profile / Agent 工具权限决定。
-- Mousepet 的默认输入优先使用 UIA / 窗口消息，不占用真实鼠标与键盘焦点；物理输入是显式回退。
+- Mousepet 的 `auto` 输入优先使用 UIA / 窗口消息；但部分 `type` / `key` 路径在 UIA 聚焦或窗口消息失败后仍可能使用物理键盘。`mode:"physical"` 会明确要求物理输入，不能把 `auto` 视为绝对无物理输入。
 - Browse 的社交平台写入与支付相关动作应保留 deny rules，不应为了自动化而放宽。
