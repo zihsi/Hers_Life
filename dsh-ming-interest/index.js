@@ -19,6 +19,7 @@
  */
 
 import path from 'node:path'
+import { homedir } from 'node:os'
 import { existsSync } from 'node:fs'
 import { appendFile, mkdir, open, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
@@ -28,7 +29,7 @@ export const name = 'ming-interest'
 /** agents 用来找/叫醒会话；timer 提供 ctx.interval。 */
 export const inject = ['agents', 'timer', 'tools']
 
-const DSH_HOME = process.env.DSH_HOME || path.join(process.env.USERPROFILE || process.env.HOME || '', '.dsh')
+const DSH_HOME = process.env.DSH_HOME || path.join(homedir(), '.dsh')
 
 const DEFAULTS = {
   enabled: true,
