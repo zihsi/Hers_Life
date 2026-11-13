@@ -7,6 +7,8 @@ import { Client, GatewayIntentBits, Partials } from 'discord.js'
 export const name = 'ming-discord'
 export const inject = ['agents', 'attachments']
 
+const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
+
 function list(value) {
   return Array.isArray(value) ? value.map(x => String(x).trim()).filter(Boolean) : []
 }
@@ -47,7 +49,7 @@ export function apply(ctx, input = {}) {
     token: input.token || process.env.DISCORD_BOT_TOKEN || '',
     provider: input.provider || '',
     model: input.model || '',
-    workspacePath: path.resolve(input.workspacePath || path.join(os.homedir(), 'dsh', 'workspace')),
+    workspacePath: path.resolve(input.workspacePath || process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace')),
     agentPreset: input.agentPreset || '',
     mentionRequired: input.mentionRequired !== false,
     directMessages: input.directMessages !== false,
@@ -58,10 +60,10 @@ export function apply(ctx, input = {}) {
     newMessagePolicy: input.newMessagePolicy === 'followup' ? 'followup' : 'steer',
     maxAttachmentBytes: Number.isFinite(Number(input.maxAttachmentBytes)) && Number(input.maxAttachmentBytes) > 0
       ? Math.floor(Number(input.maxAttachmentBytes)) : 10 * 1024 * 1024,
-    inboxPath: input.inboxPath || path.join(os.homedir(), '.dsh', 'media', 'onebot', 'qq-inbox.jsonl'),
-    chatSessionsPath: input.chatSessionsPath || path.join(os.homedir(), '.dsh', 'media', 'onebot', 'chat-sessions.json'),
+    inboxPath: input.inboxPath || path.join(DSH_HOME, 'media', 'onebot', 'qq-inbox.jsonl'),
+    chatSessionsPath: input.chatSessionsPath || path.join(DSH_HOME, 'media', 'onebot', 'chat-sessions.json'),
   }
-  const logPath = path.join(os.homedir(), '.dsh', 'ming-discord', 'discord.log')
+  const logPath = path.join(DSH_HOME, 'ming-discord', 'discord.log')
   let logQueue = Promise.resolve()
   const log = (level, message) => {
     const timestamp = new Intl.DateTimeFormat('sv-SE', {
