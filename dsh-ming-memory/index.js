@@ -545,6 +545,7 @@ function saveSharedSoon(cfg) {
       const tmp = sharedPath(cfg) + '.tmp'
       await writeFile(tmp, JSON.stringify(obj, null, 2), 'utf8')
       await rename(tmp, sharedPath(cfg))
+      writeWebForQq(cfg).catch(() => {})
       // 这边的话也同步给 QQ 那边（节流在 writeWebForQq 里）
       writeWebForQq(cfg).catch(() => {})
     } catch { /* 写失败不影响会话 */ }
