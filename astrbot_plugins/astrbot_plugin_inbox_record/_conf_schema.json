@@ -1,0 +1,8 @@
+{
+  "inboxPath": {
+    "type": "string",
+    "description": "共享 QQ 收件匣路径",
+    "default": "",
+    "hint": "留空時自動使用 DSH_HOME/media/onebot/qq-inbox.jsonl；若 AstrBot 與 DSH 使用不同資料目錄，請填入兩邊都能存取的同一個 JSONL 檔案完整路徑。"
+  }
+}
