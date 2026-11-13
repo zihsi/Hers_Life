@@ -28,13 +28,15 @@ export const name = 'ming-interest'
 /** agents 用来找/叫醒会话；timer 提供 ctx.interval。 */
 export const inject = ['agents', 'timer', 'tools']
 
+const DSH_HOME = process.env.DSH_HOME || path.join(process.env.USERPROFILE || process.env.HOME || '', '.dsh')
+
 const DEFAULTS = {
   enabled: true,
-  workspacePath: 'C:\\dsh\\workspace',
+  workspacePath: process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace'),
   /** onebot 的入站录制文件（recordInbound: true 才存在）。 */
-  inboxPath: (process.env.USERPROFILE || '') + '\\.dsh\\media\\onebot\\qq-inbox.jsonl',
+  inboxPath: path.join(DSH_HOME, 'media', 'onebot', 'qq-inbox.jsonl'),
   /** onebot 的 chatId → sessionId 映射，用来找「群自己的那个会话」。 */
-  chatSessionsPath: (process.env.USERPROFILE || '') + '\\.dsh\\media\\onebot\\chat-sessions.json',
+  chatSessionsPath: path.join(DSH_HOME, 'media', 'onebot', 'chat-sessions.json'),
   /** 兴趣清单（工作区相对路径）。 */
   interestsFile: 'live\\interests.json',
   /** 每次唤醒追加一行，可查。 */
