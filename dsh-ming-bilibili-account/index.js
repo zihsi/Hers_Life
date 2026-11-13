@@ -92,8 +92,8 @@ const GUIDANCE = `Use bilibili_search to find videos on bilibili.com by keyword;
 
 /** 存在 DSH 凭证服务里的名字。注意：这是通过服务读写，不是我去翻 .credentials.yaml。 */
 const CRED_REF = 'MING_BILI_COOKIE'
-// 登出墓碑：防止删掉 Credentials 后，旧版 credentialFile 又在下次启动时把账号恢复。
-const CRED_LOGOUT_REF = 'MING_BILI_COOKIE_LOGOUT'
+// 登出墓碑直接覆盖 Cookie 凭证，避免旧版 credentialFile 在下次启动时把账号恢复。
+const CRED_LOGOUT_SENTINEL = '__MING_BILI_LOGGED_OUT__'
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 const API_HEADERS = {
@@ -184,13 +184,15 @@ function applyRestore(ctx, legacyFile) {
     // 若 Credentials 服务暂时不可用，宁可暂时不登录，也不绕过安全凭证服务读取旧文件。
     if (canResolve) {
       try {
-        const marker = await credentials.resolve(CRED_LOGOUT_REF)
-        if (marker && typeof marker.value === 'string' && marker.value.trim() === '1') {
-          credentialSource = 'logged-out'
-          return
-        }
         const saved = await credentials.resolve(CRED_REF)
-        if (saved && typeof saved.value === 'string') cookie = saved.value.trim()
+        if (saved && typeof saved.value === 'string') {
+          const value = saved.value.trim()
+          if (value === CRED_LOGOUT_SENTINEL) {
+            credentialSource = 'logged-out'
+            return
+          }
+          cookie = value
+        }
       } catch {
         credentialSource = 'credentials-unavailable'
         return
@@ -211,7 +213,6 @@ function applyRestore(ctx, legacyFile) {
         try {
           if (!credentials || typeof credentials.set !== 'function') throw new Error('DSH Credentials 服务不可用')
           await credentials.set(CRED_REF, cookie)
-          await credentials.set(CRED_LOGOUT_REF, '0')
           credentialPersisted = true
           credentialSource = 'credentials-migrated'
         } catch {
@@ -250,7 +251,6 @@ async function persistCookie(ctx, cookie) {
   try {
     if (!ctx.credentials || typeof ctx.credentials.set !== 'function') throw new Error('DSH Credentials 服务不可用')
     await ctx.credentials.set(CRED_REF, cookie)
-    await ctx.credentials.set(CRED_LOGOUT_REF, '0')
     credentialPersisted = true
     credentialSource = 'credentials'
     return true
@@ -264,31 +264,16 @@ async function clearCookie(ctx) {
   storedCookie = ''
   pendingKey = null
   credentialPersisted = false
-  if (!ctx.credentials) {
+  try {
+    if (!ctx.credentials || typeof ctx.credentials.set !== 'function') throw new Error('DSH Credentials 服务不可用')
+    // 用非秘密墓碑覆盖 Cookie，而不是只 unset：旧版文件仍存在时也不会被重新迁移登录。
+    await ctx.credentials.set(CRED_REF, CRED_LOGOUT_SENTINEL)
+    credentialSource = 'none'
+    return true
+  } catch {
     credentialSource = 'clear-failed'
     return false
   }
-
-  // 先写墓碑，再删除 Cookie。即使删除接口失败，下次启动也不会复活旧凭证。
-  let tombstoneSaved = false
-  let cookieRemoved = false
-  try {
-    if (typeof ctx.credentials.set !== 'function') throw new Error('DSH Credentials 服务不可用')
-    await ctx.credentials.set(CRED_LOGOUT_REF, '1')
-    tombstoneSaved = true
-  } catch { /* 继续尝试删除 Cookie */ }
-  try {
-    if (typeof ctx.credentials.unset !== 'function') throw new Error('DSH Credentials 服务不可用')
-    await ctx.credentials.unset(CRED_REF)
-    cookieRemoved = true
-  } catch { /* 不把删除失败误报为成功 */ }
-
-  if (tombstoneSaved && cookieRemoved) {
-    credentialSource = 'none'
-    return true
-  }
-  credentialSource = tombstoneSaved ? 'cleared-but-stale' : 'clear-failed'
-  return false
 }
 
 export function apply(ctx, config) {
