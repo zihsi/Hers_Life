@@ -21,7 +21,7 @@
 
 | 内容 | 现在唯一的源 | 谁读它 |
 |---|---|---|
-| 主题 | `dsh-ming-ui/src/theme.js` | `dsh-ming-graph/build.mjs`、`dsh-ming-memory/build.mjs` 直接读绝对路径 |
+| 主题 | `dsh-ming-ui/src/theme.js` | `dsh-ming-graph/build.mjs`、`dsh-ming-memory/build.mjs` 以仓库内相对位置读取 |
 | 兴趣面板 | `dsh-ming-interest/src/panel.js` | `dsh-ming-graph/build.mjs` 切它的 `const INTEREST_API` 到文件末 |
 | 声音面板 | `dsh-ming-voice/src/panel.js` | 同上 |
 | 自己玩面板 | `dsh-ming-browse/src/panel.js` | 同上 |
@@ -34,12 +34,12 @@
 ## 现在怎么改、怎么验
 
 ```
-cd C:/dsh/dsh-ming-graph
+cd <REPO>\dsh-ming-graph
 node build.mjs            # 拼 client.js，跑三道门
 node build.mjs --check    # 只问一句：client.js 是最新的吗（过期退出码 1）
 ```
 
-改面板 = **改那个插件的 `src/panel.js`**，然后 `node build.mjs`。没有第二步同步。
+改面板 = **改那个插件的 `src/panel.js`**，然后在 `dsh-ming-graph` 目录执行 `node build.mjs`。没有第二步同步。`<REPO>` 是你实际 clone 的仓库目录，不要照抄旧版 `C:/dsh` 路径。
 
 三道门拦的都是「改完了、跑的不是这份」：
 
