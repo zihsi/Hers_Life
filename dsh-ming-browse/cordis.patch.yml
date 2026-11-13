@@ -3,7 +3,8 @@
       name: dsh-ming-browse
       config:
         enabled: true
-        workspacePath: '<DSH>\workspace'
+        # 留空时依序使用 MING_WORKSPACE，再回退到 <DSH_HOME>\\workspace。
+        workspacePath: ''
         # 2026-10-23 她改：自由窗口 = 每天 18:30–08:00，另加「节假日/双休日 13:50–18:15」。
         # 2026-10-25：额度多了个临时开关 live/browse-unlimited.json（她说「不限量」就全放开，
         #   默认每天早上 09:00 自己收）。dailyMax / minGapMinutes 仍是平时的底。
