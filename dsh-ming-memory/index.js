@@ -1413,7 +1413,7 @@ async function refresh(cfg) {
 }
 
 
-function attach(cfg, agent, mode) {function attach(cfg, agent, mode) {
+function attach(cfg, agent, mode) {
   const id = agent && agent.id
   if (!id || ATTACHED.has(id)) return
 
