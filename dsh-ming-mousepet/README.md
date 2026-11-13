@@ -7,6 +7,10 @@
 
 2026-11-08 起。起因是她说「把电脑操作插件和独立光标插件合在一起做一个新插件，像是在桌面陪伴，偶尔还会说两句话」。
 
+## 数据目录
+
+设置环境变量 `DSH_HOME` 后，桌宠设置、用户皮肤、截图、网页选取资料、陪伴日志与环境帧都会写入该目录下的 `ming-mousepet/`。未设置时使用 `%USERPROFILE%\\.dsh`。内置光标与预览素材仍保留在插件自身的 `assets/`，不会搬动或删除。
+
 ## 两个工具
 
 ### `pet` —— 陪伴层（默认只读）
@@ -46,7 +50,7 @@
 - `ambient`（常态识别，2026-11-10）：右键桌宠开关，开了就一直看。
   **节奏在 Node 侧**（`setInterval` 每 3 秒发一次 tick），sidecar 只负责截一张缩略图比变化；
   画面变化超过阈值（默认 3%）才留一帧 1280 宽 JPEG + 一行时间线，静止时只有一次截屏 + 粗网格抽样。
-  帧落在 `~/.dsh/ming-mousepet/ambient/`，超过 120 帧丢最旧的；`timeline.jsonl` 记 at/diff/前台窗口。
+  帧落在 `<DSH_HOME>/ming-mousepet/ambient/`，超过 120 帧丢最旧的；`timeline.jsonl` 记 at/diff/前台窗口。
   为什么不放在 sidecar 里起线程：实测后台线程里 GDI 截图会卡死（diag 停在 tick:area），
   主线程（请求线程）同一份代码正常——所以「多久看一次」归 JS，「怎么看一次」留在 sidecar。
 - 没有 `postinstall`，没有运行时依赖；侧车是 Windows PowerShell 5.1 + WinForms。
