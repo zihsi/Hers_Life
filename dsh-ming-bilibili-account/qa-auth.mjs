@@ -47,12 +47,18 @@ try {
   const loggedOut = await social.credential()
   assert.equal(loggedOut.cookie, '', '登出后不能回退到 SocialClient 旧 Cookie 缓存')
 
+  const unavailable = new SocialClient({ getCredential: async () => { throw new Error('Credentials unavailable') } })
+  unavailable.credentialCache = { cookie: COOKIE, csrf: 'test-csrf', uid: '12345' }
+  const failedClosed = await unavailable.credential()
+  assert.equal(failedClosed.cookie, '', '统一凭证服务不可用时不能退回旧 Cookie 缓存')
+
   await provider.fetchBytes('https://subtitle-cdn.example/image.png')
   assert.equal(requests[2].headers.cookie, undefined, 'Cookie 不得泄漏到字幕／图片 CDN 主机')
 
   console.log('PASS  subtitle Provider uses shared Cookie')
   console.log('PASS  social APIs use the same Cookie')
   console.log('PASS  logout clears the social client credential cache')
+  console.log('PASS  credential service failures fail closed instead of using stale cookies')
   console.log('PASS  Cookie is not sent to external CDN hosts')
   console.log('★ qa-auth: 4/4')
 } finally {
