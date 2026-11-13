@@ -103,6 +103,12 @@
 
 Discord bridge 的完整字段表、权限与安全建议见 [DISCORD_SETUP.md](DISCORD_SETUP.md)。
 
+**安全提醒：** `allowedGuildIds`、`allowedChannelIds`、`allowedUserIds` 为空时代表不额外限制该维度，不代表拒绝所有人。若 Bot 所在 Profile 含有桌面、文件、浏览器或 Shell 工具，正式使用前应填入可信的 Guild / Channel / User ID，并只邀请到可信服务器。`mentionRequired: true` 只是群聊触发门槛，不是身份验证。
+
+## 链接插件与宿主 API 依赖
+
+`dsh-ming-bilibili-account` 透过 `peerDependencies` 声明 DSH 宿主提供的 `@deepseek-ai/dsh-tools`、`@deepseek-ai/dsh-attachment` 与 `@deepseek-ai/dsh-llm`。这是链接 bundle 使用宿主 API 的依赖声明，不要擅自改成把另一份宿主 API 打包进插件。修改依赖声明后，重新执行 Profile 的 `pnpm install`，再重启 DSH 并检查插件加载日志。
+
 ## 环境变量
 
 | 变量 | 用途 | 是否必需 |
