@@ -53,8 +53,11 @@ export function apply(ctx, input = {}) {
     agentPreset: input.agentPreset || '',
     mentionRequired: input.mentionRequired !== false,
     directMessages: input.directMessages !== false,
+    observeUnmentioned: input.observeUnmentioned !== false,
     allowedGuildIds: list(input.allowedGuildIds),
     allowedChannelIds: list(input.allowedChannelIds),
+    configuredAllowedUserIds: list(input.allowedUserIds),
+    envAllowedUserIds: [...new Set([...(process.env.MING_DISCORD_ALLOWED_USER_IDS || '').split(',').map(x => x.trim()), process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
     allowedUserIds: [...new Set([...list(input.allowedUserIds), ...(process.env.MING_DISCORD_ALLOWED_USER_IDS || '').split(',').map(x => x.trim()), process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
     ownerUserIds: [...new Set([...list(input.ownerUserIds), process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
     newMessagePolicy: input.newMessagePolicy === 'followup' ? 'followup' : 'steer',
@@ -63,6 +66,33 @@ export function apply(ctx, input = {}) {
     inboxPath: input.inboxPath || path.join(DSH_HOME, 'media', 'onebot', 'qq-inbox.jsonl'),
     chatSessionsPath: input.chatSessionsPath || path.join(DSH_HOME, 'media', 'onebot', 'chat-sessions.json'),
   }
+  const settingsDir = path.join(DSH_HOME, 'ming-discord')
+  const settingsFile = path.join(settingsDir, 'settings.json')
+  let gatewayStatus = cfg.enabled ? (cfg.token ? 'starting' : 'missing-token') : 'disabled'
+  const cleanIds = value => {
+    const values = Array.isArray(value) ? value : String(value || '').split(/[\\n,;]+/)
+    return [...new Set(values.map(x => String(x).trim()).filter(x => /^\\d{5,25}$/.test(x)))].slice(0, 200)
+  }
+  const normalizeUiSettings = raw => ({
+    mentionRequired: raw.mentionRequired !== false,
+    directMessages: raw.directMessages !== false,
+    observeUnmentioned: raw.observeUnmentioned !== false,
+    allowedGuildIds: cleanIds(raw.allowedGuildIds),
+    allowedChannelIds: cleanIds(raw.allowedChannelIds),
+    configuredAllowedUserIds: cleanIds(raw.allowedUserIds),
+    newMessagePolicy: raw.newMessagePolicy === 'followup' ? 'followup' : 'steer',
+    maxAttachmentBytes: Math.max(1024 * 1024, Math.min(50 * 1024 * 1024, Math.floor(Number(raw.maxAttachmentBytes) || cfg.maxAttachmentBytes))),
+  })
+  const applyUiSettings = raw => {
+    const next = normalizeUiSettings(raw)
+    Object.assign(cfg, next)
+    cfg.allowedUserIds = [...new Set([...cfg.configuredAllowedUserIds, ...cfg.envAllowedUserIds])]
+    return next
+  }
+  const settingsReady = readFile(settingsFile, 'utf8').then(raw => {
+    try { applyUiSettings(JSON.parse(raw)) } catch (error) { log('warn', 'saved settings parse failed: ' + String(error)) }
+  }).catch(error => { if (error?.code !== 'ENOENT') log('warn', 'saved settings read failed: ' + String(error)) })
+
   const logPath = path.join(DSH_HOME, 'ming-discord', 'discord.log')
   let logQueue = Promise.resolve()
   const log = (level, message) => {
@@ -86,6 +116,70 @@ export function apply(ctx, input = {}) {
     }).catch(() => {})
   }
 
+  // 面板 API 即使 Bot 未連線也可用；只允許調整非憑證設定，Token 永不回傳或寫入設定檔。
+  ctx.inject(['connection', 'webServer'], webCtx => {
+    webCtx.effect(() => webCtx.webServer.register({
+      kind: 'prefix',
+      path: '/_dsh/dsh-ming-discord',
+      handler: async (req, res) => {
+        const send = (status, body) => {
+          res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+          res.end(JSON.stringify(body))
+        }
+        try {
+          if (webCtx.connection && typeof webCtx.connection.requestRejection === 'function') {
+            const rejection = webCtx.connection.requestRejection(req)
+            if (rejection) { send(rejection, { ok: false, error: 'rejected' }); return }
+          }
+          await settingsReady
+          const url = new URL(req.url || '/', 'http://localhost')
+          const action = url.pathname.replace('/_dsh/dsh-ming-discord', '').replace(/^\\//, '')
+          if (action === 'state' && req.method === 'GET') {
+            send(200, {
+              ok: true,
+              status: gatewayStatus,
+              tokenPresent: Boolean(cfg.token),
+              settings: {
+                mentionRequired: cfg.mentionRequired,
+                directMessages: cfg.directMessages,
+                observeUnmentioned: cfg.observeUnmentioned,
+                allowedGuildIds: cfg.allowedGuildIds,
+                allowedChannelIds: cfg.allowedChannelIds,
+                allowedUserIds: cfg.configuredAllowedUserIds,
+                environmentUserAllowCount: cfg.envAllowedUserIds.length,
+                newMessagePolicy: cfg.newMessagePolicy,
+                maxAttachmentBytes: cfg.maxAttachmentBytes,
+              },
+            })
+            return
+          }
+          if (action === 'settings' && req.method === 'POST') {
+            const chunks = []
+            let size = 0
+            for await (const chunk of req) {
+              size += chunk.length
+              if (size > 32768) { send(413, { ok: false, error: 'request body too large' }); return }
+              chunks.push(Buffer.from(chunk))
+            }
+            const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+            const next = normalizeUiSettings(body)
+            await mkdir(settingsDir, { recursive: true })
+            const temp = settingsFile + '.' + randomUUID() + '.tmp'
+            await writeFile(temp, JSON.stringify(next, null, 2) + '\\n', 'utf8')
+            await rename(temp, settingsFile)
+            applyUiSettings(next)
+            send(200, { ok: true, settings: next })
+            return
+          }
+          send(404, { ok: false, error: 'not found' })
+        } catch (error) {
+          log('warn', 'settings API failed: ' + String(error))
+          send(400, { ok: false, error: String((error && error.message) || error) })
+        }
+      },
+    }), 'ming-discord: settings api')
+  })
+
   log('info', 'apply() 已進入')
   log('info', `設定摘要：enabled=${cfg.enabled}, tokenPresent=${Boolean(cfg.token)}, workspacePath=${cfg.workspacePath}`)
   if (!cfg.enabled) {
@@ -100,6 +194,7 @@ export function apply(ctx, input = {}) {
   log('info', '準備註冊 ctx.effect()')
   ctx.effect(() => {
     let disposed = false
+    gatewayStatus = 'connecting'
     log('info', 'ctx.effect() 已執行，開始建立 Discord Client')
     let inboxQueue = Promise.resolve()
     let mapQueue = Promise.resolve()
@@ -355,6 +450,7 @@ export function apply(ctx, input = {}) {
     client.on('messageCreate', async message => {
       try {
         if (disposed || message.author?.bot) return
+        await settingsReady
         const isDm = !message.guildId
         if (isDm && !cfg.directMessages) return
         if (cfg.allowedUserIds.length && !cfg.allowedUserIds.includes(message.author.id)) return
@@ -363,12 +459,14 @@ export function apply(ctx, input = {}) {
         const mentioned = Boolean(client.user && message.mentions.has(client.user))
         const shouldRespond = isDm || !cfg.mentionRequired || mentioned
         await routeRestore
-        await recordInbox(message).catch(error => log('warn', 'inbox write failed: ' + String(error)))
-        if (!shouldRespond) return
-
+        // 即使沒有 @，也先建立頻道到 Session 的回程映射；Interest 喚醒同一 Session 時才能回到原頻道。
         const { id, chatKey } = resolveSession(message)
         sessionChannels.set(id, message.channelId)
         await saveMap(chatKey, id)
+        if (cfg.observeUnmentioned || shouldRespond) {
+          await recordInbox(message).catch(error => log('warn', 'inbox write failed: ' + String(error)))
+        }
+        if (!shouldRespond) return
         const agent = await ensureAgent(id)
         const body = client.user
           ? message.content.replace(new RegExp('<@!?'+client.user.id+'>', 'g'), '').trim()
@@ -431,6 +529,7 @@ export function apply(ctx, input = {}) {
     })
 
     client.once('ready', () => {
+      gatewayStatus = 'connected'
       routeRestore = restoreRoutes()
       void routeRestore.catch(error => log('warn', 'restore routes failed: ' + String(error)))
       log('info', '已連線 Discord：' + (client.user?.tag || client.user?.id))
@@ -438,7 +537,7 @@ export function apply(ctx, input = {}) {
     log('info', '即將呼叫 client.login()')
     client.login(cfg.token)
       .then(() => log('info', 'client.login() Promise 已成功；等待 ready 事件'))
-      .catch(error => log('error', 'login failed: ' + String(error)))
+      .catch(error => { gatewayStatus = 'error'; log('error', 'login failed: ' + String(error)) })
 
     return () => {
       disposed = true
