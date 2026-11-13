@@ -8,6 +8,8 @@
         workspacePath: ''
         mentionRequired: true
         directMessages: true
+        # 未 @ 的群訊息仍會寫入共享 inbox，供興趣插件被動觀察；關閉只保留直接回覆的訊息。
+        observeUnmentioned: true
         # 空陣列代表不額外限制；建議正式使用時填入允許的 Guild / Channel ID。
         allowedGuildIds: []
         allowedChannelIds: []
