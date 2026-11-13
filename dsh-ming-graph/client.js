@@ -3,7 +3,7 @@
  *
  * ⚠ 生成物，别手改：改 src/*.js 或各插件的 src/panel.js，然后 `node build.mjs`。
  *   现在是不是最新的：`node build.mjs --check`
- *   build cac95a5cb4c55631
+ *   build dadfd70b148042be
  *
  * 入口：左侧图标栏一个图标（sidebar.panellist），点开占满主区域（main 面板 key = ming-graph）。
  * 数据来自 Host 半端 /_dsh/dsh-ming-graph/neurons，自己拉、自己画，不经过模型。
@@ -2787,12 +2787,15 @@ function MingBilibiliPanel() {
   }, [])
 
   const load = useCallback(async () => {
+    setBusy('load')
     try {
       const data = await request('/status')
       setStatus(data)
       setError('')
     } catch (e) {
       setError(String((e && e.message) || e))
+    } finally {
+      setBusy('')
     }
   }, [request])
 
@@ -2883,14 +2886,14 @@ function MingBilibiliPanel() {
         h('div', { className: 'ming-sec-b' },
           loginUrl
             ? h('div', null,
-                h('a', { href: loginUrl, target: '_blank', rel: 'noreferrer', className: 'ming-link' }, '開啟 B 站登入連結'),
+                h('a', { href: loginUrl, target: '_blank', rel: 'noreferrer', style: { color: 'var(--dsw-alias-text-primary)', textDecoration: 'underline' } }, '開啟 B 站登入連結'),
                 h('div', { className: 'ming-note', style: { marginTop: '8px' } }, '請在手機 B 站完成確認，再回來檢查登入。'),
                 h('button', { className: 'ming-btn on', disabled: !!busy, onClick: poll, style: { marginTop: '10px' } }, busy === 'poll' ? '檢查中…' : '檢查登入'),
               )
             : h('button', { className: 'ming-btn on', disabled: !!busy || !!(status && status.loggedIn), onClick: start }, busy === 'start' ? '建立登入連結…' : '開始登入'),
         ),
       ),
-      status && status.loggedIn
+      status && (status.loggedIn || status.source === 'clear-failed')
         ? h('div', { className: 'ming-sec' },
             h('div', { className: 'ming-sec-h' },
               h('span', { className: 'ming-sec-t' }, '登出'),
