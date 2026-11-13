@@ -63,6 +63,8 @@ git -C $Repo pull --ff-only
 
 先备份目标 profile 的 `package.json`、`pnpm-lock.yaml` 与 `cordis.patch.yml`。不要删除整个 profile，也不要清空或重建 `node_modules` / pnpm store。
 
+**链接插件的宿主 API 依赖要声明为 peerDependencies。** 本仓 `dsh-ming-bilibili-account/package.json` 已声明 `@deepseek-ai/dsh-tools`、`@deepseek-ai/dsh-attachment`、`@deepseek-ai/dsh-llm`，让 DSH loader 能将插件 API 依赖解析到宿主提供的版本。不要为了消除加载错误随意把宿主 API 复制安装成插件自己的独立运行时版本。
+
 在 profile 的 `package.json` 中：
 - 把十二个目录加入 `dependencies`，值为指向各自本机目录的 `link:` 路径。
 - 把十二个 bundle 名称加入 `dsh.profile.bundles`。
@@ -141,17 +143,15 @@ Pop-Location
 
 如果当前 DSH 版本已经提供兼容 Cordis，先核对宿主版本和 peer dependency，不要盲目降级或覆盖。上面 Cordis 4.1.0 是本次 DSH Desktop 0.2.2-rc.2 环境的验证值。
 
-## 8. Discord 本地依赖解析 Junction（重要）
+## 8. Discord 本地依赖解析（仅在实际报错时处理）
 
-### 为什么需要
+当前分支的 Discord 插件已由使用者确认可以正常载入并连接 Bot。不要为了预防性排错而重复建立或覆盖现有 `node_modules` / Junction。
 
-本次实际排查发现：
+### 何时需要检查
 
-- 从 Profile 目录执行 Node 的模块解析，成功找到 Profile 的 `node_modules\discord.js`。
-- 从链接插件真实源码目录 `dsh-ming-discord` 解析，同一依赖却报 `Cannot find module 'discord.js'`。
-- 原因是 Node 从本地 link 包的真实路径解析 ESM import；pnpm 将依赖放在 Profile 的 node_modules，不会自动在 link 目标旁建立同一依赖树。
+只有在日志明确出现 `Cannot find module 'discord.js'`，且 Profile 目录可以解析、插件真实源码目录却不能解析时，才检查本机 link 依赖布局。Node 会从插件真实源码目录解析 ESM import；pnpm `link:` 的模块解析位置可能与 Profile 不同。
 
-### 建立 Junction
+### 建立 Junction（条件式方案）
 
 先确认插件目录不存在自己的 `node_modules`。若它已经存在，先检查内容和链接目标，不要覆盖：
 
@@ -169,7 +169,7 @@ if (-not (Test-Path $PluginModules)) {
 }
 ```
 
-这是本机安装布局的修复，不是插件源码。**不要把 Junction、node_modules 或依赖缓存提交到 Git。** 如果 Profile 或仓库位置变动，需要重新检查 Junction 目标。
+这是本机安装布局的修复，不是插件源码。**不要把 Junction、node_modules 或依赖缓存提交到 Git。** 如果 Profile 或仓库位置变动，需要重新检查 Junction 目标。若目前插件已正常载入，就不要重复建立。
 
 ### 验证依赖解析
 
