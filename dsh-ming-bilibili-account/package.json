@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AI的 B 站账号工具：扫码登录、查账号能力状态、改昵称。登录态只存进程内存，不落盘。",
+  "description": "AI的 B 站账号工具：扫码登录、字幕与社交功能共用本机持久化凭证。",
   "main": "index.js",
   "exports": {
     ".": "./index.js",
