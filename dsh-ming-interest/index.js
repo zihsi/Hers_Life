@@ -26,7 +26,7 @@ import { randomUUID } from 'node:crypto'
 export const name = 'ming-interest'
 
 /** agents 用来找/叫醒会话；timer 提供 ctx.interval。 */
-export const inject = ['agents', 'timer']
+export const inject = ['agents', 'timer', 'tools']
 
 const DEFAULTS = {
   enabled: true,
@@ -370,6 +370,40 @@ export function apply(ctx, config) {
   const statePath = path.join(cfg.workspacePath, cfg.stateFile)
   const logPath = path.join(cfg.workspacePath, cfg.logFile)
   const offPath = path.join(cfg.workspacePath, cfg.offFlag)
+
+  // 同一工作区共用一份兴趣清单；所有会话都能让助手自行新增、候选、确认或移除。
+  try {
+    ctx.tools.register({
+      name: 'ming_interest_manage',
+      description: [
+        '管理助手根据自身长期行为推断出的兴趣清单（跨 QQ、Discord、网页会话共用）。',
+        '当你在多次互动中持续主动追问、反复探索、主动找相关内容时，可 action=add；',
+        '只有一次性任务、用户喜欢但你没有持续探索，不应直接加入；不确定时用 action=propose。',
+        '兴趣淡去或你不想再关注时用 action=remove；用户明确要求加入或移除时优先执行。',
+        '可用 action=list 查看当前主动兴趣与候选。请附 reason、evidence、source，避免无依据地乱加。',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['list', 'add', 'remove', 'propose', 'accept', 'reject', 'mute', 'unmute'] },
+          name: { type: 'string', description: '兴趣名称；mute/unmute 时也可用 word。' },
+          keywords: { type: 'array', items: { type: 'string' }, description: '用于发现相关内容的关键词。' },
+          reason: { type: 'string', description: '为什么认为这是持续兴趣。' },
+          evidence: { type: 'string', description: '来自聊天、群聊、影片、小说或生活的简短证据。' },
+          source: { type: 'string', description: '证据来源，例如 Discord 群、B 站字幕、网页会话。' },
+          word: { type: 'string', description: 'mute/unmute 使用的词。' },
+        },
+        required: ['action'],
+      },
+      output: { schema: { type: 'string' } },
+      async execute(args) {
+        const result = await manageInterest(interestsPath, args)
+        return JSON.stringify(result)
+      },
+    })
+  } catch (error) {
+    log('warn', 'interest manage tool 注册失败: ' + String(error))
+  }
 
   /** inbox 的读取位置（字节）。null = 还没定，首次读就跳到末尾，不翻旧账。 */
   let cursor = null
