@@ -309,7 +309,7 @@ export function apply(ctx, config) {
             if (rejection) { send(rejection, { ok: false, error: 'rejected' }); return }
           }
           const url = new URL(req.url || '/', 'http://localhost')
-          const what = url.pathname.replace('/_dsh/dsh-ming-interest', '').replace(/^\\//, '')
+          const what = url.pathname.replace('/_dsh/dsh-ming-interest', '').replace(/^\//, '')
           const interestsPath = path.join(cfg.workspacePath, cfg.interestsFile)
 
           if (what === 'toggle' && req.method === 'POST') {
