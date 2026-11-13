@@ -318,6 +318,133 @@ export function apply(ctx, config) {
     console.error('[ming-bilibili] 社交面工具整体注册失败（其余工具不受影响）：' + String((e && e.message) || e))
   }
 
+  const auth = {
+    async status() {
+      await restorePromise
+      return {
+        loggedIn: !!session,
+        user: session ? (session.uname || '') : '',
+        uid: session ? (session.uid || '') : '',
+        persisted: !!credentialPersisted,
+        source: credentialSource,
+      }
+    },
+    async start() {
+      await restorePromise
+      const { text } = await requestBody('https://passport.bilibili.com/x/passport-login/web/qrcode/generate', {
+        headers: { ...API_HEADERS },
+      })
+      let json
+      try { json = JSON.parse(text) } catch { return { state: 'error', message: 'B 站没有返回有效的登录资料。' } }
+      if (!json || json.code !== 0 || !json.data || !json.data.qrcode_key || !json.data.url) {
+        return { state: 'error', message: '生成登录链接失败：' + String(json?.message || json?.code || '未知错误') }
+      }
+      pendingKey = json.data.qrcode_key
+      return { state: 'waiting_scan', url: json.data.url, expiresAt: Date.now() + 180000 }
+    },
+    async poll() {
+      await restorePromise
+      if (!pendingKey) return { state: 'not_started', message: '尚未开始扫码，请先开始登录。' }
+      const { res, text } = await requestBody(
+        'https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=' + encodeURIComponent(pendingKey),
+        { headers: { ...API_HEADERS } },
+      )
+      let json
+      try { json = JSON.parse(text) } catch { return { state: 'error', message: 'B 站没有返回有效的轮询结果。' } }
+      const code = json && json.data ? json.data.code : -1
+      if (code === 86101) return { state: 'waiting_scan', message: '尚未扫码。' }
+      if (code === 86090) return { state: 'waiting_confirm', message: '已扫码，请在手机上确认登录。' }
+      if (code === 86038) {
+        pendingKey = null
+        return { state: 'expired', message: '登录链接已过期，请重新开始。' }
+      }
+      if (code !== 0) return { state: 'error', message: '登录失败，B 站返回 code=' + String(code) }
+      const jar = parseSetCookies(typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [])
+      const cookie = buildCookieHeader(jar)
+      if (!cookie) return { state: 'error', message: '登录完成，但没有取得可用的 Cookie。' }
+
+      pendingKey = null
+      const persisted = await persistCookie(ctx, cookie)
+      const me = await api('/x/web-interface/nav')
+      const d = me.json && me.json.data
+      if (!d || !d.isLogin) {
+        await clearCookie(ctx)
+        return { state: 'invalid_cookie', message: 'B 站没有确认这份登录状态有效，请重新扫码。' }
+      }
+      session.uname = d.uname
+      session.uid = String(d.mid)
+      return {
+        state: 'logged_in',
+        user: session.uname,
+        uid: session.uid,
+        persisted,
+        message: persisted
+          ? '登录成功，Cookie 已保存到 DSH 本机凭证库。字幕和社交工具会共用这份登录状态。'
+          : '登录成功，但本机安全凭证保存失败；当前运行期间可用，重启后需要重新登录。',
+      }
+    },
+    async logout() {
+      await restorePromise
+      const cleared = await clearCookie(ctx)
+      return {
+        state: 'logged_out',
+        persistedCleared: cleared,
+        message: cleared
+          ? '已登出，并清除本机保存的 B 站凭证。'
+          : '本次运行已登出，但本机凭证库未能确认清除；请检查 DSH Credentials 服务。',
+      }
+    },
+  }
+
+  const AUTH_ROUTE = '/_dsh/dsh-ming-bilibili-account'
+  ctx.inject(['connection', 'webServer'], (webCtx) => {
+    webCtx.effect(() => webCtx.webServer.register({
+      kind: 'prefix',
+      path: AUTH_ROUTE,
+      handler: async (req, res) => {
+        const send = (status, body) => {
+          res.writeHead(status, {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+          })
+          res.end(JSON.stringify(body))
+        }
+        try {
+          if (webCtx.connection && typeof webCtx.connection.requestRejection === 'function') {
+            const rejection = webCtx.connection.requestRejection(req)
+            if (rejection !== undefined) {
+              send(rejection || 403, { ok: false, error: 'rejected' })
+              return
+            }
+          }
+          const url = new URL(req.url || '/', 'http://localhost')
+          const action = url.pathname.slice(AUTH_ROUTE.length).replace(/^\\//, '')
+          if (req.method === 'GET' && action === 'status') {
+            send(200, { ok: true, ...(await auth.status()) })
+            return
+          }
+          if (req.method === 'POST' && action === 'login/start') {
+            const result = await auth.start()
+            send(result.state === 'error' ? 502 : 200, { ok: result.state !== 'error', ...result })
+            return
+          }
+          if (req.method === 'POST' && action === 'login/poll') {
+            const result = await auth.poll()
+            send(result.state === 'error' || result.state === 'invalid_cookie' ? 502 : 200, { ok: result.state !== 'error' && result.state !== 'invalid_cookie', ...result })
+            return
+          }
+          if (req.method === 'POST' && action === 'logout') {
+            send(200, { ok: true, ...(await auth.logout()) })
+            return
+          }
+          send(404, { ok: false, error: 'not found' })
+        } catch (error) {
+          send(500, { ok: false, error: String(error?.message || error) })
+        }
+      },
+    }))
+  })
+
   ctx.tools.register({
     name: 'bili_login',
     description:
@@ -334,70 +461,34 @@ export function apply(ctx, config) {
     output: { schema: { type: 'string' }, render: (_a, v) => [{ type: 'text', text: String(v) }] },
     async execute(args) {
       const action = args && args.action
-
       if (action === 'status') {
-        if (!session) return '当前没有登录态。'
-        return '已登录：' + (session.uname || session.uid) + '（uid ' + (session.uid || '?') + '）'
+        const state = await auth.status()
+        return state.loggedIn
+          ? '已登录：' + (state.user || state.uid) + '（uid ' + (state.uid || '?') + '）' + (state.persisted ? '；已保存在本机' : '；尚未确认本机保存成功')
+          : '当前没有登录态。'
       }
-
-      if (action === 'logout') {
-        session = null
-        pendingKey = null
-        try { await ctx.credentials.unset(CRED_REF) } catch { /* 无所谓 */ }
-        return '已清掉登录态（内存和凭证服务里都清了）。'
-      }
-
+      if (action === 'logout') return (await auth.logout()).message
       if (action === 'start') {
-        const { res, text } = await requestBody('https://passport.bilibili.com/x/passport-login/web/qrcode/generate', {
-          headers: { ...API_HEADERS },
-        })
-        const json = JSON.parse(text)
-        if (!json || json.code !== 0 || !json.data) return '生成登录二维码失败：' + JSON.stringify(json).slice(0, 200)
-        pendingKey = json.data.qrcode_key
+        const result = await auth.start()
+        if (result.state === 'error') return result.message
         return [
-          '用手机打开这个链接，在 B 站里确认登录（我没给你二维码图，链接一样能用）：',
-          json.data.url,
+          '用手机打开这个链接，在 B 站里确认登录：',
+          result.url,
           '',
-          '确认完回来告诉我，我再轮询一次。二维码大约 3 分钟过期。',
-        ].join('\n')
+          '确认后调用 action=poll。链接约 3 分钟过期。',
+        ].join('\\n')
       }
-
       if (action === 'poll') {
-        if (!pendingKey) return '还没有开始登录。先调用 action=start。'
-        const { res, text } = await requestBody(
-          'https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=' + encodeURIComponent(pendingKey),
-          { headers: { ...API_HEADERS } },
+        const result = await auth.poll()
+        return result.message || (
+          result.state === 'logged_in'
+            ? '登录成功：' + result.user + '（uid ' + result.uid + '）'
+            : '登录状态：' + result.state
         )
-        const json = JSON.parse(text)
-        const code = json && json.data ? json.data.code : -1
-        if (code === 86101) return '还没扫码。'
-        if (code === 86090) return '扫了，但还没在手机上点确认。'
-        if (code === 86038) { pendingKey = null; return '二维码过期了，重新 start 一次。' }
-        if (code !== 0) return '登录失败，code=' + code + ' ' + JSON.stringify(json).slice(0, 200)
-
-        const jar = parseSetCookies(typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [])
-        const cookie = ['SESSDATA', 'bili_jct', 'DedeUserID', 'DedeUserID__ckMd5', 'sid']
-          .filter((k) => jar[k])
-          .map((k) => k + '=' + jar[k])
-          .join('; ')
-        if (!cookie) return '拿到了成功码，但没解析出 cookie。'
-
-        session = { cookie, csrf: jar.bili_jct || '', uid: jar.DedeUserID || '', uname: '' }
-        pendingKey = null
-        // 落进凭证服务：DSH 重启后能自己恢复，不用再扫
-        try { await ctx.credentials.set(CRED_REF, cookie) } catch { /* 存不进也不影响这次登录 */ }
-
-        const me = await api('/x/web-interface/nav')
-        const d = me.json && me.json.data
-        if (d && d.isLogin) {
-          session.uname = d.uname
-          session.uid = String(d.mid)
-        }
-        return '登录成功：' + (session.uname || '(名字待查)') + '（uid ' + (session.uid || '?') + '）\n接着用 bili_me 看账号状态。'
       }
-
       return 'action 只能是 start / poll / status / logout'
     },
+
   })
 
   ctx.tools.register({
@@ -418,6 +509,7 @@ export function apply(ctx, config) {
     output: { schema: { type: 'string' }, render: (_a, v) => [{ type: 'text', text: String(v) }] },
     async execute(args) {
       const action = args && args.action
+      await restorePromise
       if (!session) return '还没登录。先 bili_login action=start。'
 
       if (action === 'whoami') {
