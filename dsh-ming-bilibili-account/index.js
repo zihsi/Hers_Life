@@ -42,6 +42,7 @@ import { applyBilibiliSocialTools } from './lib/social.js'
 /** 凭证文件默认位置。配置项 credentialFile 覆盖它。 */
 const DSH_HOME = process.env.DSH_HOME || path.join(process.env.USERPROFILE || process.env.HOME || '', '.dsh')
 const DEFAULT_CREDENTIAL_FILE = path.join(DSH_HOME, 'bili-duty', 'bili_credential.json')
+const LEGACY_DEFAULT_CREDENTIAL_FILE = path.join(process.env.USERPROFILE || process.env.HOME || '', '.dsh', 'bili-duty', 'bili_credential.json')
 const SEARCH_MAX_PAGE_SIZE = 20
 const TOOL_TIMEOUT_MS = 30_000
 
@@ -200,7 +201,11 @@ function applyRestore(ctx, legacyFile) {
       credentialPersisted = true
       credentialSource = 'credentials'
     } else {
-      cookie = await readCredentialCookie(legacyFile)
+      const legacyFiles = [...new Set([legacyFile, LEGACY_DEFAULT_CREDENTIAL_FILE].filter((file) => typeof file === 'string' && file.length > 0))]
+      for (const file of legacyFiles) {
+        cookie = await readCredentialCookie(file)
+        if (cookie) break
+      }
       if (cookie) {
         credentialSource = 'legacy-file'
         try {
