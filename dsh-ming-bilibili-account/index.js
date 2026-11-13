@@ -418,7 +418,7 @@ export function apply(ctx, config) {
             }
           }
           const url = new URL(req.url || '/', 'http://localhost')
-          const action = url.pathname.slice(AUTH_ROUTE.length).replace(/^\\//, '')
+          const action = url.pathname.slice(AUTH_ROUTE.length).replace(/^\//, '')
           if (req.method === 'GET' && action === 'status') {
             send(200, { ok: true, ...(await auth.status()) })
             return
@@ -449,7 +449,7 @@ export function apply(ctx, config) {
     name: 'bili_login',
     description:
       '登录 B 站账号（扫码）。action=start 返回一个手机可打开的登录链接；你在手机 B 站确认后，'
-      + '用 action=poll 轮询结果。登录态只存在内存里，DSH 重启就要重新扫。',
+      + '用 action=poll 轮询结果。登录态保存在 DSH 本机 Credentials 中，并由字幕与社交工具共用。',
     parameters: {
       type: 'object',
       additionalProperties: false,
