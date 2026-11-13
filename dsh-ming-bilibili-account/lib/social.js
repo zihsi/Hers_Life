@@ -149,7 +149,8 @@ export class SocialClient {
     if (this.getCredential) {
       try {
         const fresh = await this.getCredential()
-        if (fresh && typeof fresh.cookie === 'string' && fresh.cookie.length > 0) {
+        if (fresh && typeof fresh.cookie === 'string') {
+          // 统一凭证服务是唯一真相源；空 Cookie 代表已登出，不能退回旧缓存。
           this.credentialCache = fresh
           return fresh
         }
