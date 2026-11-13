@@ -26,7 +26,7 @@
 
 ## 消息源：AstrBot 与 Discord
 
-QQ 侧使用 AstrBot；本仓的 DSH 插件读取文件与工具，不绑定特定 QQ bot 后端。兴趣唤醒依赖兼容格式的 `qq-inbox.jsonl`，AstrBot 插件 `astrbot_plugins/astrbot_plugin_inbox_record` 负责写入。
+QQ 侧使用 AstrBot；本仓的 DSH 插件读取文件与工具，不绑定特定 QQ bot 后端。兴趣唤醒依赖兼容格式的 `qq-inbox.jsonl`，AstrBot 插件 `astrbot_plugins/astrbot_plugin_inbox_record` 负责写入。记录器默认写入 `<DSH_HOME>/media/onebot/qq-inbox.jsonl`（未设置 `DSH_HOME` 时为 `%USERPROFILE%\\.dsh`）；也可在 AstrBot 插件设置中用 `inboxPath` 指定完整路径。
 
 Discord 由 `dsh-ming-discord` 直接接入 DSH：服务器频道与私讯各自使用独立 Session；服务器频道默认必须 @ Bot 才会触发 Agent 回复，但未 @ 的群消息仍会写入兼容 inbox，供 `dsh-ming-interest` 匹配。**目前 inbox 观察记录只写文字，不代表兴趣系统已经能理解未 @ 消息中的图片。**
 
