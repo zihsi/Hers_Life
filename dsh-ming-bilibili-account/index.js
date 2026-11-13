@@ -7,8 +7,8 @@
  * 登录态怎么拿：扫码。生成 qrcode_key → 你在手机 B 站上确认 → 轮询换 cookie。
  * 密码和 cookie 都不经过聊天框。
  *
- * 登录态存哪：**只存在进程内存里**，不落盘、不进记忆库、不进日记。
- * 代价是 DSH 重启要重扫一次。我觉得这个代价该付。
+ * 登录态存哪：统一写入 DSH 本机 Credentials 安全凭证服务；账号工具、字幕 Provider、社交接口共用同一份 Cookie。
+ * 旧版 credentialFile 只用于首次迁移，不再作为运行时的第二套凭证来源。
  */
 export const name = 'ming-bilibili-account'
 
@@ -20,7 +20,6 @@ export const inject = ['tools', 'systemPrompt', 'credentials']
 
 // —— B站取数：从 dsh-plugin-bilibili 搬过来的 provider 与五个工具（原样 vendored）——
 import { readFile } from 'node:fs/promises'
-import { readFileSync } from 'node:fs'
 import {
   BilibiliOfficialProvider,
   BILIBILI_DEFAULT_BASE_URL,
@@ -50,6 +49,8 @@ const CREDENTIAL_FIELDS = [
   ['bili_jct', 'bili_jct'],
   ['buvid3', 'buvid3'],
   ['DedeUserID', 'dedeuserid'],
+  ['DedeUserID__ckMd5', 'dedeuserid__ckmd5'],
+  ['sid', 'sid'],
 ]
 
 /** 把凭证 JSON 拼成 cookie header。**返回值只往下传，任何时候都不打印、不落进工具输出。** */
@@ -94,9 +95,13 @@ const API_HEADERS = {
 /** 进程内存里的登录态；重启即失效，故意不落盘 */
 let session = null // { cookie, csrf, uid, uname }
 let pendingKey = null
+let storedCookie = ''
+let credentialPersisted = false
+let credentialSource = 'none'
+let restorePromise = Promise.resolve()
 
 function cookieHeader() {
-  return session ? session.cookie : ''
+  return storedCookie || (session ? session.cookie : '')
 }
 
 /** 从 cookie 串里取一个键的值 */
@@ -160,49 +165,108 @@ async function api(pathname, init) {
   return { status: res.status, json }
 }
 
-function applyRestore(ctx) {
-  // 启动时从 DSH 凭证服务恢复登录态：走服务 API，不去读 .credentials.yaml
-  if (!ctx.credentials || typeof ctx.credentials.resolve !== 'function') return
-  Promise.resolve()
-    .then(async () => {
-      const r = await ctx.credentials.resolve(CRED_REF)
-      if (!r || !r.value) return
-      const restored = sessionFromCookie(r.value)
-      session = restored
-      const me = await api('/x/web-interface/nav')
-      const d = me.json && me.json.data
-      if (d && d.isLogin) {
-        session.uname = d.uname
-        session.uid = String(d.mid)
-      } else {
-        session = null // 过期了就清掉，免得拿着废 cookie 到处撞
+function applyRestore(ctx, legacyFile) {
+  restorePromise = (async () => {
+    let cookie = ''
+    try {
+      if (ctx.credentials && typeof ctx.credentials.resolve === 'function') {
+        const saved = await ctx.credentials.resolve(CRED_REF)
+        if (saved && typeof saved.value === 'string') cookie = saved.value.trim()
       }
-    })
-    .catch(() => { /* 恢复失败就当没登录 */ })
+    } catch { /* credentials 服务不可用时尝试迁移旧文件 */ }
+
+    if (cookie) {
+      credentialPersisted = true
+      credentialSource = 'credentials'
+    } else {
+      cookie = await readCredentialCookie(legacyFile)
+      if (cookie) {
+        credentialSource = 'legacy-file'
+        try {
+          if (!ctx.credentials || typeof ctx.credentials.set !== 'function') throw new Error('DSH Credentials 服务不可用')
+          await ctx.credentials.set(CRED_REF, cookie)
+          credentialPersisted = true
+          credentialSource = 'credentials-migrated'
+        } catch {
+          credentialPersisted = false
+          credentialSource = 'legacy-session-only'
+        }
+      }
+    }
+
+    if (!cookie) return
+    storedCookie = cookie
+    session = sessionFromCookie(cookie)
+    const me = await api('/x/web-interface/nav')
+    const d = me.json && me.json.data
+    if (d && d.isLogin) {
+      session.uname = d.uname
+      session.uid = String(d.mid)
+    } else {
+      session = null
+      storedCookie = ''
+      credentialPersisted = false
+      credentialSource = 'expired'
+      try { await ctx.credentials.unset(CRED_REF) } catch { /* 失效凭证清理失败也不能影响插件启动 */ }
+    }
+  })().catch(() => {
+    session = null
+    storedCookie = ''
+    credentialPersisted = false
+    credentialSource = 'unavailable'
+  })
+  return restorePromise
+}
+
+async function persistCookie(ctx, cookie) {
+  storedCookie = cookie
+  session = sessionFromCookie(cookie)
+  credentialPersisted = false
+  credentialSource = 'session-only'
+  try {
+    if (!ctx.credentials || typeof ctx.credentials.set !== 'function') throw new Error('DSH Credentials 服务不可用')
+    await ctx.credentials.set(CRED_REF, cookie)
+    credentialPersisted = true
+    credentialSource = 'credentials'
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function clearCookie(ctx) {
+  session = null
+  storedCookie = ''
+  pendingKey = null
+  credentialPersisted = false
+  try {
+    if (!ctx.credentials || typeof ctx.credentials.unset !== 'function') throw new Error('DSH Credentials 服务不可用')
+    await ctx.credentials.unset(CRED_REF)
+    credentialSource = 'none'
+    return true
+  } catch {
+    credentialSource = 'clear-failed'
+    return false
+  }
 }
 
 export function apply(ctx, config) {
-  applyRestore(ctx)
-
-  // ——— B站取数（搜索 / 视频详情 / 字幕 / 直链 / 抽帧） ———
   // 配置走纯对象，不挂 schemastery：少一个依赖就少一处加载失败。
   const cfg = config && typeof config === 'object' ? config : {}
-  // cookie 必须在**构造 provider 之前**读到：provider 构造时把 cookie 抄成自己的字段，
-  // 之后再改 options 对象它根本不看。2026-11-08 实测：异步填的那一版，字幕永远报「账号未登录」。
-  // 读不到 = 匿名，不报错、不崩；任何分支都不把 cookie 写进日志或工具输出。
-  let cookie = ''
-  try {
-    cookie = buildCookieHeader(JSON.parse(readFileSync(cfg.credentialFile || DEFAULT_CREDENTIAL_FILE, 'utf8')))
-  } catch {
-    cookie = ''
-  }
+  const credentialFile = cfg.credentialFile || DEFAULT_CREDENTIAL_FILE
+  applyRestore(ctx, credentialFile)
 
+  // ——— B站取数（搜索 / 视频详情 / 字幕 / 直链 / 抽帧） ———
+  // Provider 每次请求都向同一个凭证管理器取 Cookie；扫码登录或面板登出后无需重启。
   const providerOptions = {
     baseUrl: BILIBILI_DEFAULT_BASE_URL,
     userAgent: BILIBILI_DEFAULT_USER_AGENT,
     requestTimeoutMs: BILIBILI_DEFAULT_REQUEST_TIMEOUT_MS,
     subtitleLanguage: BILIBILI_DEFAULT_SUBTITLE_LANGUAGE,
-    ...(cookie ? { cookie } : {}),
+    getCookie: async () => {
+      await restorePromise
+      return storedCookie || ''
+    },
   }
   const provider = new BilibiliOfficialProvider(providerOptions)
 
@@ -234,11 +298,20 @@ export function apply(ctx, config) {
   })
 
   // ——— 社交面：评论 / 发评 / 观看历史 / 关注 / 收藏夹 / 动态 / 私信会话 ———
-  // cookie 由 social.js 每次请求前现读凭证文件（换 cookie 不用重启）；这里只传路径。
+  // 社交接口与字幕 Provider 共用同一个 DSH Credentials 凭证，不再各读一份 JSON。
   // 整段包一层：新工具注册不成功，搜索/字幕/登录那一批照旧。
   try {
     applyBilibiliSocialTools(ctx, {
-      credentialFile: cfg.credentialFile || DEFAULT_CREDENTIAL_FILE,
+      credentialFile,
+      getCredential: async () => {
+        await restorePromise
+        const cookie = storedCookie || ''
+        return {
+          cookie,
+          csrf: cookieValue(cookie, 'bili_jct'),
+          uid: cookieValue(cookie, 'DedeUserID'),
+        }
+      },
       timeoutMs: toolTimeout,
     })
   } catch (e) {
