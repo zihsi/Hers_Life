@@ -21,7 +21,7 @@
 | Cordis | 4.1.0 |
 | discord.js | 14.28.1 |
 | Profile | desktop |
-| 仓库分支 | feature/discord-integration |
+| 验证基线分支 | sync/local-latest-20261113 |
 
 ## 安装结果
 
