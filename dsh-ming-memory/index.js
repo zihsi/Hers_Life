@@ -437,7 +437,7 @@ function scopeOf(sessionOrId) {
   if (group) return 'group:' + group[1]
   if (id.startsWith('onebot-group-')) return 'group:' + id.slice('onebot-group-'.length)
 
-  const discordGroup = /^discord-guild-(\d+)-channel-(\d+)$/.exec(id)
+  const discordGroup = /^discord-guild-(\d+)-channel-(\d+)(?:-\d+)?$/.exec(id)
   if (discordGroup) return 'group:' + discordGroup[1] + ':' + discordGroup[2]
   if (id.startsWith('discord-dm-')) return 'dm'
 
@@ -460,15 +460,18 @@ const DIALOG_MAX = 20   // 缓冲上限
 const DIALOG_SHOW = 10  // 注入时最多列几条
 const DIALOG_LINE = 70  // 每条注入时截断长度
 
-function pushTurn(prev, role, text) {
+function pushTurn(prev, role, text, at = Date.now(), sourceId = '', source = '') {
   const clean = String(text).replace(/\s+/g, ' ').trim()
   if (!clean) return null
   const items = Array.isArray(prev.items) ? prev.items.slice() : []
-  items.push({
+  const item = {
     r: role,
     t: clean.length > 200 ? clean.slice(0, 200) + '…' : clean,
-    at: Date.now(),
-  })
+    at: Number(at) || Date.now(),
+  }
+  if (sourceId) item.id = String(sourceId)
+  if (source) item.src = String(source)
+  items.push(item)
   let digest = prev.digest || ''
   while (items.length > DIALOG_MAX) {
     const old = items.shift()
@@ -559,14 +562,16 @@ function recordShared(cfg, session, text) {
   if (!sid || IGNORED_SESSIONS.has(sid)) return
   const clean = String(text).replace(/\s+/g, ' ').trim()
   if (!clean) return
-  const prev = SHARED.get(sid) || { surface: surfaceOf(session), tail: '', digest: '', at: 0 }
-  const turn = pushTurn(prev, '她', clean)
+  const now = Date.now()
+  const prev = SHARED.get(sid) || { surface: surfaceOf(session), tail: '', digest: '', at: 0, items: [] }
+  if ((prev.items || []).some((item) => item && item.src === 'inbox' && item.t === clean && Math.abs((Number(item.at) || 0) - now) <= 30000)) return
+  const turn = pushTurn(prev, '她', clean, now, '', 'session')
   SHARED.set(sid, {
     surface: prev.surface || surfaceOf(session),
     scope: scopeOf(session),
     tail: prev.tail || '',
     digest: turn ? turn.digest : (prev.digest || ''),
-    at: Date.now(),
+    at: now,
     mine: prev.mine || '',
     mineAt: prev.mineAt || 0,
     rev: turn ? turn.rev : (Number(prev.rev) || 0),
@@ -611,8 +616,8 @@ function recordMine(cfg, session, text) {
   if (!clean) return
 
   const now = Date.now()
-  const prev = SHARED.get(sid) || { surface: surfaceOf(session), tail: '', digest: '', at: 0 }
-  const turn = pushTurn(prev, 'AI', clean)
+  const prev = SHARED.get(sid) || { surface: surfaceOf(session), tail: '', digest: '', at: 0, items: [] }
+  const turn = pushTurn(prev, 'AI', clean, now, '', 'assistant')
 
   SHARED.set(sid, {
     surface: prev.surface || surfaceOf(session),
@@ -627,6 +632,44 @@ function recordMine(cfg, session, text) {
   })
 
   saveSharedSoon(cfg)
+}
+
+/** 把 QQ / Discord inbox 中未进入 Agent 正常回合的原始消息并入同一份共享 feed。 */
+function recordObserved(cfg, payload) {
+  try {
+    if (!cfg.root || !payload || typeof payload !== 'object') return false
+    if (payload.workspacePath && path.resolve(String(payload.workspacePath)).toLowerCase() !== path.resolve(cfg.root).toLowerCase()) return false
+    const sid = String(payload.sessionId || '')
+    if (!sid || IGNORED_SESSIONS.has(sid)) return false
+    const clean = String(payload.text || '').replace(/\s+/g, ' ').trim()
+    if (!clean) return false
+    let at = Number(payload.at) || Date.now()
+    if (at > 0 && at < 1e12) at *= 1000
+    const role = String(payload.role || '群友').trim().slice(0, 48) || '群友'
+    const sourceId = String(payload.sourceId || '')
+    const prev = SHARED.get(sid) || { surface: surfaceOf({ id: sid }), scope: scopeOf(sid), tail: '', digest: '', at: 0, mine: '', mineAt: 0, rev: 0, items: [] }
+    const oldItems = Array.isArray(prev.items) ? prev.items : []
+    if (sourceId && oldItems.some((item) => item && item.id === sourceId)) return false
+    // 同一条消息可能同时经 inbox 与 Agent 正常事件进入；按正文和时间窗口去重。
+    if (oldItems.some((item) => item && item.t === clean && Math.abs((Number(item.at) || 0) - at) <= 30000)) return false
+    const turn = pushTurn(prev, role, clean, at, sourceId, 'inbox')
+    if (!turn) return false
+    SHARED.set(sid, {
+      surface: prev.surface || surfaceOf({ id: sid }),
+      scope: prev.scope || scopeOf(sid),
+      tail: role + '：' + clean,
+      digest: turn.digest,
+      at: Math.max(Number(prev.at) || 0, at),
+      mine: prev.mine || '',
+      mineAt: prev.mineAt || 0,
+      rev: turn.rev,
+      items: turn.items,
+    })
+    saveSharedSoon(cfg)
+    return true
+  } catch {
+    return false
+  }
 }
 
 // 每个会话「已经读到哪一版」：agentId -> (别的会话 id -> { at, rev })；时间相同也能识别新消息。
@@ -1132,9 +1175,7 @@ async function readQqBlock(cfg) {
       for (const m of rec.msgs) {
         const ts = Number(m && m.ts) || 0
         if (!ts || ts < since) continue
-        // ★ 2026-10-22（她定）：别的会话只带「我回复的」——她的话不进这一层。
-        //   跨会话同步的是同一个我的姿态，不是把别人的聊天记录搬来搬去。
-        if (!m.self) continue
+        // 同一颗大脑需要知道群里双方说了什么；来源标签保留发言者，不把群友误标成主人。
         rows.push({ ts, label: qqChatLabel(rec.chatKey, name), m })
       }
     }
@@ -1153,7 +1194,7 @@ async function readQqBlock(cfg) {
       '',
       '【QQ 那边的我最近说的】',
       ...lines,
-      '（也是我，只是那边的壳；这些不是本会话的历史，细节不在这边就说不知道。）',
+      '（同一工作区的 QQ 会话内容；可自然承接其他频道的话题，不要假装失忆。）',
     ].join('\n')
   } catch {
     return ''
@@ -1257,8 +1298,8 @@ async function readOtherRoomsBlock(cfg) {
       '',
       '【几间私聊最近（含她那一间）】',
       ...lines,
-      '（我在各个私聊房间说过、听过的话。记得它们是为了不失忆，不是为了转述：'
-        + '**嘴按房间管**——这一间的原话不往群里搬、不往别的屋子搬，被问到就说「别人的事我不转述」。）',
+      '（这些来自同一工作区的其他会话，都是同一个人的连续经历；普通话题可以自然接续，不要假装不知道。'
+        + '不要复述密码、Cookie、API Key 等凭证；除此之外按当前对话语境自然回应。）',
     ].join('\n')
   } catch {
     return ''
@@ -1298,8 +1339,7 @@ async function writeWebForQq(cfg, force = false) {
     const entries = feed && typeof feed === 'object' ? Object.entries(feed) : []
     for (const [sid, e] of entries) {
       if (!e || typeof e !== 'object') continue
-      if ((e.scope || scopeOf(sid)) !== 'dm') continue
-      if ((e.surface || 'web') !== 'web') continue
+      if ((e.surface || surfaceOf({ id: sid })) === 'qq') continue
       if (!Array.isArray(e.items) || !e.items.length) continue
       if (now - (Number(e.at) || 0) > 6 * 3600 * 1000) continue
       rows.push(e)
@@ -1311,7 +1351,7 @@ async function writeWebForQq(cfg, force = false) {
         const t = it.t.length > 48 ? it.t.slice(0, 48) + '…' : it.t
         return roleLabel(it.r) + t
       })
-      lines.push('- [web ' + stamp(e.at) + '] ' + items.join(' / '))
+      lines.push('- [' + String(e.surface || surfaceOf({ id: sid })) + ' ' + stamp(e.at) + '] ' + items.join(' / '))
     }
     let doing = ''
     try {
@@ -1326,9 +1366,9 @@ async function writeWebForQq(cfg, force = false) {
       'QQ 那边和网页这边是同一个助手，不是两个人。',
       '底线：不装记得；不表演人；可以说不。读不到就说读不到。',
       '',
-      '# 网页那边（同一个工作区，另一个窗口）',
+      '# 其他平台（网页 / Discord 等）最近的会话',
       '更新时间：' + stamp(now),
-      '（这段由 DSH 侧自动写；只在网页窗口里跟她说话时才更新，别当成 QQ 的历史。）',
+      '（这段由 DSH 侧自动写；来自同一工作区的其他入口，可用于自然接续话题。）',
       '',
     ]
     if (doing) head.push('现在在做什么：' + doing, '')
@@ -1537,6 +1577,11 @@ export function apply(ctx, config) {
     } catch { /* 记不上就算了，绝不影响会话 */ }
   })
 
+  ctx.on('ming-memory/observe', (payload) => {
+    if (!cfg.root) return
+    recordObserved(cfg, payload)
+  })
+
   ctx.on('agent/created', async (payload) => {
     try {
       const agent = payload && payload.agent
@@ -1698,5 +1743,5 @@ function readResumeBlock(cfg) {
 
 // 只给手动/脚本测试用：插件运行时不会碰它。
 // 例：node -e "import('./index.js').then(m => m.__internals...)"
-export const __internals = { normalize, readQqBlock, readOtherRoomsBlock, writeWebForQq, syncPersonaForQq, stamp, readStatusBlock, readHeavyBlock, readWhenBlock, noteCompact, compactFlag, sessionIdOf, readSessionCwd, pruneShared }
+export const __internals = { normalize, readQqBlock, readOtherRoomsBlock, writeWebForQq, syncPersonaForQq, stamp, readStatusBlock, readHeavyBlock, readWhenBlock, noteCompact, compactFlag, sessionIdOf, readSessionCwd, pruneShared, recordObserved }
 
