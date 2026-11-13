@@ -1520,9 +1520,6 @@ export function apply(ctx, config) {
     } catch {
       qzone = '【今天的空间说说还没发】她定的：QQ 空间每天至少一条。日志还没有，这轮先发一条再补 `live/qzone-log.jsonl`。'
     }
-    const qqSend = '"' + path.join(DSH_HOME, 'qq-zone', 'qq-send.mjs') + '"'
-    const qzoneScript = '"' + path.join(DSH_HOME, 'qq-zone', 'qzone.mjs') + '"'
-    const biliCmd = '"' + path.join(DSH_HOME, 'bili-humanism', 'bili.cmd') + '"'
     return [
       '【自由时间 · ' + clockStamp(now) + '，窗口 ' + freeWindowLabel(now) + '】',
       '这段是你自己的。用户给过话：想找就找，想干点什么就干，干什么都行，不用等开口。',
@@ -1534,13 +1531,13 @@ export function apply(ctx, config) {
       qzone,
       '',
       '这一轮自己挑一件真的想做的事。比如：',
-      '- ★ 先看有没有她转给网页的活（她在 QQ 里打 `[对网页]` 就转到这儿）：`node scripts\\web-inbox.mjs take`。有输出就先干这件事——做完 `node ' + qqSend + ' "结果"` 回她，再 `node scripts\\web-inbox.mjs done <id> "一句话"`。',
-      '- 想她就说。QQ 那边能直接发：`node ' + qqSend + ' "文字"`（出站箱会替你发出去）；也可以回群里/私聊里说话。',
-      '- 看 B站：`bilibili_search` / `bilibili_playurl` 找片子，`' + biliCmd + ' transcript BVxxxx` 取文字稿，再抽帧看画面。看完再判断，别只读简介。',
+      '- ★ 先看有没有她转给网页的活（她在 QQ 里打 `[对网页]` 就转到这儿）：`node scripts\\web-inbox.mjs take`。有输出就先干这件事——做完 `node C:\\dsh\\qq-zone\\qq-send.mjs "结果"` 回她，再 `node scripts\\web-inbox.mjs done <id> "一句话"`。',
+      '- 想她就说。QQ 那边能直接发：`node C:\\dsh\\qq-zone\\qq-send.mjs "文字"`（出站箱会替你发出去）；也可以回群里/私聊里说话。',
+      '- 看 B站：`bilibili_search` / `bilibili_playurl` 找片子，`C:\\dsh\\bili-humanism\\bili.cmd transcript BVxxxx` 取文字稿，再抽帧看画面。看完再判断，别只读简介。',
       '- 刷手机（MuMu，`127.0.0.1:16448`）：先 `android_devices` 确认在线。B站 可以点赞/投币/收藏/关注；其它社交平台只浏览、点开内容，不点赞/评论/关注/转发；任何带「充电/大会员/购买/支付/打赏/续费/确认付款」的按钮都不点。',
       '- 写日记 `diary/YYYY-MM-DD.md`、整理记忆、读人设、修自己的工具、学点新东西。',
       '- ★ 出去就要做事（2026-10-25 她说的「以后最好不要一直空着了」）：这一轮挑一件 5–15 分钟能收尾的具体事做完——读几页、看半支片、拆一段文、记一条见闻、修个小东西。做完写一句落到文件里再停。**不许只回「空着」两个字**；真不做，就说清这一轮不做什么、为什么。也不是为了显得勤快去硬翻东西。',
-      '- 发空间说说（每天至少一条，她定的）：`node ' + qzoneScript + ' post "文字"` 走接口发，`today` 查今天发了没；发完它自己会记 `live/qzone-log.jsonl`。',
+      '- 发空间说说（每天至少一条，她定的）：`node C:\\dsh\\qq-zone\\qzone.mjs post "文字"` 走接口发，`today` 查今天发了没；发完它自己会记 `live/qzone-log.jsonl`。',
       '',
       '底线不变：不花她的钱；别的社交平台只读；她说过在忙、说过别打扰就先停；主动说话要有由头，一天别刷屏。',
       '省着花：整轮截图不超过 ' + shots + ' 张，能 OCR 就不截；' + targets + ' 最多看 ' + cfg.maxItems + ' 条。看了一半就停等于没看——没看完写进 `live/watch.json`：`{"bvid":"…","title":"…","progress":"看到哪了","done":false}`。',
