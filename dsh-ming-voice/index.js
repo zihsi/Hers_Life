@@ -24,8 +24,10 @@ export const name = 'ming-voice'
 // （manager.log 里 2026-10-20 15:19 两条就是这么来的），于是被 disabled 到现在。
 export const inject = ['tools']
 
+const DSH_HOME = process.env.DSH_HOME || path.join(homedir(), '.dsh')
+
 const DEFAULTS = {
-  root: 'C:\\dsh\\workspace',
+  root: process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace'),
   voice: 'zh-CN-XiaoxiaoNeural',
   rate: '+0%',
   python: 'python',
