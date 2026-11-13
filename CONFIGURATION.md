@@ -24,7 +24,7 @@
 | `dsh-ming-voice` | TTS 与 MP3 输出 | 默认工作区依序使用 `MING_WORKSPACE`、`DSH_HOME/workspace`；可配置 Python / FFmpeg；缺少 edge-tts 环境时可能回退 Windows SAPI |
 | `dsh-ming-bilibili-account` | B 站帐号与内容工具 | 扫码登录写入 DSH Credentials；账号、字幕与社交 API 共用 `MING_BILI_COOKIE`；旧 `credentialFile` 仅作迁移来源 |
 | `dsh-ming-browse` | 浏览器自主浏览与受限操作 | `enabled`、`workspacePath`、ADB 路径 / serial、社交平台安全名单 |
-| `dsh-ming-interest` | 兴趣 inbox 监测与自主唤醒 | `enabled`、`workspacePath`、`interestsFile`、日志 / 状态文件、限流、quiet hours、groups |
+| `dsh-ming-interest` | 兴趣 inbox 监测与自主唤醒 | `enabled`、`workspacePath`、`interestsFile`、日志 / 状态文件、限流、quiet hours、groups；被动观察白名单另设 `observeGroups` |
 | `dsh-ming-wake` | Agent 自行安排下一次唤醒 | 工作区 root；由 Agent 调用 `ming_wake_arm` 并提供明确 sessionId |
 | `dsh-ming-resume` | 插话后恢复先前任务 | root、ADB 路径 / serial、`pauseMediaOnInterrupt` |
 | `dsh-ming-discord` | Discord ↔ DSH bridge | `enabled`、`workspacePath`、`mentionRequired`、`directMessages`、allowlists、`newMessagePolicy`、附件上限与 inbox 路径 |
@@ -104,7 +104,7 @@
 
 确认设备处于 `device` 状态，再填入插件配置。不同 MuMu 版本的安装路径可能不同。
 
-## Discord 配置
+## AstrBot inbox 记录器\n\n`astrbot_plugins/astrbot_plugin_inbox_record` 默认将 QQ 入站消息写入 `<DSH_HOME>/media/onebot/qq-inbox.jsonl`；未设置 `DSH_HOME` 时使用 `%USERPROFILE%\\\\.dsh`。若 AstrBot 插件设置需要自订位置，可填 `inboxPath`（完整路径）；DSH 侧的 `dsh-ming-interest` 也必须读取同一个 inbox 文件。记录器会自动建立目标目录。\n\n## Discord 配置
 
 Discord bridge 的完整字段表、权限与安全建议见 [DISCORD_SETUP.md](DISCORD_SETUP.md)。
 
