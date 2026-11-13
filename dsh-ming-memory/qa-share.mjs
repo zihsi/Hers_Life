@@ -5,6 +5,7 @@
 //   ② 它在 agent/created 之后才发消息，然后直接读开场段——可「别的会话在说什么」
 //      是 agent/pre-step 每步重算的，不跑 pre-step 当然什么都看不到。
 // 现在按真实时序驱动：先建两个会话，再发消息，再走一步 pre-step。
+import { existsSync } from 'node:fs'
 import { tempRoot, emptyDir, mount, sessionFor, agentFor, check, summary, sleep, readFeed } from './qa-lib.mjs'
 
 const ROOT = tempRoot('ming-share-')
@@ -21,58 +22,127 @@ const m = mount(cfg)
 const qqS = sessionFor('onebot-private-10001', ROOT)
 const webS = sessionFor('web-abc', ROOT)
 const grpS = sessionFor('onebot-group-123456789', ROOT)
+const grpS2 = sessionFor('onebot-group-456789123', ROOT)
 const discordS = sessionFor('discord-guild-987654321-channel-555', ROOT)
+const discordS2 = sessionFor('discord-guild-987654321-channel-556', ROOT)
+const discordDmS = sessionFor('discord-dm-442612564208386048', ROOT)
 const otherS = sessionFor('trpg', tempRoot('ming-share-other-'))
 
 const qqA = agentFor('onebot-private-10001', ROOT)
 const webA = agentFor('web-abc', ROOT)
 const grpA = agentFor('onebot-group-123456789', ROOT)
+const grpA2 = agentFor('onebot-group-456789123', ROOT)
 const discordA = agentFor('discord-guild-987654321-channel-555', ROOT)
-await m.created(qqA.agent)
-await m.created(webA.agent)
-await m.created(grpA.agent)
-await m.created(discordA.agent)
+const discordA2 = agentFor('discord-guild-987654321-channel-556', ROOT)
+const discordDmA = agentFor('discord-dm-442612564208386048', ROOT)
+const otherA = agentFor('trpg', otherS.header.cwd)
+for (const a of [qqA, webA, grpA, grpA2, discordA, discordA2, discordDmA, otherA]) {
+  await m.created(a.agent)
+}
 
-m.user(qqS, '她在 QQ 说的第一句话。')
-m.assistant(qqS, 'AI在 QQ 回的第一句。')
-m.user(grpS, 'QQ 群里说的话，Discord 也应该知道。')
-m.user(discordS, 'Discord 群里说的话，QQ 私訊也应该知道。')
+m.user(qqS, '她在 QQ 私訊说的第一句话。')
+m.assistant(qqS, 'AI在 QQ 私訊回的第一句。')
+m.user(grpS, 'QQ 群 123 里说的话，Discord 也应该知道。')
+m.user(grpS2, 'QQ 群 456 里说的话，其他群也应该知道。')
+m.user(discordS, 'Discord 频道 555 里说的话，其他频道也应该知道。', 'plugin:ming-discord')
+m.user(discordS2, 'Discord 频道 556 里说的话，其他频道也应该知道。', 'plugin:ming-discord')
+m.user(discordDmS, 'Discord 私訊里说的话，网页和群聊也应该知道。', 'plugin:ming-discord')
+m.user(grpS, '【兴趣唤醒 · 系统生成】这不是主人说的话。', 'plugin:ming-interest')
+m.user(grpS, '【插话·先答再回去】这也不是主人说的话。', 'plugin:ming-resume')
 m.user(otherS, '这句来自 trpg_web，绝对不该被记录')
 
 await m.preStep(webA.agent)
 const t1 = webA.text()
-check('Web 看得见 QQ 那边说了什么', t1.includes('别的会话里的对话') && t1.includes('她在 QQ 说的第一句话'))
-check('也看得见我在那边回的那句', t1.includes('AI在 QQ 回的第一句'))
-check('群聊内容会进入私訊/網頁的共同記憶', t1.includes('QQ 群里说的话'))
-check('群里的话带群号标签', /群 123456789/.test(t1))
-check('别的工程目录一条不读', !t1.includes('trpg_web'))
+check('Web 看得见 QQ 私訊', t1.includes('别的会话里的对话') && t1.includes('她在 QQ 私訊说的第一句话'))
+check('也看得见 AI 在 QQ 私訊回的那句', t1.includes('AI在 QQ 私訊回的第一句'))
+check('Web 看得见两个不同 QQ 群', t1.includes('QQ 群 123 里说的话') && t1.includes('QQ 群 456 里说的话'))
+check('Web 看得见同一伺服器的两个 Discord 频道', t1.includes('Discord 频道 555') && t1.includes('Discord 频道 556'))
+check('Web 看得见 Discord 私訊', t1.includes('Discord 私訊里说的话'))
+check('不同频道来源标签保留', /群 987654321:555/.test(t1) && /群 987654321:556/.test(t1))
+check('其他工程目录不会被记录进共享 feed', !t1.includes('trpg_web'))
 
 await m.preStep(webA.agent)
 const t2 = webA.text()
-check('同一段不重复塞第二步（读完就划掉）', !t2.includes('她在 QQ 说的第一句话'))
+check('同一批共享内容不会重复注入第二步', !t2.includes('她在 QQ 私訊说的第一句话'))
 
 await m.preStep(grpA.agent)
 const g1 = grpA.text()
-check('群聊也能看到 QQ 私訊內容（共同大腦）', g1.includes('她在 QQ 说的第一句话'))
+check('QQ 群能看到 QQ 私訊内容（共同大脑）', g1.includes('她在 QQ 私訊说的第一句话'))
+check('QQ 群能看到另一个 QQ 群的内容', g1.includes('QQ 群 456 里说的话'))
+check('QQ 群能看到 Discord 频道内容', g1.includes('Discord 频道 555'))
 
 await m.preStep(discordA.agent)
 const d1 = discordA.text()
-check('Discord 群聊能看到 QQ 私訊內容', d1.includes('她在 QQ 说的第一句话'))
-check('Discord 群聊能看到 QQ 群聊內容', d1.includes('QQ 群里说的话'))
-check('Discord 群聊能看到其他 Discord/跨入口內容', d1.includes('Discord 群里说的话'))
+check('Discord 频道 555 能看到 QQ 私訊', d1.includes('她在 QQ 私訊说的第一句话'))
+check('Discord 频道 555 能看到 QQ 群', d1.includes('QQ 群 123 里说的话'))
+check('Discord 频道 555 能看到另一个 Discord 频道', d1.includes('Discord 频道 556'))
 
-check('QQ 那边看不到自己的话（只给别人的）', !qqA.text().includes('别的会话里的对话'))
+await m.preStep(discordA2.agent)
+const d2 = discordA2.text()
+check('Discord 频道 556 能反向看到频道 555', d2.includes('Discord 频道 555 里说的话'))
 
+await m.preStep(discordDmA.agent)
+const ddm = discordDmA.text()
+check('Discord 私訊也能看到群聊与其他私訊', ddm.includes('Discord 频道 555') && ddm.includes('她在 QQ 私訊说的第一句话'))
+
+await m.preStep(qqA.agent)
+check('QQ 私訊会话也能读取其他入口的共享内容', qqA.live().includes('Discord 频道 556'))
+check('QQ 那边不会把自己的历史重复当成别的会话注入', !qqA.live().includes('QQ 私訊说的第一句话'))
+
+await m.preStep(otherA.agent)
+const outside = otherA.live()
+check('工作区外的工程会话不读取共享聊天', !outside.includes('别的会话里的对话'))
+check('工作区外的工程会话不读取 QQ 私訊', !outside.includes('她在 QQ 私訊说的第一句话'))
+check('工作区外的工程会话不读取 Discord 群聊', !outside.includes('Discord 频道 555'))
+
+// 同一毫秒内连续写入：第二条不能因为 at 时间戳相同而被 seen 游标吞掉。
+const rapidS = sessionFor('discord-guild-987654321-channel-557', ROOT)
+const fixedNow = Date.now() + 10
+const realNow = Date.now
+try {
+  Date.now = () => fixedNow
+  m.user(rapidS, '同毫秒第一条消息。', 'plugin:ming-discord')
+  await m.preStep(webA.agent)
+  webA.live() // 触发 context 交付与 seen 游标提交
+  m.user(rapidS, '同毫秒第二条消息。', 'plugin:ming-discord')
+  await m.preStep(webA.agent)
+  const rapid = webA.live()
+  check('同毫秒的第二条消息仍能跨会话同步', rapid.includes('同毫秒第二条消息'))
+} finally {
+  Date.now = realNow
+}
+
+// 过了注入期限的内容不应进入上下文，但仍在 7 天本机保留期限内。
+const expiredS = sessionFor('web-expired', ROOT)
+try {
+  Date.now = () => realNow() - 3 * 60 * 60 * 1000
+  m.user(expiredS, '这条消息已经超过两小时。')
+} finally {
+  Date.now = realNow
+}
+await m.preStep(webA.agent)
+check('超过两小时的旧内容不再注入', !webA.live().includes('这条消息已经超过两小时'))
+
+// 超过本机保留期限的 feed 条目应在下一次落盘时清理。
+const ancientS = sessionFor('web-ancient', ROOT)
+try {
+  Date.now = () => realNow() - 8 * 24 * 60 * 60 * 1000
+  m.user(ancientS, '这条超过七天，应该清理。')
+} finally {
+  Date.now = realNow
+}
 await sleep(1300)
 const feed = readFeed(ROOT)
 const qqEntry = feed['onebot-private-10001'] || {}
 const qqItems = Array.isArray(qqEntry.items) ? qqEntry.items : []
 check('feed.json 落盘', !!feed['onebot-private-10001'])
 check('feed 里两边原话都在', qqItems.some((i) => i.r === '她') && qqItems.some((i) => i.r === 'AI'))
-check('别的工程目录没进 feed', !feed['trpg'])
-check('群來源標籤仍保留（但不限制共享）', feed['onebot-group-123456789'] && feed['onebot-group-123456789'].scope === 'group:123456789',
-  JSON.stringify(feed['onebot-group-123456789'] && feed['onebot-group-123456789'].scope))
-check('私聊归 dm 那间房', (qqEntry.scope || '') === 'dm', JSON.stringify(qqEntry.scope))
+check('不同 QQ 群都保存独立来源标签', feed['onebot-group-123456789']?.scope === 'group:123456789' && feed['onebot-group-456789123']?.scope === 'group:456789123')
+check('两个 Discord 频道都保存独立会话记录', !!feed['discord-guild-987654321-channel-555'] && !!feed['discord-guild-987654321-channel-556'])
+check('插件生成的兴趣／接续提示不会伪装成用户发言', !JSON.stringify(feed).includes('系统生成') && !JSON.stringify(feed).includes('这也不是主人说的话'))
+check('不同工程目录没进 feed', !feed['trpg'])
+check('超过七天的 feed 记录会清理', !feed['web-ancient'])
+check('默认关闭的诊断不会生成调试日志', !existsSync(ROOT + '/live/shared-diagnostic.log') && !existsSync(ROOT + '/live/persona-debug.log'))
 
 // 2026-11-08：注入段被当成她的话记下来——我在另一个窗口里编的「调试预算」按钮，
 // 就是这样绕回本会话、再变成「她说过」的。她的话后面追加的注入块必须剥掉。
