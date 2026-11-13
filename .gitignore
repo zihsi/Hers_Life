@@ -29,3 +29,11 @@ Thumbs.db
 desktop.ini
 .DS_Store
 astrbot_plugins/**/__pycache__/
+
+# 本机临时实验与测试运行产物（保留测试源码，不提交机器状态 / 窗口数据）
+**/.tmp/
+**/test/*.log
+dsh-ming-mousepet/test/testapp.json
+dsh-ming-mousepet/test/live-*.json
+dsh-ming-mousepet/test/live-bracket-*.json
+dsh-ming-mousepet/test-click-result.txt
