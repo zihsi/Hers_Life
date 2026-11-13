@@ -12,7 +12,7 @@
 - pnpm `11.28.5`（DSH Desktop 内置 runtime）
 - Cordis `4.1.0`
 - Discord.js `14.28.1`
-- 仓库分支：`feature/discord-integration`
+- 安装基线分支：`sync/local-latest-20261113`（本分支为 2026-11-13 的用户同步基线；后续开发分支不应直接当作安装基线）
 
 以上是一次实际安装环境，不代表其他版本都已验证。不同 DSH 版本的 profile 结构、插件 API 和依赖版本可能不同。
 
@@ -52,8 +52,8 @@
 
 ```powershell
 $Repo = "D:\Hers_Life" # 按你的实际 clone 位置修改
-git clone --branch feature/discord-integration https://github.com/zihsi/Hers_Life.git $Repo
-git -C $Repo switch feature/discord-integration
+git clone --branch sync/local-latest-20261113 https://github.com/zihsi/Hers_Life.git $Repo
+git -C $Repo switch sync/local-latest-20261113
 git -C $Repo pull --ff-only
 ```
 
