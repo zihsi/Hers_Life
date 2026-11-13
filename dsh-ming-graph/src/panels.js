@@ -116,12 +116,15 @@ function MingBilibiliPanel() {
   }, [])
 
   const load = useCallback(async () => {
+    setBusy('load')
     try {
       const data = await request('/status')
       setStatus(data)
       setError('')
     } catch (e) {
       setError(String((e && e.message) || e))
+    } finally {
+      setBusy('')
     }
   }, [request])
 
@@ -212,14 +215,14 @@ function MingBilibiliPanel() {
         h('div', { className: 'ming-sec-b' },
           loginUrl
             ? h('div', null,
-                h('a', { href: loginUrl, target: '_blank', rel: 'noreferrer', className: 'ming-link' }, '開啟 B 站登入連結'),
+                h('a', { href: loginUrl, target: '_blank', rel: 'noreferrer', style: { color: 'var(--dsw-alias-text-primary)', textDecoration: 'underline' } }, '開啟 B 站登入連結'),
                 h('div', { className: 'ming-note', style: { marginTop: '8px' } }, '請在手機 B 站完成確認，再回來檢查登入。'),
                 h('button', { className: 'ming-btn on', disabled: !!busy, onClick: poll, style: { marginTop: '10px' } }, busy === 'poll' ? '檢查中…' : '檢查登入'),
               )
             : h('button', { className: 'ming-btn on', disabled: !!busy || !!(status && status.loggedIn), onClick: start }, busy === 'start' ? '建立登入連結…' : '開始登入'),
         ),
       ),
-      status && status.loggedIn
+      status && (status.loggedIn || status.source === 'clear-failed')
         ? h('div', { className: 'ming-sec' },
             h('div', { className: 'ming-sec-h' },
               h('span', { className: 'ming-sec-t' }, '登出'),
