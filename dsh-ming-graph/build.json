@@ -1,7 +1,7 @@
 {
-  "hash": "62df3e00327668a1",
-  "at": "2026-11-13T17:09:52.849Z",
-  "bytes": 228819,
+  "hash": "a60f1d2e758f71c9",
+  "at": "2026-11-13T17:37:36.603Z",
+  "bytes": 286781,
   "units": [
     {
       "label": "主题",
@@ -26,7 +26,7 @@
     {
       "label": "Discord",
       "path": "dsh-ming-discord/src/panel.js",
-      "chars": 8489
+      "chars": 8487
     },
     {
       "label": "声音",
@@ -39,9 +39,14 @@
       "chars": 24724
     },
     {
+      "label": "B站 QR 编码器",
+      "path": "dsh-ming-bilibili-account/src/vendor/qrcode.js",
+      "chars": 56658
+    },
+    {
       "label": "壳 extras",
       "path": "dsh-ming-graph/src/panels.js",
-      "chars": 9228
+      "chars": 10532
     },
     {
       "label": "主面板·公共",
