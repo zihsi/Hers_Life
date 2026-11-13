@@ -3,7 +3,8 @@
       name: dsh-ming-interest
       config:
         enabled: true
-        workspacePath: '<DSH>\workspace'
+        # 留空时使用 MING_WORKSPACE；未设置时回退到 <DSH_HOME>/workspace。
+        workspacePath: ''
         # onebot 的入站录制（recordInbound: true）落在这里。
         # 不填就用默认（默认按 %USERPROFILE% 拼，本机路径不写进仓里）。
         # inboxPath: '%USERPROFILE%\.dsh\media\onebot\qq-inbox.jsonl'
