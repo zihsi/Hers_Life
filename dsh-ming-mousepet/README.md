@@ -115,7 +115,7 @@ node test/pet-test.mjs
 - **网页指一段**：扩展右键「溟：指一段」→ 光标下的语义块高亮 → 点一下交出去，带站点、作者、时间、BV 号、播放进度。老的「选中 + Ctrl+Alt+S」留着兜底。
 - **提权程序不读**：`guard` 现在会看前台进程是不是管理员权限跑的，命中就拒。
 - **卡片跟桌宠**：卡片开在桌宠右上方，桌宠一动它跟着挪（250ms）；她手动拖标题栏就停止跟随。`pet {action:"card", op:"follow", on}` 可拨开关（JS 侧要重启 DSH）。气泡=简易回复（quick），卡片=完整回复（full）。
-- **会话桥**：`pet {action:"sessions"}` 列会话、`pet {action:"ask", sessionId, text, capture}` 把一句（连同 `<抓取内容>`）丢进真会话去跑，已确认归属的完整回答消息追加到卡片，不逐 token 显示；关联缺失或同轮混入其他请求时拒绝展示。卡片自己有嘴，这条只在她要「真去动手」时才用。关闭卡片只停止跟随，不代表已提交的 DSH 任务停止。真实宿主端到端尚未验证。
+- **会话桥**：`pet {action:"sessions"}` 列会话、`pet {action:"ask", sessionId, text, capture}` 把一句（连同 `<抓取内容>`）丢进真会话去跑，已确认归属的完整回答消息追加到卡片，不逐 token 显示；关联缺失或同轮混入其他请求时拒绝展示。卡片自己有嘴，这条只在她要「真去动手」时才用。关闭卡片只停止跟随，不代表已提交的 DSH 任务停止。这句话是 2026-11-09 当时的验收状态；它不是当前所有版本的实时测试结论。请以仓库根目录 `docs/VERIFICATION.md` 与最新宿主验收记录为准。
 
 改 `sidecar.ps1` 之后**先跑 `node fix-ps.mjs`**：PS 5.1 要 UTF-8 BOM + CRLF，工具链会悄悄把它们弄丢，
 症状是「报错指在第 30 行，坏的地方在第一个字节」（11-08、11-09 各踩过一次）。
@@ -125,11 +125,6 @@ node test/pet-test.mjs
 卡片回答要带模型路由：宿主 `GenerateOptions.provider` / `model` 是必填，路由取自 `talkerOptions`（`settings.json` 的 talkProvider/talkModel 优先，留空退回插件 config）。缺了当场报「没指定 provider/model」，不会再去撞适配器、更不会把它显示成「模型给的空话」。
 
 
-## 光标页的源在哪（2026-11-10）
+## 光标设置页
 
-界面**只有一份**：`C:/dsh/dsh-ming-ui/src/cursor-page.js`。
-它被 `sync-cursor-page.mjs` 原样注入到 `client.js` 的标记区（`// >>> 共享光标页` … `// <<< 共享光标页`）。
-
-- 改界面：改源 → `node C:/dsh/dsh-ming-ui/sync-cursor-page.mjs`
-- 验有没有漂：`node C:/dsh/dsh-ming-ui/sync-cursor-page.mjs --check`（可以挂进构建门口）
-- **别手改 client.js 里那一段**——下一次同步会被覆盖，而且两边会长得不一样。
+当前仓库的光标设置页实现位于 `client.js` 的 `makeCursorPage()`，并以 `// >>> 共享光标页` 标记区包住。当前仓库树中没有旧文档提到的 `dsh-ming-ui/src/cursor-page.js` 或 `sync-cursor-page.mjs`；不要再照抄历史 `C:/dsh/...` 绝对路径或运行不存在的同步脚本。修改前先确认 `client.js` 当前实现与标记区，再直接维护本仓实际存在的源文件。
