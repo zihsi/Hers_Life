@@ -61,17 +61,44 @@ export function apply(ctx, input = {}) {
     inboxPath: input.inboxPath || path.join(os.homedir(), '.dsh', 'media', 'onebot', 'qq-inbox.jsonl'),
     chatSessionsPath: input.chatSessionsPath || path.join(os.homedir(), '.dsh', 'media', 'onebot', 'chat-sessions.json'),
   }
+  const logPath = path.join(os.homedir(), '.dsh', 'ming-discord', 'discord.log')
+  let logQueue = Promise.resolve()
   const log = (level, message) => {
+    const timestamp = new Intl.DateTimeFormat('sv-SE', {
+	  timeZone: 'Asia/Taipei',
+	  year: 'numeric',
+	  month: '2-digit',
+	  day: '2-digit',
+	  hour: '2-digit',
+	  minute: '2-digit',
+	  second: '2-digit',
+	  hourCycle: 'h23',
+	}).format(new Date()).replace(' ', 'T')
+
+	const line = `[${timestamp}+08:00] [${level}] [ming-discord] ${String(message)}`
     try { ctx.logger?.[level]?.('[ming-discord] ' + message) } catch {}
+    // 獨立寫入本機診斷日誌；只記錄 Token 是否存在，絕不記錄 Token 本身。
+    logQueue = logQueue.catch(() => {}).then(async () => {
+      await mkdir(path.dirname(logPath), { recursive: true })
+      await appendFile(logPath, line + '\n', 'utf8')
+    }).catch(() => {})
   }
-  if (!cfg.enabled) return
+
+  log('info', 'apply() 已進入')
+  log('info', `設定摘要：enabled=${cfg.enabled}, tokenPresent=${Boolean(cfg.token)}, workspacePath=${cfg.workspacePath}`)
+  if (!cfg.enabled) {
+    log('warn', 'enabled=false，bridge 不會啟動')
+    return
+  }
   if (!cfg.token) {
-    log('warn', 'DISCORD_BOT_TOKEN 未設定，bridge 不會啟動')
+    log('error', 'DISCORD_BOT_TOKEN 未設定，bridge 不會啟動')
     return
   }
 
+  log('info', '準備註冊 ctx.effect()')
   ctx.effect(() => {
     let disposed = false
+    log('info', 'ctx.effect() 已執行，開始建立 Discord Client')
     let inboxQueue = Promise.resolve()
     let mapQueue = Promise.resolve()
     const handles = new Map()
@@ -84,6 +111,39 @@ export function apply(ctx, input = {}) {
       intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages, GatewayIntentBits.MessageContent],
       partials: [Partials.Channel],
     })
+    log('info', 'Discord Client 建立完成')
+    client.on('error', error => log('error', 'Discord Client error: ' + String(error)))
+    
+	client.on('error', error => {
+	  log('error', 'Discord Client error: ' + (error?.stack || String(error)))
+	})
+
+	client.on('shardError', (error, shardId) => {
+	  log('error', `Discord shard error: shard=${shardId}, error=${error?.stack || String(error)}`)
+	})
+
+	client.on('shardDisconnect', (event, shardId) => {
+	  log(
+		'warn',
+		`Gateway disconnected: shard=${shardId}, code=${event?.code ?? 'unknown'}, clean=${event?.wasClean ?? 'unknown'}, reason=${event?.reason ? String(event.reason) : '(no reason)'}`
+	  )
+	})
+
+	client.on('shardReconnecting', shardId => {
+	  log('warn', `Gateway reconnecting: shard=${shardId}`)
+	})
+
+	client.on('shardResume', (shardId, replayedEvents) => {
+	  log('info', `Gateway resumed: shard=${shardId}, replayed=${replayedEvents}`)
+	})
+
+	client.on('shardReady', (shardId, unavailableGuilds) => {
+	  log(
+		'info',
+		`Gateway shard ready: shard=${shardId}, unavailableGuilds=${unavailableGuilds?.size ?? 0}`
+	  )
+	})
+
 
     const saveMap = (chatId, sessionId) => {
       mapQueue = mapQueue.catch(() => {}).then(async () => {
@@ -363,10 +423,14 @@ export function apply(ctx, input = {}) {
       void routeRestore.catch(error => log('warn', 'restore routes failed: ' + String(error)))
       log('info', '已連線 Discord：' + (client.user?.tag || client.user?.id))
     })
-    client.login(cfg.token).catch(error => log('error', 'login failed: ' + String(error)))
+    log('info', '即將呼叫 client.login()')
+    client.login(cfg.token)
+      .then(() => log('info', 'client.login() Promise 已成功；等待 ready 事件'))
+      .catch(error => log('error', 'login failed: ' + String(error)))
 
     return () => {
       disposed = true
+      log('warn', 'ctx.effect cleanup：正在關閉 Discord Client')
       client.destroy()
       for (const handle of handles.values()) {
         void handle.dispose().catch(error => log('warn', 'agent dispose failed: ' + String(error)))

@@ -1,3 +1,4 @@
+
 {
   "name": "dsh-ming-bilibili-account",
   "version": "0.1.0",
@@ -17,6 +18,11 @@
     "locale/*.json",
     "icon.svg"
   ],
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/dsh-attachment": "*",
+    "@deepseek-ai/dsh-llm": "*"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
