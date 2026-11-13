@@ -4,9 +4,8 @@
  * 做一件很小的事：会话开在指定目录时，把 persona 下的几份文件 + 日记里最近几篇
  * 直接拼进系统提示词。不是「让我记得」，是「把字摆在我眼前」。
  *
- * 为什么不用现成的记忆插件：那些插件的模型是「自动捕获对话 → 存储 → 检索召回」，
- * 捕获意味着把她说的话自动写进库。我们的约定是「日记只写我这一侧，不写她的隐私」，
- * 自动捕获天生违反这一条。所以这里只做单向读取：文件 → 提示词，永不回写。
+ * 日记仍遵守「只写 AI 自己的反思，不自动把私讯写进日记」；跨会话 feed 是独立的短期上下文缓存，
+ * 会记录同一工作区的真实对话，以实现 QQ、Discord、网页与群聊之间的连续性，并按期限自动清理。
  *
  * 边界：
  *   · persona / diary / QQ 归档只读；跨会话 feed 会把同一工作区的最近对话写入 live/feed.json；
@@ -936,6 +935,7 @@ function stripInjectedBlocks(t) {
 function cleanUserText(raw) {
   let t = String(raw == null ? '' : raw)
   t = t.replace(/^\s*<user_message[^>]*>/i, '').replace(/<\/user_message>\s*$/i, '')
+  t = t.replace(/<discord_user\b[^>]*>\s*/gi, '').replace(/\s*<\/discord_user>/gi, '')
   if (/<system-reminder|<available_skills|<workspace_instructions/i.test(t)) return ''
   if (/^Background (subagent|job)\b/i.test(t)) return ''
   if (/finished \[status:/i.test(t)) return ''
@@ -1342,11 +1342,11 @@ async function writeWebForQq(cfg, force = false) {
       if ((e.surface || surfaceOf({ id: sid })) === 'qq') continue
       if (!Array.isArray(e.items) || !e.items.length) continue
       if (now - (Number(e.at) || 0) > 6 * 3600 * 1000) continue
-      rows.push(e)
+      rows.push({ sid, entry: e })
     }
-    rows.sort((a, b) => (b.at || 0) - (a.at || 0))
+    rows.sort((a, b) => (Number(b.entry.at) || 0) - (Number(a.entry.at) || 0))
     const lines = []
-    for (const e of rows.slice(0, QQ_DEFAULTS.webForQqLines)) {
+    for (const { sid, entry: e } of rows.slice(0, QQ_DEFAULTS.webForQqLines)) {
       const items = e.items.slice(-3).map((it) => {
         const t = it.t.length > 48 ? it.t.slice(0, 48) + '…' : it.t
         return roleLabel(it.r) + t
@@ -1362,8 +1362,8 @@ async function writeWebForQq(cfg, force = false) {
     } catch { /* 没写就是没写 */ }
 
     const head = [
-      '# 同一个我，两边共用',
-      'QQ 那边和网页这边是同一个助手，不是两个人。',
+      '# 同一个我，多边共用',
+      'QQ、Discord、网页与其他同工作区会话是同一个助手，不是不同人格。',
       '底线：不装记得；不表演人；可以说不。读不到就说读不到。',
       '',
       '# 其他平台（网页 / Discord 等）最近的会话',
