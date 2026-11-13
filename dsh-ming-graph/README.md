@@ -181,19 +181,25 @@ build.mjs         打包
 **读盘和建图不在这儿**（2026-11-08 搬的）：`readDsh/readQQ/readPeople/readDiaries/build`
 在 `../dsh-ming-memory/lib/model.mjs`，`buildNeuron/buildUnified` 在 `../dsh-ming-memory/lib/neuron.mjs`。
 理由：神经元、星图、「她的一生」三个视图吃的是同一批数据，那批数据的实现不该住在「展示」这个插件里。
-代价是**这个仓要跟 `dsh-ming-memory` 放在同一个父目录下**（默认 `C:\dsh\` 并排），
-借的是相对路径而不是包名——profile 的 node_modules 是按真路径加载的，包名在这里解析不到。
-单独把这个仓 clone 出去，Host 半边起不来。
+代价是**`dsh-ming-graph` 与 `dsh-ming-memory` 必须保留在同一个仓库的并列目录**（本仓默认布局即如此），
+借的是相对路径而不是包名——profile 的 node_modules 是按真实路径加载的，包名在这里解析不到。
+不要只复制 `dsh-ming-graph` 单一目录到另一个位置；若改变目录结构，必须同步调整共享 model / neuron 模块的相对路径。
 
-## 开发约定：推送前过闸
+## 开发约定：推送前检查
 
-仓库里带了一个 pre-push 钩子（`.githooks/pre-push`），拦三样东西：本机号码/路径、`.html`、超过 1 MB 的文件。
+目前这个仓库没有提交 `.githooks/pre-push`，因此不要照旧版说明执行 `git config core.hooksPath .githooks`，也不要假设推送时会自动拦截私人资料或大文件。
 
-```sh
-git config core.hooksPath .githooks   # 每个 clone 跑一次
+每次推送前至少手动检查：
+
+```powershell
+git status --short
+git diff --check
+git diff --stat
+git diff --cached --stat
+git diff --cached --name-only
 ```
 
-为什么要有它：这个插件最早一版把使用者的 QQ 号、群号和两个内嵌整图数据的预览页一起推了上去，后来改写过一次历史。钩子是为了让「下次」不会再犯。
+确认暂存区只有本次准备提交的文件；不要使用不加路径限制的 `git add .`。Token、个人 ID、私人工作区数据、日志、测试输出、`node_modules` 与本机备份都不应提交。
 
 ## 外部页签：别的插件可以往「她的一生」里挂一页（2026-11-09）
 
