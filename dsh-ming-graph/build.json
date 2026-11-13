@@ -1,7 +1,7 @@
 {
-  "hash": "cac95a5cb4c55631",
-  "at": "2026-11-13T16:41:57.271Z",
-  "bytes": 210466,
+  "hash": "dadfd70b148042be",
+  "at": "2026-11-13T16:43:21.240Z",
+  "bytes": 210614,
   "units": [
     {
       "label": "主题",
@@ -36,7 +36,7 @@
     {
       "label": "壳 extras",
       "path": "dsh-ming-graph/src/panels.js",
-      "chars": 9080
+      "chars": 9228
     },
     {
       "label": "主面板·公共",
