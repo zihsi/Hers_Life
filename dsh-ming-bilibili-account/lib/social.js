@@ -141,10 +141,21 @@ export class SocialClient {
     this.credentialFile = typeof options.credentialFile === 'string' && options.credentialFile.length > 0
       ? options.credentialFile
       : SOCIAL_DEFAULT_CREDENTIAL_FILE
+    this.getCredential = typeof options.getCredential === 'function' ? options.getCredential : null
   }
 
-  /** 现读凭证；文件不可读时退回上一次读到的（仍是空就匿名）。 */
-  credential() {
+  /** 统一凭证服务优先；独立使用旧版插件时才回退到 legacy JSON 文件。 */
+  async credential() {
+    if (this.getCredential) {
+      try {
+        const fresh = await this.getCredential()
+        if (fresh && typeof fresh.cookie === 'string' && fresh.cookie.length > 0) {
+          this.credentialCache = fresh
+          return fresh
+        }
+      } catch { /* 读不到时只退回本实例上次拿到的凭证 */ }
+      return this.credentialCache ?? { cookie: '', csrf: '', uid: '' }
+    }
     const fresh = readCredential(this.credentialFile)
     if (fresh.cookie.length > 0) {
       this.credentialCache = fresh
@@ -181,7 +192,7 @@ export class SocialClient {
       origin: 'https://www.bilibili.com',
       accept: 'application/json, text/plain, */*',
     }
-    const cred = this.credential()
+    const cred = await this.credential()
     if (cred.cookie.length > 0) headers.cookie = cred.cookie
     if (spec.method === 'POST') headers['content-type'] = 'application/x-www-form-urlencoded'
     const init = { method: spec.method ?? 'GET', headers, redirect: 'manual', signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }
@@ -262,7 +273,7 @@ export class SocialClient {
    * @param {{path: string, host?: string, params?: object, method?: 'GET'|'POST', signed?: boolean, login?: boolean}} spec
    */
   async request(spec) {
-    const cred = this.credential()
+    const cred = await this.credential()
     if (spec.login === true && cred.cookie.length === 0) {
       throw new BilibiliError('这个接口要登录态，但凭证文件里没有可用 cookie', 'BILIBILI_LOGIN_REQUIRED')
     }
@@ -317,7 +328,7 @@ export class SocialClient {
 
   /** 发一条评论。csr 从凭证文件的 bili_jct 现读。 */
   async postComment({ bvid, message }) {
-    const cred = this.credential()
+    const cred = await this.credential()
     if (cred.cookie.length === 0) throw new BilibiliError('没有登录态，发不了评论', 'BILIBILI_LOGIN_REQUIRED')
     if (cred.csrf.length === 0) throw new BilibiliError('凭证里没有 bili_jct，发不了评论', 'BILIBILI_LOGIN_REQUIRED')
     const video = await this.video(bvid)
@@ -370,7 +381,7 @@ export class SocialClient {
 
   /** 关注列表（要登录）。vmid 省略 = 自己。 */
   async followings({ vmid, page = 1, pageSize = 20 }) {
-    const cred = this.credential()
+    const cred = await this.credential()
     const target = vmid !== undefined && String(vmid).length > 0 ? String(vmid) : cred.uid
     if (target.length === 0) throw new BilibiliError('不知道自己是谁（凭证里没有 DedeUserID）', 'BILIBILI_LOGIN_REQUIRED')
     const data = asRecord(await this.request({
@@ -390,7 +401,7 @@ export class SocialClient {
 
   /** 自己建的收藏夹。 */
   async favFolders() {
-    const cred = this.credential()
+    const cred = await this.credential()
     if (cred.uid.length === 0) throw new BilibiliError('不知道自己是谁（凭证里没有 DedeUserID）', 'BILIBILI_LOGIN_REQUIRED')
     const data = asRecord(await this.request({
       path: '/x/v3/fav/folder/created/list-all',
@@ -541,11 +552,12 @@ const textOutput = {
  * 注册社交面工具。每个工具独立 try：一个 schema 不被宿主接受，不影响其它工具，
  * 更不影响已经挂好的取数/账号那七个。
  * @param {any} ctx 宿主上下文。
- * @param {{credentialFile?: string, timeoutMs?: number}} options
+ * @param {{credentialFile?: string, getCredential?: () => Promise<{cookie:string,csrf:string,uid:string}>, timeoutMs?: number}} options
  */
 export function applyBilibiliSocialTools(ctx, options = {}) {
   const client = new SocialClient({
     credentialFile: options.credentialFile || SOCIAL_DEFAULT_CREDENTIAL_FILE,
+    getCredential: options.getCredential,
   })
   const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : SOCIAL_DEFAULT_TOOL_TIMEOUT_MS
   const registered = []
