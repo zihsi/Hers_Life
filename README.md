@@ -46,12 +46,15 @@ Discord 由 `dsh-ming-discord` 直接接入 DSH：服务器频道与私讯各自
 
 ## 隐私
 
+Bilibili 登录态由 `dsh-ming-bilibili-account` 通过 DSH Credentials 保存；`MING_BILI_COOKIE` 是凭证引用名，不是 Cookie 内容。旧版 `bili_credential.json` 只用于迁移；登出会记录本机登出状态，避免迁移来源让登录态复活。
+
 Token、Discord / QQ 使用者 ID、群号、私人聊天、个人工作区内容、环境变量值、备份、`node_modules`、pnpm store、运行日志与测试输出都不应提交到仓库。仓库只保存通用配置范例与不含秘密的安装说明。
 
 | 变量 / 位置 | 说明 |
 |---|---|
 | `MING_WORKSPACE` | **统一工作区根目录**；Memory、Interest、Discord 未显式指定 `root` / `workspacePath` 时共用此路径 |
 | `DSH_HOME` | DSH 主目录；未设置时使用 `%USERPROFILE%\\.dsh`，用于插件本机配置、Discord inbox / session map 等默认路径 |
+| Bilibili Cookie | 存在 DSH Credentials 的 `MING_BILI_COOKIE`；账号、字幕与社交工具共用，不写入仓库或聊天记录 |
 | `MING_OWNER_QQ` | 本人 QQ ID；部分本人指令需要 |
 | `MING_OWNER_DISCORD_ID` | 本人 Discord ID；可选，启用本人私讯指令时设置 |
 | `MING_DISCORD_ALLOWED_USER_IDS` | 可选 Discord 使用者 ID 白名单，逗号分隔 |
