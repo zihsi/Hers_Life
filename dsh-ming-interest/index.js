@@ -331,9 +331,15 @@ export function apply(ctx, config) {
             send(result.ok ? 200 : 400, result)
             return
           }
+          if (what === 'settings' && req.method === 'POST') {
+            const body = await readBody()
+            send(200, { ok: true, settings: await saveSettings(body) })
+            return
+          }
 
           if (what !== 'state' || req.method !== 'GET') { send(404, { error: 'not found' }); return }
 
+          await loadSettings()
           const doc = await readInterestDocument(interestsPath)
           let st = {}
           try { st = JSON.parse(await readFile(path.join(cfg.workspacePath, cfg.stateFile), 'utf8')) } catch {}
@@ -375,7 +381,7 @@ export function apply(ctx, config) {
       },
     }))
   })
-  const quiet = parseQuietHours(cfg.quietHours)
+  let quiet = parseQuietHours(cfg.quietHours)
 
   const log = (level, message) => {
     try {
@@ -700,6 +706,8 @@ export function apply(ctx, config) {
     if (polling) return
     polling = true
     try {
+      await loadSettings()
+      quiet = parseQuietHours(cfg.quietHours)
       const now = new Date()
       const { lines, note: readNote } = await readNewLines()
       const interests = await readInterests(interestsPath)
