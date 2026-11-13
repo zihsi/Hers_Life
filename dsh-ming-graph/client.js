@@ -3,7 +3,7 @@
  *
  * ⚠ 生成物，别手改：改 src/*.js 或各插件的 src/panel.js，然后 `node build.mjs`。
  *   现在是不是最新的：`node build.mjs --check`
- *   build da39c142ae37c109
+ *   build a5a1229bcc84a2cd
  *
  * 入口：左侧图标栏一个图标（sidebar.panellist），点开占满主区域（main 面板 key = ming-graph）。
  * 数据来自 Host 半端 /_dsh/dsh-ming-graph/neurons，自己拉、自己画，不经过模型。
