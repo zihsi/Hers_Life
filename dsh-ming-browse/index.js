@@ -44,6 +44,7 @@ export const inject = ['agents', 'timer', 'tools']
 
 /** 刷手机专用会话 id。固定，不随机：重启后 resume 同一个，历史连得上。 */
 const BROWSE_SESSION_ID = 'ming-browse'
+const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 
 const DEFAULTS = {
   enabled: true,
