@@ -71,6 +71,7 @@ function cut(text, from, to, label) {
 // 三个面板的源都写到文件末尾（最后一个是各自的 Icon），所以 to 给 null。
 const PANELS = [
   { name: '兴趣', file: path.join(ROOT, 'dsh-ming-interest/src/panel.js'), from: 'const INTEREST_API' },
+  { name: 'Discord', file: path.join(ROOT, 'dsh-ming-discord/src/panel.js'), from: 'const DISCORD_API' },
   { name: '声音', file: path.join(ROOT, 'dsh-ming-voice/src/panel.js'), from: 'const VOICE_API' },
   { name: '自己玩', file: path.join(ROOT, 'dsh-ming-browse/src/panel.js'), from: 'const BROWSE_API' },
 ]
