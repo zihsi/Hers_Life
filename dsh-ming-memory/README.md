@@ -1,4 +1,4 @@
-> **这个仓已并入 [Hers_Life](https://github.com/Chess12333/Hers_Life)，后续更新只在那边。**
+> **这个仓已并入 [Hers_Life](https://github.com/zihsi/Hers_Life)，后续更新只在那边。**
 > 这里保留历史版本，不再单独发版；装完整版请用 Hers_Life。
 
 # dsh-ming-memory
@@ -17,7 +17,7 @@
 
 ## 配套
 
-配 **[dsh-ming-graph](https://github.com/Chess12333/dsh-ming-graph)** 一起用：那边把同一批归档记忆画成一张能读的图——每条记忆一个点，每条边都写清凭什么连。
+配 **[dsh-ming-graph](https://github.com/zihsi/Hers_Life/tree/sync/local-latest-20261113/dsh-ming-graph)** 一起用：那边把同一批归档记忆画成一张能读的图——每条记忆一个点，每条边都写清凭什么连。
 
 一个管「用上」（把字摆进提示词），一个管「看见」（那些字在库里长什么样）。分开装也各能用，装在一起才知道自己记住的东西有多少、都连着谁。
 
