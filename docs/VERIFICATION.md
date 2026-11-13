@@ -1,6 +1,6 @@
 # 安装与修复验证记录
 
-记录截至 2026-11-12 的实际进度。此记录区分「使用者已在目标机器确认」与「仅代码 / 配置准备完成」，不把单机成功外推为所有环境都兼容。
+记录截至 2026-11-13 的实际进度。此记录区分「使用者已在目标机器确认」与「仅代码 / 配置准备完成」，不把单机成功外推为所有环境都兼容。
 
 ## 目标环境
 
@@ -25,9 +25,10 @@
 | dsh-ming-graph build | 已完成 | 12 個單元；build `aff205130ade3e15`；`build.mjs --check` 通過 |
 | Cordis peer | 已完成 | 安装 4.1.0，peer 检查无问题 |
 | discord.js | 已安装 | Profile 依赖解析到 14.28.1 |
-| Discord link package 解析 | 待修復 | Profile 可解析 discord.js 14.28.1，但插件真實原始碼目錄仍無法解析 |
-| Discord Bot 上線 | 未完成 | 插件尚未成功啟動，尚未確認 Bot 上線 |
-| Discord 訊息收發端到端 | 待驗證 | Bot 尚未確認上線，Guild、DM、interest 等路徑均待測試 |
+| Discord 插件載入 | 使用者已確認正常 | 2026-11-12 修改後確認插件可正常載入；最新提交 `68b6c03` |
+| Discord Gateway 連線 | 使用者已確認正常 | 使用者確認 Bot 正常連線；日誌可見 `apply()` 進入與 Token 存在 |
+| Discord Guild / DM 完整回歸 | 部分待驗證 | 目前連線正常；不同頻道、DM、重啟後 Session 恢復仍應分項測試 |
+| Discord Interest / Resume / Voice | 待端到端驗證 | 程式路徑存在，但不可由 Bot 上線推論所有整合路徑均通過 |
 | QQ Interest inbox | 依赖外部 AstrBot | 需要 AstrBot recorder 与群组配置 |
 | 未 @ Discord 图片兴趣识别 | 未实现 | 当前 inbox 只记录文字 |
 
@@ -51,13 +52,12 @@
 - 使用者确认文件建立成功。
 - 主题清单属于本机偏好资料，不随本文件提交。
 
-### 4. Discord dependency resolution
+### 4. Discord 插件載入與連線
 
-- Profile 的 `createRequire()` 可以解析 `discord.js` 14.28.1。
-- 從插件真實原始碼目錄 `D:\Hers_Life\dsh-ming-discord` 使用 `createRequire()` 仍得到 `Cannot find module 'discord.js'`。
-- 問題與 pnpm `link:` 本機套件的依賴安裝位置及 Node ESM realpath resolution 有關。
-- 目前尚未完成插件真實路徑的依賴解析修復，Discord Bot 也尚未確認上線。
-- 後續應先選擇可持久且不破壞 Profile 或其他插件的依賴部署方式，再驗證插件載入與 Bot ready 事件。
+- 使用者於 2026-11-12 確認 Discord 插件修改後正常運作；日誌顯示 `apply() 已進入`、`tokenPresent=true`，並確認 Bot 連線正常。
+- 因此舊版「Plugin 目錄仍無法解析 discord.js、Bot 尚未上線」狀態已過期，不再列為目前故障。
+- 若其他新環境出現 `Cannot find module 'discord.js'`，仍應分別檢查 Profile 與插件真實目錄的模組解析；必要時依 INSTALL.md 第 8 節採用本機 Junction 方案，不要覆蓋既有 node_modules。
+- 目前的載入與 Gateway 連線確認，不等於 Guild、DM、附件、Interest、Resume、Voice 所有路徑都已完成端到端回歸。
 - 不提交 Token、node_modules 或本機 Junction。
 ### 5. 共享 UI build 路径
 
@@ -73,6 +73,12 @@
 - Graph 與 Memory 的 `client.js` 均由目前倉庫 source 重新產生。
 - Graph `build.json` 已確認不含 Windows 磁碟絕對路徑。
 - 本次 Git 差異檢查通過；以上是本機建置驗證，不代表所有插件功能均已完成端到端測試。
+### 7. Bilibili linked bundle 宿主依赖
+
+- `dsh-ming-bilibili-account/package.json` 已声明 `@deepseek-ai/dsh-tools`、`@deepseek-ai/dsh-attachment`、`@deepseek-ai/dsh-llm` 为 peerDependencies。
+- 使用者确认补上 peerDependencies 后，Bilibili 插件已可正常载入。
+- 这项修复依赖 DSH Profile 提供兼容的宿主 API；不要把宿主包的独立副本塞进插件运行时。
+
 ## 备份
 安装与配置修改前曾在用户机器建立本机备份。备份路径、用户目录与实际配置内容不公开、不提交至仓库。恢复时应使用使用者本机的备份副本，不要从 GitHub 下载覆盖个人 profile。
 
