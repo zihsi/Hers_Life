@@ -149,7 +149,10 @@ export class BilibiliOfficialProvider {
         const url = new URL(path, this.options.baseUrl ?? BILIBILI_DEFAULT_BASE_URL);
         for (const [key, value] of Object.entries(params))
             url.searchParams.set(key, String(value));
-        const cookie = this.cookieHeader(this.options.cookie);
+        const configuredCookie = typeof this.options.getCookie === 'function'
+            ? await this.options.getCookie()
+            : this.options.cookie;
+        const cookie = this.cookieHeader(configuredCookie);
         const headers = {
             accept: 'application/json',
             'user-agent': this.options.userAgent ?? BILIBILI_DEFAULT_USER_AGENT,
