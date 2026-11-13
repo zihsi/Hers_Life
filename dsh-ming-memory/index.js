@@ -473,7 +473,7 @@ function pushTurn(prev, role, text) {
     const old = items.shift()
     digest = foldInto(digest, old.r + '：' + old.t)
   }
-  return { items, digest, rev: (Number(prev.rev) || 0) + 1 }
+  return { items, digest, rev: Math.max(Number(prev.rev) || 0, Array.isArray(prev.items) ? prev.items.length : 0) + 1 }
 }
 
 // feed.json 的 mtime：变了才重读，没变就不碰磁盘（每步只 stat 一次）
@@ -628,7 +628,7 @@ function recordMine(cfg, session, text) {
   saveSharedSoon(cfg)
 }
 
-// 每个会话「已经读过哪一句」：agentId -> (别的会话 id -> 上次读到的 at)
+// 每个会话「已经读到哪一版」：agentId -> (别的会话 id -> { at, rev })；时间相同也能识别新消息。
 // 只注新增，读过的不再重复——不然每一步都把同样的几行重新塞进提示词。
 const SHARED_SEEN = new Map()
 // 已准备、但尚未经 sp.context() 交付的共享讯息。
@@ -1460,19 +1460,21 @@ function attach(cfg, agent, mode) {function attach(cfg, agent, mode) {
 
           const result = live.trim() ? live : ''
 
-          if (rec.shared && result && cfg.diagnostics === true) {
-            sharedDiag(cfg, "CONTEXT_READ", {
-              agentId: id,
-              sharedLength: rec.shared.length,
-              pending: (SHARED_PENDING.get(id) || []).map(x => x.sid)
-            })
-            try {
-              console.warn("[MING_SHARED_CONTEXT_READ]", JSON.stringify({
+          if (rec.shared && result) {
+            if (cfg.diagnostics === true) {
+              sharedDiag(cfg, "CONTEXT_READ", {
                 agentId: id,
                 sharedLength: rec.shared.length,
                 pending: (SHARED_PENDING.get(id) || []).map(x => x.sid)
-              }))
-            } catch {}
+              })
+              try {
+                console.warn("[MING_SHARED_CONTEXT_READ]", JSON.stringify({
+                  agentId: id,
+                  sharedLength: rec.shared.length,
+                  pending: (SHARED_PENDING.get(id) || []).map(x => x.sid)
+                }))
+              } catch {}
+            }
             commitShared(id, cfg)
           }
 
