@@ -43,7 +43,7 @@ const DEFAULT_CREDENTIAL_FILE = (process.env.USERPROFILE || '') + '\\.dsh\\bili-
 const SEARCH_MAX_PAGE_SIZE = 20
 const TOOL_TIMEOUT_MS = 30_000
 
-/** cookie 的四段；缺哪段跳过哪段。JSON 里的字段名按小写比对，格式不同的写法也能认。 */
+/** Cookie 白名单字段；缺哪段跳过哪段。JSON 里的字段名按小写比对。 */
 const CREDENTIAL_FIELDS = [
   ['SESSDATA', 'sessdata'],
   ['bili_jct', 'bili_jct'],
