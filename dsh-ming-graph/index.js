@@ -43,27 +43,32 @@ let costIndexing = null
 
 export const name = 'dsh-ming-graph'
 
+const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
+const WORKSPACE = process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace')
+
 const DEFAULTS = {
   // 记忆侧默认值（notes 目录、QQ 观察库、群友索引、记忆卡、日记目录）在 memory 那边，
   // 这里展开它，本机配置照旧覆盖（~/.dsh/ming-graph.json）
   ...MEMORY_DEFAULTS,
+  // Graph 的預設記憶來源也必須跟隨 DSH_HOME；本機 config 可再明確覆蓋。
+  dshMemoryDir: path.join(DSH_HOME, 'memory'),
   syncSeconds: 120,
   // 2026-11-08：skill 开关。cwd 决定「按哪个工作区遮」——跟 dsh-ming-skill-isolate 的 root 是同一个意思；
   // offFile 留空就用 <skillsCwd>/skills-off.json，跟那边写的必须是同一个文件，否则开关写了也不生效。
-  skillsCwd: process.env.MING_WORKSPACE || '',
+  skillsCwd: WORKSPACE,
   skillsOffFile: '',
   // 费用价目表：我们自己维护，缺省在 <workspace>/live/cost-prices.json
-  costPricesFile: process.env.MING_COST_PRICES || ((process.env.MING_WORKSPACE || '') + '\\live\\cost-prices.json'),
+  costPricesFile: process.env.MING_COST_PRICES || path.join(WORKSPACE, 'live', 'cost-prices.json'),
   // 2026-11-10：「索引费用」按钮写出来的自动价目。人工那份永远压过它。
-  costAutoFile: process.env.MING_COST_AUTO || ((process.env.MING_WORKSPACE || '') + '\\live\\cost-prices.auto.json'),
+  costAutoFile: process.env.MING_COST_AUTO || path.join(WORKSPACE, 'live', 'cost-prices.auto.json'),
 }
 
 // ---------- 本地配置 ----------
 // 路径、号码、群名这些跟某台机器绑在一起的值不进仓库。
-// 放 ~/.dsh/ming-graph.json（或用环境变量 MING_GRAPH_CONFIG 指一个文件），
+// 放 <DSH_HOME>/ming-graph.json（或用环境变量 MING_GRAPH_CONFIG 指一个文件），
 // 仓库里只留通用默认。没有这个文件也能跑：只是不读 QQ 侧、不显示昵称。
 export function loadLocalConfig(file) {
-  const f = file || process.env.MING_GRAPH_CONFIG || path.join(os.homedir(), '.dsh', 'ming-graph.json')
+  const f = file || process.env.MING_GRAPH_CONFIG || path.join(DSH_HOME, 'ming-graph.json')
   try {
     const j = JSON.parse(readFileSync(f, 'utf8'))
     return j && typeof j === 'object' ? j : {}
@@ -77,10 +82,8 @@ const LOCAL = loadLocalConfig()
 // 跟手填的 roomLabels 合并，手填优先。
 function loadGroupNames() {
   const out = {}
-  // 2026-11-07 22:1x：默认路径不写进仓库（这个仓是公开的）。没配 MING_WORKSPACE 就不读，返回空表。
-  const ws = process.env.MING_WORKSPACE || ''
-  if (!ws) return out
-  const f = path.join(ws, 'live', 'qq-groups.json')
+  // 默认从共享工作区读取；路径不写进仓库（这个仓是公开的）。
+  const f = path.join(WORKSPACE, 'live', 'qq-groups.json')
   try {
     const j = JSON.parse(readFileSync(f, 'utf8'))
     if (Array.isArray(j.groups)) {
