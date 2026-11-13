@@ -1521,7 +1521,7 @@ export function apply(ctx, config) {
       qzone = '【今天的空间说说还没发】她定的：QQ 空间每天至少一条。日志还没有，这轮先发一条再补 `live/qzone-log.jsonl`。'
     }
     const qqSend = '"' + path.join(DSH_HOME, 'qq-zone', 'qq-send.mjs') + '"'
-    const qzone = '"' + path.join(DSH_HOME, 'qq-zone', 'qzone.mjs') + '"'
+    const qzoneScript = '"' + path.join(DSH_HOME, 'qq-zone', 'qzone.mjs') + '"'
     const biliCmd = '"' + path.join(DSH_HOME, 'bili-humanism', 'bili.cmd') + '"'
     return [
       '【自由时间 · ' + clockStamp(now) + '，窗口 ' + freeWindowLabel(now) + '】',
