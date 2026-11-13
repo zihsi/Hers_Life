@@ -23,6 +23,7 @@
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { homedir } from 'node:os'
+import { homedir } from 'node:os'
 
 export const name = 'ming-skill-isolate'
 export const inject = ['skills', 'tools']
@@ -31,8 +32,9 @@ export const inject = ['skills', 'tools']
 const SHADOW_RANK = 1
 const PROVIDER = 'ming-skill-isolate'
 
+const DSH_HOME = process.env.DSH_HOME || path.join(homedir(), '.dsh')
 const DEFAULTS = {
-  root: 'C:\\dsh\\workspace',
+  root: process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace'),
   stateFile: '',
 }
 
