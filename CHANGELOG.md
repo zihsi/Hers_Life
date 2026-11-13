@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2026-11-13 — 文件校正與測試輸出清理
+
+- 更新 Discord 安裝、設定、故障排除與驗證文件：目前目標環境已由使用者確認插件正常載入及連線，不再將依賴解析或 Bot 上線列為未修復。
+- 補充 Bilibili bundle 透過 `peerDependencies` 宣告 DSH 宿主 API 的安裝說明。
+- 強化 Discord allowlist、DM 與高權限 Profile 的安全注意事項。
+- 移除 Mousepet 已產生的即時測試輸出、過期臨時實驗檔與舊 sidecar 備份副本；保留可重跑的測試程式與驗證紀錄。
+- 更新 `.gitignore`，避免上述本機測試輸出再次進入版本控制。
 
 ## 2026-11-12 — Graph / Memory 建置產物同步
 
@@ -7,7 +14,7 @@
 - Graph `build.mjs --check` 通過；Memory 與 Graph 的 Node 語法檢查通過。
 - Graph build metadata 改用相對於倉庫根目錄的路徑，不再記錄開發者本機絕對路徑。
 - Graph 與 Memory 的 `client.js` 已依目前 source 重新產生，清除舊建置產物中不屬於目前 source 的殘留程式碼。
-- 本次建置與依賴驗證不代表 Discord Bot 已完成上線；Discord link package 的依賴解析仍待修復。
+- 本次項目僅涵蓋 Graph / Memory 建置產物；Discord 的載入與連線狀態另見 2026-11-13 驗證紀錄。
 ## 2026-11-12 — Windows DSH Desktop 安装与 Discord link 依赖修复
 
 - 新增 Windows 11 / DSH Desktop 十二插件安装指南、配置参考、Discord Bot 设置、架构说明、故障排除与安装验证记录。
