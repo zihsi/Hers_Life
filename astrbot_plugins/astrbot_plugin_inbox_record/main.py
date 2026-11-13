@@ -1,24 +1,12 @@
 """astrbot_plugin_inbox_record —— 把 AstrBot 收到的每条消息追加进 qq-inbox.jsonl
 
-2026-11-11 立。原因：QQ 从 QQ-Agent 换到 AstrBot 之后，
-`~/.dsh/media/onebot/qq-inbox.jsonl` 在 13:06 就停了（那是旧 onebot 插件写的）。
-而 `dsh-ming-interest`（兴趣唤醒）还在读这个文件——于是它读不到任何新消息，等于瞎了。
-
-这个插件只做一件事：按旧格式把入站消息写回去，让兴趣唤醒不用改代码就能继续工作。
-
-格式（跟旧 onebot 插件一致，字段只保留兴趣唤醒真正用到的）：
-  {"ts": 毫秒, "kind": "message", "decision": {...}, "frame": {
-      "message_type": "group"|"private",
-      "group_id": "...", "user_id": "...", "self_id": "...",
-      "sender": {"card": "...", "nickname": "..."},
-      "message": [{"type": "text", "data": {"text": "..."}}]
-  }}
-
-写盘用行缓冲、单行不拆——兴趣唤醒按行读、按换行切，半行会被它跳过（它那边有注释）。
+QQ 侧消息源适配器：写入 dsh-ming-interest 使用的兼容 inbox 格式。
+默认路径跟随 DSH_HOME；可在 AstrBot 插件设置中用 inboxPath 覆盖。
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import time
@@ -27,17 +15,27 @@ from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star, register
 
-INBOX = os.path.join(
-    os.environ.get("USERPROFILE", r"C:\Users\13588"),
-    ".dsh", "media", "onebot", "qq-inbox.jsonl",
-)
+
+def resolve_inbox_path(config: dict | None = None) -> str:
+    dsh_home = (
+        os.environ.get("DSH_HOME")
+        or os.path.join(
+            os.environ.get("USERPROFILE") or os.path.expanduser("~"),
+            ".dsh",
+        )
+    )
+    configured = (config or {}).get("inboxPath") or (config or {}).get("inbox_path")
+    raw_path = str(configured or os.path.join(dsh_home, "media", "onebot", "qq-inbox.jsonl")).strip()
+    return os.path.abspath(os.path.expandvars(os.path.expanduser(raw_path)))
 
 
-@register("astrbot_plugin_inbox_record", "溟", "把入站消息写进 qq-inbox.jsonl，供兴趣唤醒读取", "0.1.0")
+@register("astrbot_plugin_inbox_record", "溟", "把入站消息写进 qq-inbox.jsonl，供兴趣唤醒读取", "0.2.0")
 class InboxRecord(Star):
     def __init__(self, context: Context, config: dict | None = None):
         super().__init__(context)
         self.config = config or {}
+        self.inbox_path = resolve_inbox_path(self.config)
+        self._write_lock = asyncio.Lock()
         self._warned = False
 
     @filter.event_message_type(filter.EventMessageType.ALL)
@@ -67,8 +65,11 @@ class InboxRecord(Star):
                     ],
                 },
             }
-            with open(INBOX, "a", encoding="utf-8") as f:
-                f.write(json.dumps(line, ensure_ascii=False) + "\n")
+            encoded = json.dumps(line, ensure_ascii=False) + "\n"
+            async with self._write_lock:
+                os.makedirs(os.path.dirname(self.inbox_path), exist_ok=True)
+                with open(self.inbox_path, "a", encoding="utf-8") as f:
+                    f.write(encoded)
         except Exception as e:  # noqa: BLE001
             if not self._warned:
                 logger.warning("[inbox-record] 写入失败（只提示一次）：%s", e)
