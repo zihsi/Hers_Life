@@ -46,7 +46,7 @@ people/_index.json（号码→昵称） ┘
 
 ## 数据源（只读）
 
-- **DSH 侧**（默认开）：`~/.dsh/memory/notes/*.md` 的 frontmatter。**扫目录，不读 index.json**——索引会有滞后，目录才是全的。老笔记没有 `created` 就从文件名 `20261020-123127-…` 里解析。
+- **DSH 侧**（默认开）：`<DSH_HOME>/memory/notes/*.md` 的 frontmatter。**扫目录，不读 index.json**——索引会有滞后，目录才是全的。老笔记没有 `created` 就从文件名 `20261020-123127-…` 里解析。
 - **QQ 侧**（可选）：任何一行的 JSONL 观察库，路径配 `qqObservations`。**不读 evidence/原文档**——那文件几十 MB，图上用不着。
 - **人名**（可选）：`peopleIndex` 指的 `{ byId: { "<号码>": [{ name }] } }`。昵称会改，认人只认号。
 
@@ -138,7 +138,7 @@ node neuron-check.mjs out.json   # 指定落盘路径
 
 ## 配置
 
-跟某台机器绑在一起的值不进仓库，放 `~/.dsh/ming-graph.json`（或用 `MING_GRAPH_CONFIG` 指一个文件）：
+跟某台机器绑在一起的值不进仓库，放 `<DSH_HOME>/ming-graph.json`（或用 `MING_GRAPH_CONFIG` 指一个文件）；`DSH_HOME` 未设定时默认 `%USERPROFILE%\.dsh`：
 
 ```json
 {
