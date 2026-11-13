@@ -1,5 +1,7 @@
 # Discord Bot 建立与连接
 
+> **当前状态（2026-11-13）：** 使用者已确认 `dsh-ming-discord` 在目标 DSH Desktop Profile 中正常载入，Gateway 连接也正常。以下安装步骤是新机器或重新部署时的指引；单次连接成功不等于 Guild、DM、附件、Interest、Resume、Voice 等每条路径都已完成端到端回归。
+
 ## 功能与消息规则
 
 `dsh-ming-discord` 是 Discord Gateway，直接把 Discord 频道和私讯连接到 DSH Agent。
@@ -104,7 +106,7 @@ OAuth2 URL Generator 中选择：
 | `inboxPath` | interest 读取的兼容 inbox |
 | `chatSessionsPath` | 聊天 ID 到 DSH Session ID 的映射文件 |
 
-当 allowlists 为空时，bridge 不会额外限制 Guild / Channel / User；若 Agent profile 有本机操作工具，建议填入可信 Guild / Channel / User ID，避免把拥有高权限工具的 Bot 邀入公开服务器。
+当 allowlists 为空时，bridge 不会额外限制 Guild / Channel / User；这不是安全默认值。若 Agent profile 有本机操作工具，正式使用前应填入可信 Guild / Channel / User ID。`mentionRequired: true` 只限制群聊是否 @ Bot，不限制谁可以使用 Bot；DM 也应依 `allowedUserIds` 收紧。不要把拥有高权限工具的 Bot 邀入公开或不可信服务器。
 
 ## 5. 安装依赖与修复 link 包解析
 
@@ -115,11 +117,9 @@ Profile 安装 `discord.js`：
 pnpm add "discord.js@^14.19.3"
 ```
 
-注意：pnpm 的 `link:` 本地插件不会自动把依赖安装到链接目标目录。Node ESM 从插件真实源码目录解析依赖，因此可能出现 Profile 能解析、插件自身却报 `Cannot find module 'discord.js'`。
+pnpm 的 `link:` 本地插件会从真实源码目录解析 ESM 依赖；某些安装布局可能出现 Profile 能解析、插件自身却报 `Cannot find module 'discord.js'`。当前使用者环境已确认插件正常载入与连接，因此不要对正常环境重复改动。
 
-本次在 Windows DSH Desktop profile 的实际修复是：在插件目录建立指向 Profile `node_modules` 的 NTFS Junction。完整命令、验证脚本与保护条件见 [INSTALL.md 第 8 节](INSTALL.md#8-discord-本地依赖解析-junction-重要)。
-
-这项 Junction 是本机安装产物，不应提交到 GitHub；如果移动 Profile 或仓库目录，必须重新检查链接目标。
+若新环境遇到上述明确错误，按 [INSTALL.md 第 8 节](INSTALL.md#8-discord-本地依赖解析-仅在实际报错时处理) 检查 Profile 与 Plugin 两处解析结果；只有确认插件目录解析失败时，才考虑建立指向 Profile `node_modules` 的 NTFS Junction。Junction 是本机安装产物，不应提交到 GitHub；移动 Profile 或仓库后必须重新检查链接目标。
 
 ## 6. 验证连接
 
