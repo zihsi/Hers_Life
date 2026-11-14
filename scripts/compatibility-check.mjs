@@ -5,7 +5,6 @@ import { parseArgs, readProfile, repoRoot, resolveProfileDir, CHILDREN, BASELINE
 const fail = (message) => { console.error('BLOCKED: ' + message); process.exitCode = 2 }
 try {
   const args = parseArgs(process.argv.slice(2), ['plugin-manager-available'])
-  const root = repoRoot()
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
   const spec = JSON.parse(await readFile(new URL('../hers-life.install.json', import.meta.url), 'utf8'))
   const profileDir = await resolveProfileDir(args)
@@ -25,7 +24,8 @@ try {
   if (!args['host-version']) warnings.push('Running DSH version was not supplied; do not assume compatibility.')
   const alreadyInstalled = Object.hasOwn(manifest.dependencies, 'dsh-hers-life') || bundles.includes('dsh-hers-life')
   const report = {
-    ready: errors.length === 0 && args['plugin-manager-available'] === true && Boolean(args['host-version']),
+    readyForPluginManagerAttempt: errors.length === 0 && args['plugin-manager-available'] === true && Boolean(args['host-version']),
+    hostCompatibilityConfirmed: false,
     errors,
     warnings,
     runtime: { node: process.versions.node, hostDshVersion: args['host-version'] || null },
@@ -35,7 +35,7 @@ try {
   }
   console.log(JSON.stringify(report, null, 2))
   if (errors.length) process.exitCode = 2
-  else if (!report.ready) process.exitCode = 3
+  else if (!report.readyForPluginManagerAttempt) process.exitCode = 3
 } catch (error) {
   fail(error.message)
 }
