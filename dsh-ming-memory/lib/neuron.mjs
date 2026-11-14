@@ -18,7 +18,7 @@ import path from 'node:path'
 import os from 'node:os'
 
 export const DEFAULTS = {
-  dshMemoryDir: path.join(os.homedir(), '.dsh', 'memory'),
+  dshMemoryDir: path.join(process.env.DSH_HOME || path.join(os.homedir(), '.dsh'), 'memory'),
   // QQ-Agent 侧的观察库；留空 = 不读 QQ 侧（真实路径放本地配置）
   qqObservations: '',
   maxNodes: 1200,
