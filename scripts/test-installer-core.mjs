@@ -53,7 +53,7 @@ test('backup copies only profile metadata and records integrity hashes', async (
     'cordis.patch.yml', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml',
   ])
   assert.equal(manifest.excluded.includes('diary'), true)
-  assert.equal(await verifyBackup(backupDir, profile).kind, 'hers-life-profile-metadata-backup')
+  assert.equal((await verifyBackup(backupDir, profile)).kind, 'hers-life-profile-metadata-backup')
   await assert.rejects(readFile(path.join(backupDir, 'diary', 'private.md')))
 })
 
@@ -80,7 +80,7 @@ test('backup integrity verification catches changed files and wrong profiles', a
 test('health check verifies installed dependency and selected bundle without booting DSH', async (t) => {
   const { temp, profile } = await fixture(t)
   const root = path.join(temp, 'repo')
-  await mkdir(path.join(root, 'node_modules', BUNDLE_NAME), { recursive: true })
+  await mkdir(path.join(profile, 'node_modules', BUNDLE_NAME), { recursive: true })
   await writeFile(path.join(root, 'package.json'), JSON.stringify({
     name: BUNDLE_NAME, dependencies: Object.fromEntries(CHILDREN.map(name => [name, 'git+https://example.invalid/path'])),
   }))
@@ -88,7 +88,7 @@ test('health check verifies installed dependency and selected bundle without boo
     baselineCommit: '4880c98e00c634997103c6bc2192a88e7934e05f',
   }))
   await writeFile(path.join(root, 'cordis.patch.yml'), '- insert:\n    - id: hers-life\n      disabled: true\n      config:\n        security:\n          privacyReady: false\n')
-  await writeFile(path.join(root, 'node_modules', BUNDLE_NAME, 'package.json'), JSON.stringify({ name: BUNDLE_NAME }))
+  await writeFile(path.join(profile, 'node_modules', BUNDLE_NAME, 'package.json'), JSON.stringify({ name: BUNDLE_NAME }))
   const report = await checkHealth(profile, root)
   assert.equal(report.ok, true)
   assert.equal(report.effectiveRuntimeConfigVerified, false)
