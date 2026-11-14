@@ -148,6 +148,7 @@ export function assertFreshInstallBackup(manifest) {
 }
 
 export async function verifyBackup(backupDir, profileDir) {
+  if (!path.isAbsolute(backupDir)) throw new Error('--backup-dir must be an absolute path.')
   const backup = await realpath(backupDir)
   const profile = await realpath(profileDir)
   if (isWithin(profile, backup) || isWithin(backup, profile)) {

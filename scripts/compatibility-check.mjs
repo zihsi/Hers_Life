@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises'
-import { parseArgs, readProfile, repoRoot, resolveProfileDir, CHILDREN, BASELINE_COMMIT, BRANCH } from './lib/installer-core.mjs'
+import { parseArgs, readProfile, resolveProfileDir, CHILDREN, BASELINE_COMMIT, BRANCH } from './lib/installer-core.mjs'
 
 const fail = (message) => { console.error('BLOCKED: ' + message); process.exitCode = 2 }
 try {
