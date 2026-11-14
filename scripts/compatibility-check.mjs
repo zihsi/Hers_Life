@@ -15,24 +15,45 @@ try {
   if (pkg.name !== 'dsh-hers-life') errors.push('Root package name does not match dsh-hers-life.')
   if (pkg.version !== spec.install.postInstallAssertion?.version || pkg.version !== '0.1.0') errors.push('Root package version differs from the install spec.')
   const expectedPeers = {
-    '@deepseek-ai/cordis': '^4.0.1',
-    '@deepseek-ai/dsh-tools': '*',
-    '@deepseek-ai/dsh-attachment': '*',
-    '@deepseek-ai/dsh-llm': '*',
-    '@deepseek-ai/dsh-brand': '^0.0.1-rc.1',
-    '@deepseek-ai/dsh-invariants': '^0.0.1-rc.1',
-    '@deepseek-ai/dsh-timeout': '^0.0.1-rc.1',
-    '@deepseek-ai/dsh-agent': '^0.0.1-rc.1',
-    '@deepseek-ai/dsh-code-runtime': '^0.0.1-rc.1',
-    '@deepseek-ai/dsh-scope': '^0.0.1-rc.1',
-    '@deepseek-ai/dsh-session': '^0.0.1-rc.1',
-    '@deepseek-ai/dsh-system-prompt': '^0.0.1-rc.1',
-    react: '^18.2.0',
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/dsh-attachment": "*",
+    "@deepseek-ai/dsh-llm": "*",
+    "@deepseek-ai/dsh-brand": "*",
+    "@deepseek-ai/dsh-invariants": "*",
+    "@deepseek-ai/dsh-timeout": "*",
+    "@deepseek-ai/dsh-agent": "*",
+    "@deepseek-ai/dsh-code-runtime": "*",
+    "@deepseek-ai/dsh-scope": "*",
+    "@deepseek-ai/dsh-session": "*",
+    "@deepseek-ai/dsh-system-prompt": "*",
+    "@deepseek-ai/dsh-user-approval": "*",
+    "@deepseek-ai/dsh-typert-protocol": "*",
+    "@deepseek-ai/dsh-type-meta": "*",
+    "react": "^18.2.0"
   }
-  const peerMatches = actual => actual &&
-    Object.keys(actual).length === Object.keys(expectedPeers).length &&
-    Object.entries(expectedPeers).every(([name, range]) => actual[name] === range)
-  if (!peerMatches(pkg.peerDependencies) || !peerMatches(pkg.devDependencies)) {
+  const expectedDevDependencies = {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-tools": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-attachment": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-llm": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-brand": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-invariants": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-timeout": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-agent": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-code-runtime": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-scope": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-session": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-user-approval": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-typert-protocol": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-type-meta": "0.0.1-rc.1",
+    "react": "^18.2.0"
+  }
+  const peerMatches = (actual, expected) => actual &&
+    Object.keys(actual).length === Object.keys(expected).length &&
+    Object.entries(expected).every(([name, range]) => actual[name] === range)
+  if (!peerMatches(pkg.peerDependencies, expectedPeers) || !peerMatches(pkg.devDependencies, expectedDevDependencies)) {
     errors.push('DSH runtime peer declarations do not match the reviewed compatibility contract.')
   }
 

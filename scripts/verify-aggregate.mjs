@@ -31,19 +31,40 @@ const expectedPeers = {
   "@deepseek-ai/dsh-tools": "*",
   "@deepseek-ai/dsh-attachment": "*",
   "@deepseek-ai/dsh-llm": "*",
-  "@deepseek-ai/dsh-brand": "^0.0.1-rc.1",
-  "@deepseek-ai/dsh-invariants": "^0.0.1-rc.1",
-  "@deepseek-ai/dsh-timeout": "^0.0.1-rc.1",
-  "@deepseek-ai/dsh-agent": "^0.0.1-rc.1",
-  "@deepseek-ai/dsh-code-runtime": "^0.0.1-rc.1",
-  "@deepseek-ai/dsh-scope": "^0.0.1-rc.1",
-  "@deepseek-ai/dsh-session": "^0.0.1-rc.1",
-  "@deepseek-ai/dsh-system-prompt": "^0.0.1-rc.1",
+  "@deepseek-ai/dsh-brand": "*",
+  "@deepseek-ai/dsh-invariants": "*",
+  "@deepseek-ai/dsh-timeout": "*",
+  "@deepseek-ai/dsh-agent": "*",
+  "@deepseek-ai/dsh-code-runtime": "*",
+  "@deepseek-ai/dsh-scope": "*",
+  "@deepseek-ai/dsh-session": "*",
+  "@deepseek-ai/dsh-system-prompt": "*",
+  "@deepseek-ai/dsh-user-approval": "*",
+  "@deepseek-ai/dsh-typert-protocol": "*",
+  "@deepseek-ai/dsh-type-meta": "*",
+  "react": "^18.2.0"
+}
+const expectedDevDependencies = {
+  "@deepseek-ai/cordis": "^4.0.1",
+  "@deepseek-ai/dsh-tools": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-attachment": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-llm": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-brand": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-invariants": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-timeout": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-agent": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-code-runtime": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-scope": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-session": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-system-prompt": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-user-approval": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-typert-protocol": "0.0.1-rc.1",
+  "@deepseek-ai/dsh-type-meta": "0.0.1-rc.1",
   "react": "^18.2.0"
 }
 
 assert.deepEqual(pkg.peerDependencies, expectedPeers)
-assert.deepEqual(pkg.devDependencies, expectedPeers)
+assert.deepEqual(pkg.devDependencies, expectedDevDependencies)
 assert.equal(spec.install.postInstallAssertion.name, 'dsh-hers-life')
 assert.equal(spec.install.postInstallAssertion.version, pkg.version)
 for (const name of expected) {
