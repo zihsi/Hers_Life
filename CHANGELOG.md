@@ -48,6 +48,7 @@
 这一版的正事是**换壳之后的接口对齐**：QQ 侧从 QQ-Agent 迁到 AstrBot 4.29。
 
 - 新增 `astrbot_plugins/astrbot_plugin_inbox_record`：把 AstrBot 收到的每条消息按旧格式追加进 `~/.dsh/media/onebot/qq-inbox.jsonl`。
+- 后续路径对齐后，记录器默认位置改为 `<DSH_HOME>/media/onebot/qq-inbox.jsonl`（未设置 `DSH_HOME` 时仍是 `~/.dsh`）；可用 AstrBot 的 `inboxPath` 自订，且需与 `dsh-ming-interest` 指向同一文件。
 - README 加入消息源说明；插件读取文件与工具，不绑定某个 QQ bot 后端。
 - 其余十一包代码未变。
 
