@@ -8,7 +8,7 @@
   "source": {
     "dependencyCommit": "4880c98e00c634997103c6bc2192a88e7934e05f",
     "dependencyResolution": "pnpm-git-subdirectory",
-    "settingsDependencyCommit": "28cbb752e96150eba2f7827bd1af170a7ba4af64"
+    "settingsDependencyCommit": "aff1a758c559f49c07cda22d740e4fa9d7cd3719"
   },
   "install": {
     "addPlugin": {

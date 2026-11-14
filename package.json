@@ -40,7 +40,7 @@
     "dsh-ming-resume": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-resume",
     "dsh-ming-skill-isolate": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-skill-isolate",
     "dsh-ming-mousepet": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-mousepet",
-    "dsh-hers-life-settings": "git+https://github.com/zihsi/Hers_Life.git#28cbb752e96150eba2f7827bd1af170a7ba4af64&path:/dsh-hers-life-settings"
+    "dsh-hers-life-settings": "git+https://github.com/zihsi/Hers_Life.git#aff1a758c559f49c07cda22d740e4fa9d7cd3719&path:/dsh-hers-life-settings"
   },
   "dsh": {
     "bundle": {
