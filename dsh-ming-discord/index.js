@@ -5,7 +5,7 @@ import { mkdir, readFile, rename, writeFile, appendFile, stat } from 'node:fs/pr
 import { Client, GatewayIntentBits, Partials } from 'discord.js'
 
 export const name = 'ming-discord'
-export const inject = ['agents', 'attachments']
+export const inject = ['agents', 'attachments', 'credentials']
 
 const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 
@@ -43,10 +43,20 @@ function imageType(a) {
   return ({'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif'})[ext] || ''
 }
 
-export function apply(ctx, input = {}) {
+export async function apply(ctx, input = {}) {
+  let credentialToken = ''
+  try {
+    const credential = await ctx.credentials.resolve('DISCORD_BOT_TOKEN')
+    credentialToken = typeof credential?.value === 'string' ? credential.value : ''
+  } catch (error) {
+    ctx.logger?.warn?.('[ming-discord] DSH Credentials 無法讀取；不會從一般設定檔讀取 Token。')
+  }
+  if (typeof input.token === 'string' && input.token.trim()) {
+    ctx.logger?.warn?.('[ming-discord] 偵測到舊版一般設定中的 Token 欄位；此版本不再讀取該欄位，請改用 Hers Life 設定頁的安全憑據欄位。')
+  }
   const cfg = {
     enabled: input.enabled !== false,
-    token: input.token || process.env.DISCORD_BOT_TOKEN || '',
+    token: credentialToken || process.env.DISCORD_BOT_TOKEN || '',
     provider: input.provider || '',
     model: input.model || '',
     workspacePath: path.resolve(input.workspacePath || process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace')),
@@ -57,9 +67,9 @@ export function apply(ctx, input = {}) {
     allowedGuildIds: list(input.allowedGuildIds),
     allowedChannelIds: list(input.allowedChannelIds),
     configuredAllowedUserIds: list(input.allowedUserIds),
-    envAllowedUserIds: [...new Set([...(process.env.MING_DISCORD_ALLOWED_USER_IDS || '').split(',').map(x => x.trim()), process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
-    allowedUserIds: [...new Set([...list(input.allowedUserIds), ...(process.env.MING_DISCORD_ALLOWED_USER_IDS || '').split(',').map(x => x.trim()), process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
-    ownerUserIds: [...new Set([...list(input.ownerUserIds), process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
+    envAllowedUserIds: [...new Set([...(process.env.MING_DISCORD_ALLOWED_USER_IDS || '').split(',').map(x => x.trim()), input.ownerUserId || '', process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
+    allowedUserIds: [...new Set([...list(input.allowedUserIds), input.ownerUserId || '', ...(process.env.MING_DISCORD_ALLOWED_USER_IDS || '').split(',').map(x => x.trim()), process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
+    ownerUserIds: [...new Set([...list(input.ownerUserIds), input.ownerUserId || '', process.env.MING_OWNER_DISCORD_ID || ''].filter(Boolean))],
     newMessagePolicy: input.newMessagePolicy === 'followup' ? 'followup' : 'steer',
     maxAttachmentBytes: Number.isFinite(Number(input.maxAttachmentBytes)) && Number(input.maxAttachmentBytes) > 0
       ? Math.floor(Number(input.maxAttachmentBytes)) : 10 * 1024 * 1024,
@@ -452,9 +462,11 @@ export function apply(ctx, input = {}) {
         if (disposed || message.author?.bot) return
         await settingsReady
         const isDm = !message.guildId
-        if (isDm && !cfg.directMessages) return
-        if (cfg.allowedUserIds.length && !cfg.allowedUserIds.includes(message.author.id)) return
-        if (message.guildId && cfg.allowedGuildIds.length && !cfg.allowedGuildIds.includes(message.guildId)) return
+        const isOwner = cfg.ownerUserIds.includes(message.author.id)
+        if (isDm && (!cfg.directMessages || !isOwner)) return
+        if (!isOwner && !cfg.allowedUserIds.includes(message.author.id)) return
+        // Empty Guild allowlists mean deny all Guild traffic, never allow all.
+        if (message.guildId && (!cfg.allowedGuildIds.length || !cfg.allowedGuildIds.includes(message.guildId))) return
         if (cfg.allowedChannelIds.length && !cfg.allowedChannelIds.includes(message.channelId)) return
         const mentioned = Boolean(client.user && message.mentions.has(client.user))
         const shouldRespond = isDm || !cfg.mentionRequired || mentioned

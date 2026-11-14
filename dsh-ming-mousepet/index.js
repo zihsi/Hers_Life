@@ -44,12 +44,12 @@ function toLosslessJson(value) {
   return out
 }
 
-async function loadDefineTool() {
+async function loadDefineTool(overridePath = '') {
   try {
     const mod = await import('@deepseek-ai/dsh-tools')
     if (mod?.defineTool) return mod.defineTool
   } catch { /* 本地测试时走环境变量 */ }
-  const override = process.env.DSH_TOOLS_PATH
+  const override = overridePath || process.env.DSH_TOOLS_PATH
   if (override) {
     const { pathToFileURL } = await import('node:url')
     const mod = await import(pathToFileURL(override).href)
@@ -306,7 +306,7 @@ function readBody(req) {
 }
 
 export async function apply(ctx, rawConfig = {}) {
-  const defineTool = await loadDefineTool()
+  const defineTool = await loadDefineTool(rawConfig?.toolsPath || '')
   const log = (message) => { try { ctx?.logger?.info?.(`[ming-mousepet] ${message}`) } catch { /* ignore */ } }
   const saved = await loadSavedSettings(log)
   let current = normalizeSettings(saved, normalizeSettings(rawConfig))
