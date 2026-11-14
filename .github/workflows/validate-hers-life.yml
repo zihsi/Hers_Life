@@ -65,3 +65,5 @@ jobs:
         run: node --test scripts/test-installer-core.mjs
       - name: Resolve all 12 Git subdirectory dependencies
         run: pnpm install --ignore-scripts --config.auto-install-peers=false
+      - name: Inspect peer dependency compatibility
+        run: pnpm peers check
