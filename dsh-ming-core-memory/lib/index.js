@@ -1017,6 +1017,7 @@ const toolDefs = [
           return '设置失败：action=set 需要提供 preset。可用：' + PRESETS.map((p) => p.id).join(' / ');
         }
         if (action === 'custom') patch.custom = typeof args.text === 'string' ? args.text : '';
+        if (action === 'custom' && containsCredential(patch.custom)) return credentialWriteError();
 
         return await enqueue(async () => {
           const cur = readPersona();
@@ -1075,6 +1076,7 @@ export function apply(ctx) {
               const cur = readPersona();
               const check = normalizePersonaInput(patch, cur);
               if (!check.ok) return { ok: false, error: check.error };
+              if (containsCredential(check.value.custom || '')) return { ok: false, error: credentialWriteError() };
               await atomicWrite(personaPath(), renderPersonaFile(check.value));
               return { ok: true, persona: readPersona() };
             });
