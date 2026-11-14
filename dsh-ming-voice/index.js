@@ -32,6 +32,7 @@ const DEFAULTS = {
   rate: '+0%',
   python: 'python',
   ffmpeg: 'ffmpeg',
+  powershell: 'powershell',
   timeoutMs: 60000,
 }
 
@@ -44,6 +45,7 @@ function normalize(config) {
     rate: str(c.rate, DEFAULTS.rate),
     python: str(c.python, DEFAULTS.python),
     ffmpeg: str(c.ffmpeg, DEFAULTS.ffmpeg),
+    powershell: str(c.powershell, DEFAULTS.powershell),
     timeoutMs: Number.isFinite(Number(c.timeoutMs)) ? Number(c.timeoutMs) : DEFAULTS.timeoutMs,
   }
 }
@@ -87,7 +89,7 @@ async function sapiTts(cfg, text, out) {
     "$s.Speak('" + safe + "')",
     '$s.Dispose()',
   ].join('; ')
-  const r = await run('powershell', ['-NoProfile', '-Command', ps], cfg.timeoutMs)
+  const r = await run(cfg.powershell, ['-NoProfile', '-Command', ps], cfg.timeoutMs)
   if (!r.ok) return r.stderr || 'SAPI 失败'
   const conv = await run(cfg.ffmpeg, ['-y', '-loglevel', 'error', '-i', wav, '-codec:a', 'libmp3lame', '-qscale:a', '4', out], cfg.timeoutMs)
   if (!conv.ok) return conv.stderr || 'ffmpeg 转码失败'

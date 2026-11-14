@@ -9,7 +9,7 @@ window.__ModuleLoader__.load({
     const REF = 'DISCORD_BOT_TOKEN'
     const PATHS = [
       ['workspacePath'],
-      ['environment', 'pythonPath'], ['environment', 'ffmpegPath'], ['environment', 'ffplayPath'],
+      ['environment', 'pythonPath'], ['environment', 'ffmpegPath'], ['environment', 'ffplayPath'], ['environment', 'powershellPath'],
       ['environment', 'adbPath'], ['environment', 'dshToolsPath'],
       ['discord', 'enabled'], ['discord', 'ownerUserId'], ['discord', 'allowedGuildIds'],
       ['discord', 'allowedChannelIds'], ['discord', 'allowedUserIds'],
@@ -28,7 +28,7 @@ window.__ModuleLoader__.load({
     ]
     const LABELS = {
       workspacePath: '共用工作區',
-      pythonPath: 'Python 執行檔', ffmpegPath: 'FFmpeg 執行檔', ffplayPath: 'FFplay 執行檔', adbPath: 'ADB 執行檔', dshToolsPath: 'DSH Tools 模組路徑',
+      pythonPath: 'Python 執行檔', ffmpegPath: 'FFmpeg 執行檔', ffplayPath: 'FFplay 執行檔', powershellPath: 'PowerShell 執行檔', adbPath: 'ADB 執行檔', dshToolsPath: 'DSH Tools 模組路徑',
       enabled: '啟用功能', ownerUserId: '主人 Discord User ID', allowedGuildIds: '允許的伺服器 ID',
       allowedChannelIds: '允許的頻道 ID', allowedUserIds: '允許的使用者 ID',
       directMessages: '接收私訊', mentionRequired: '群聊必須 @ Bot', observeUnmentioned: '觀察未 @ Bot 的訊息',
@@ -181,9 +181,10 @@ window.__ModuleLoader__.load({
                   h('div', { style: STYLE.label }, '偵測到的工作區'),
                   ...env.workspaceCandidates.map((item, i) => h('button', { key: i, style: STYLE.btn, onClick: () => update(['workspacePath'], item.path) }, (item.exists ? '使用 ' : '建立 ') + item.source + '：' + item.path))) : null,
                 grid(field(['environment','pythonPath']), field(['environment','ffmpegPath'])),
-                grid(field(['environment','ffplayPath']), field(['environment','adbPath'])),
+                grid(field(['environment','ffplayPath']), field(['environment','powershellPath'])),
+                field(['environment','adbPath']),
                 field(['environment','dshToolsPath'], { hint: '通常不需要填；只有 DSH Tools 無法自動解析時才需要指定模組檔案。' }),
-                env ? h('div', { style: STYLE.row }, ...[['python','pythonPath'],['ffmpeg','ffmpegPath'],['ffplay','ffplayPath'],['adb','adbPath']].map(([key,target]) => env.commands?.[key] ? h('button', { key, style: STYLE.btn, onClick: () => update(['environment',target], env.commands[key]) }, '使用偵測到的 ' + key) : null)) : null,
+                env ? h('div', { style: STYLE.row }, ...[['python','pythonPath'],['ffmpeg','ffmpegPath'],['ffplay','ffplayPath'],['powershell','powershellPath'],['adb','adbPath']].map(([key,target]) => env.commands?.[key] ? h('button', { key, style: STYLE.btn, onClick: () => update(['environment',target], env.commands[key]) }, '使用偵測到的 ' + key) : null)) : null,
                 h('div', { style: STYLE.hint }, '執行檔路徑留空時使用系統 PATH 自動偵測；偵測結果可直接套用。'))))
           : tab === 'discord'
             ? h(React.Fragment, null,

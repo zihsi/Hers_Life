@@ -23,6 +23,7 @@ export const Config = z.object({
     pythonPath: z.string().default(''),
     ffmpegPath: z.string().default(''),
     ffplayPath: z.string().default(''),
+    powershellPath: z.string().default(''),
     adbPath: z.string().default(''),
     dshToolsPath: z.string().default(''),
   }).default({}).volatile(),
@@ -137,6 +138,7 @@ export const Config = z.object({
     rate: z.string().default('+0%'),
     python: z.string().default(''),
     ffmpeg: z.string().default(''),
+    powershell: z.string().default(''),
     timeoutMs: z.number().step(1).min(1000).default(60000),
   }).default({}).volatile(),
   wake: z.object({
@@ -244,6 +246,7 @@ export async function apply(ctx, rawConfig = {}) {
   voice.root = voice.root || workspacePath
   if (environment.pythonPath) voice.python = environment.pythonPath
   if (environment.ffmpegPath) voice.ffmpeg = environment.ffmpegPath
+  if (environment.powershellPath) voice.powershell = environment.powershellPath
 
   const wake = childConfigs.wake
   wake.root = wake.root || workspacePath
