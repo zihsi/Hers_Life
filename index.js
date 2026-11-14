@@ -152,7 +152,7 @@ export const Config = z.object({
   }).default({}).volatile(),
   skillIsolate: z.object({
     root: z.string().default(''),
-    offFile: z.string().default(''),
+    stateFile: z.string().default(''),
   }).default({}).volatile(),
   mousepet: z.object({
     cursorMode: z.string().default('companion'),
@@ -258,7 +258,7 @@ export async function apply(ctx, rawConfig = {}) {
   if (environment.dshToolsPath) mousepet.toolsPath = environment.dshToolsPath
   const skillIsolate = childConfigs.skillIsolate
   skillIsolate.root = skillIsolate.root || workspacePath
-  skillIsolate.offFile = skillIsolate.offFile || graph.skillsOffFile
+  skillIsolate.stateFile = skillIsolate.stateFile || graph.skillsOffFile
 
   const init = await initializeWorkspace({
     workspacePath,
