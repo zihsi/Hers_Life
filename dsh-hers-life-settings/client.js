@@ -20,7 +20,7 @@ window.__ModuleLoader__.load({
       ['interest', 'enabled'], ['interest', 'observeEnabled'], ['interest', 'observePrivate'],
       ['interest', 'groups'], ['interest', 'observeGroups'], ['interest', 'quietHours'],
       ['interest', 'pollMs'], ['interest', 'minGapMinutes'], ['interest', 'maxPerHour'], ['interest', 'minChars'], ['interest', 'contextLines'], ['interest', 'pendingMax'], ['interest', 'pendingTtlMinutes'], ['interest', 'interestsFile'], ['interest', 'logFile'], ['interest', 'stateFile'], ['interest', 'offFlag'],
-      ['voice', 'root'], ['voice', 'voice'], ['voice', 'rate'],
+      ['voice', 'root'], ['voice', 'voice'], ['voice', 'rate'], ['voice', 'python'], ['voice', 'ffmpeg'], ['voice', 'powershell'], ['voice', 'timeoutMs'],
       ['mousepet', 'cursorMode'], ['mousepet', 'cursorHoldMs'], ['mousepet', 'cursorSize'], ['mousepet', 'toolsPath'], ['mousepet', 'companion', 'enabled'], ['mousepet', 'companion', 'tickMs'],
       ['browse', 'enabled'], ['browse', 'adbPath'], ['browse', 'serial'],
       ['browse', 'idleMinutes'], ['browse', 'minGapMinutes'], ['browse', 'dailyMax'],
@@ -45,6 +45,7 @@ window.__ModuleLoader__.load({
       pauseMediaOnInterrupt: '被插話時暫停媒體', syncSeconds: '圖譜同步間隔（秒）',
       qqObservations: 'QQ 觀察紀錄檔', skillsCwd: 'Skill 工作區',
       cursorMode: '游標模式', cursorHoldMs: '游標停留時間（毫秒）', cursorSize: '游標尺寸（像素）', toolsPath: 'Mousepet 工具路徑', tickMs: '陪伴模式更新間隔（毫秒）',
+      python: '語音 Python 執行檔', ffmpeg: '語音 FFmpeg 執行檔', powershell: '語音 PowerShell 執行檔', timeoutMs: '語音合成逾時（毫秒）',
     }
     const STYLE = {
       page: { padding: '18px 20px 28px', maxWidth: '920px', color: 'var(--dsw-alias-label-primary)', fontSize: '13px' },
@@ -229,7 +230,9 @@ window.__ModuleLoader__.load({
                       grid(field(['interest','minGapMinutes'], { type: 'number' }), field(['interest','maxPerHour'], { type: 'number' })))))
                 : tab === 'runtime' ? h(React.Fragment, null,
                     section('語音', h(React.Fragment, null,
-                      field(['voice','root']), field(['voice','voice']), field(['voice','rate']))),
+                      field(['voice','root']), field(['voice','voice']), field(['voice','rate']),
+                      field(['voice','python']), field(['voice','ffmpeg']), field(['voice','powershell']),
+                      field(['voice','timeoutMs'], { type: 'number' }))),
                     section('Android / 自動化', h(React.Fragment, null,
                       field(['browse','enabled'], { type: 'boolean' }),
                       field(['browse','adbPath']), field(['browse','serial']),
