@@ -257,6 +257,28 @@ function makeSnippet(bodyText, qtokens) {
 // prompt 组装对 {{variable}} 严格插值——注入前把字面 {{ 拆开，避免撞变量语法
 function sanitize(text) { return String(text).split('{{').join('{ {') }
 
+// 记忆写入的硬性凭证门：提示词政策之外，再拦常见可直接使用的秘密值。
+// 只返回通用错误，不把命中的值写进日志或错误讯息。
+const CREDENTIAL_PATTERNS = [
+  /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/i,
+  /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/,
+  /\bsk-[A-Za-z0-9_-]{20,}\b/,
+  /\bAIza[0-9A-Za-z_-]{30,}\b/,
+  /\bAKIA[0-9A-Z]{16}\b/,
+  /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/,
+  /\b[A-Za-z0-9_-]{24}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{25,}\b/,
+  /\b\d{8,10}:[A-Za-z0-9_-]{35}\b/,
+  /\bBearer\s+[A-Za-z0-9._~+/-]{16,}={0,}/i,
+  /\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|aws[_-]?secret[_-]?access[_-]?key|password|passwd|pwd|secret|authorization|cookie|sessdata)\s*[:=]\s*["']?(?!<redacted>|redacted\b|xxxxx+\b|your[_-]?(?:api[_-]?key|token|password)\b|\.{3})[A-Za-z0-9_./+=:-]{8,}/i,
+];
+function containsCredential(value) {
+  const text = String(value ?? '');
+  return CREDENTIAL_PATTERNS.some((pattern) => pattern.test(text));
+}
+function credentialWriteError() {
+  return '写入已拒绝：内容疑似包含密码、Token、Cookie、API Key 或私钥。请先移除凭证或替换成 [已遮蔽]；没有写入记忆。';
+}
+
 // ---------- fs 辅助 ----------
 function readFileSyncOrNull(path) {
   try { return readFileSync(path, 'utf8'); } catch { return null; }
@@ -465,6 +487,7 @@ const toolDefs = [
       const title = typeof args.title === 'string' ? args.title.replace(/\s+/g, ' ').trim() : '';
       const content = typeof args.content === 'string' ? args.content : '';
       if (!title || !content.trim()) return '保存失败：title 和 content 均不能为空。';
+      if (containsCredential([title, content, ...(Array.isArray(args.tags) ? args.tags : [])].join('\n'))) return credentialWriteError();
       const tags = Array.isArray(args.tags)
         ? args.tags.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim())
         : [];
@@ -508,6 +531,7 @@ const toolDefs = [
             last_confirmed: status === 'active' ? now : '',
           };
           const fileText = noteFileText(meta, content);
+          if (containsCredential(fileText)) return credentialWriteError();
           meta.size = fileText.length;
           await atomicWrite(join(notesDir(), id + '.md'), fileText);
           let notes = [meta, ...existing.filter((n) => n.id !== id)].sort(noteSort);
@@ -563,6 +587,7 @@ const toolDefs = [
         ? args.tags.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim())
         : [];
       if (!title) return '合并失败：title 不能为空。';
+      if (containsCredential([title, note, ...tags].join('\n'))) return credentialWriteError();
       if (rawIds.length < 2) return '合并失败：至少给两条 id——一条不叫合并，直接 memory_write 更清楚。';
       try {
         return await enqueue(async () => {
@@ -657,6 +682,7 @@ const toolDefs = [
       const text = typeof args.text === 'string' ? args.text : '';
       if (!section) return '编辑失败：section 不能为空。';
       if ((action === 'append' || action === 'replace') && !text.trim()) return '编辑失败：append/replace 需要提供 text。';
+      if (containsCredential([section, text].join('\n'))) return credentialWriteError();
       try {
         return await enqueue(async () => {
           let raw = null;
