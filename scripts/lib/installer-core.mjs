@@ -158,22 +158,30 @@ export async function checkHealth(profileDir, rootDir = repoRoot()) {
   const dependency = manifest.dependencies[BUNDLE_NAME]
   const installedManifestPath = path.join(profileDir, 'node_modules', BUNDLE_NAME, 'package.json')
   let installedManifest = null
+  let installedPatch = ''
+  let installedEntry = ''
   try {
     installedManifest = await readJson(installedManifestPath)
+    const packageDir = path.dirname(installedManifestPath)
+    installedPatch = await readFile(path.join(packageDir, 'cordis.patch.yml'), 'utf8')
+    installedEntry = await readFile(path.join(packageDir, 'index.js'), 'utf8')
   } catch (error) {
     if (error.code !== 'ENOENT') throw error
   }
   const rootPackage = await readJson(path.join(rootDir, 'package.json'))
   const rootSpec = await readJson(path.join(rootDir, 'hers-life.install.json'))
-  const staticPatch = await readFile(path.join(rootDir, 'cordis.patch.yml'), 'utf8')
+  const childDependenciesMatch = CHILDREN.every(name =>
+    installedManifest?.dependencies?.[name] === rootPackage.dependencies?.[name],
+  )
   const checks = {
     profileManifestValid: true,
     dependencyDeclared: typeof dependency === 'string',
     bundleSelected: bundles.includes(BUNDLE_NAME),
     packageFilesPresent: installedManifest?.name === BUNDLE_NAME,
-    privacyGateTemplateDisabled: /disabled:\s*true/.test(staticPatch) && /privacyReady:\s*false/.test(staticPatch),
+    all12ChildDependenciesPinned: childDependenciesMatch,
+    privacyGateTemplateDisabled: /disabled:\s*true/.test(installedPatch) && /privacyReady:\s*false/.test(installedPatch),
+    privacyGateCodeGuardPresent: installedEntry.includes('config?.security?.privacyReady !== true'),
     pinnedBaseline: rootSpec.baselineCommit === BASELINE_COMMIT,
-    all12ChildrenDeclared: CHILDREN.every(name => Object.hasOwn(rootPackage.dependencies || {}, name)),
   }
   const ok = Object.values(checks).every(Boolean)
   return {
