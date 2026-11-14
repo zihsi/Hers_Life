@@ -53,6 +53,12 @@ jobs:
           node --check client.js
           node --check scripts/build-client.mjs
           node --check scripts/verify-aggregate.mjs
+          node --check scripts/lib/installer-core.mjs
+          node --check scripts/compatibility-check.mjs
+          node --check scripts/backup.mjs
+          node --check scripts/rollback.mjs
+          node --check scripts/health-check.mjs
+          node --check scripts/test-installer-core.mjs
       - name: Verify integration bundle contract
         run: node scripts/verify-aggregate.mjs
       - name: Test installer safety and rollback contracts
