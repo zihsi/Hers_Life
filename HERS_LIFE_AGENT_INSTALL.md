@@ -68,7 +68,7 @@ Rollback 只允許使用「備份當時尚未安裝 dsh-hers-life」的備份，
 - 即使有人手動啟用該 Host 插件 row，組合插件也會在隱私閘門未完成時拒絕啟動子插件。
 - Discord、Interest 與 Mousepet 的首次啟用亦採保守預設。
 
-**不要把「套件已安裝」回報成「整套功能已啟動」。** 待 Memory Access Controller、身份授權及相關回歸測試完成後，才會在後續階段解除閘門。
+**不要把「套件已安裝」回報成「整套功能已啟動」。** 目前也刻意不在 Bundle manifest 註冊 DSH Client UI 入口；瀏覽器 UI 原始碼只保留為建置產物，避免 Client 在伺服器端隱私閘門之前先啟動。待 Memory Access Controller、身份授權及相關回歸測試完成後，才會註冊 UI 入口並解除閘門。
 
 ## 安裝後檢查
 

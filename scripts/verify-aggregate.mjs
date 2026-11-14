@@ -23,7 +23,7 @@ const expected = [
 ]
 assert.equal(pkg.name, 'dsh-hers-life')
 assert.equal(pkg.dsh?.bundle?.patch, './cordis.patch.yml')
-assert.equal(pkg.dsh?.client?.platform, 'web')
+assert.equal(pkg.dsh?.client, undefined, 'client UI must remain unregistered until the privacy phase')
 assert.equal(pkg.exports?.['./client'], './client.js')
 assert.deepEqual(Object.keys(pkg.dependencies).sort(), [...expected].sort())
 const expectedPeers = {
@@ -51,6 +51,7 @@ assert.match(patch, /name:\s*dsh-hers-life/)
 assert.match(patch, /disabled:\s*true/)
 assert.match(patch, /privacyReady:\s*false/)
 assert.match(index, /config\?\.security\?\.privacyReady !== true/)
+assert.ok(index.indexOf('config?.security?.privacyReady !== true') < index.indexOf('await import(packageName)'), 'child modules must not evaluate before the privacy gate')
 for (const id of ['dsh-ming-memory', 'dsh-ming-graph', 'dsh-ming-mousepet', 'dsh-hers-life']) {
   assert.ok(client.includes(`id: '${id}'`), `missing client module ${id}`)
 }

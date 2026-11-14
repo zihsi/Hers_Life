@@ -8,36 +8,23 @@
  * material into cross-session context. Do not activate any child plugin until the
  * explicit privacy gate is enabled by the later Memory Access Controller phase.
  */
-import * as coreMemory from 'dsh-ming-core-memory'
-import * as memory from 'dsh-ming-memory'
-import * as graph from 'dsh-ming-graph'
-import * as discord from 'dsh-ming-discord'
-import * as interest from 'dsh-ming-interest'
-import * as bilibiliAccount from 'dsh-ming-bilibili-account'
-import * as browse from 'dsh-ming-browse'
-import * as voice from 'dsh-ming-voice'
-import * as wake from 'dsh-ming-wake'
-import * as resume from 'dsh-ming-resume'
-import * as skillIsolate from 'dsh-ming-skill-isolate'
-import * as mousepet from 'dsh-ming-mousepet'
 
 export const name = 'hers-life'
 
 const CHILDREN = [
-  ['coreMemory', coreMemory],
-  ['memory', memory],
-  ['graph', graph],
-  ['discord', discord],
-  ['interest', interest],
-  ['bilibiliAccount', bilibiliAccount],
-  ['browse', browse],
-  ['voice', voice],
-  ['wake', wake],
-  ['resume', resume],
-  ['skillIsolate', skillIsolate],
-  ['mousepet', mousepet],
+  ['coreMemory', 'dsh-ming-core-memory'],
+  ['memory', 'dsh-ming-memory'],
+  ['graph', 'dsh-ming-graph'],
+  ['discord', 'dsh-ming-discord'],
+  ['interest', 'dsh-ming-interest'],
+  ['bilibiliAccount', 'dsh-ming-bilibili-account'],
+  ['browse', 'dsh-ming-browse'],
+  ['voice', 'dsh-ming-voice'],
+  ['wake', 'dsh-ming-wake'],
+  ['resume', 'dsh-ming-resume'],
+  ['skillIsolate', 'dsh-ming-skill-isolate'],
+  ['mousepet', 'dsh-ming-mousepet'],
 ]
-
 function asCordisPlugin(module, fallbackName) {
   if (!module || typeof module.apply !== 'function') {
     throw new TypeError(`[dsh-hers-life] invalid child plugin: ${fallbackName}`)
@@ -61,7 +48,9 @@ export async function apply(ctx, config = {}) {
     return
   }
 
-  for (const [key, module] of CHILDREN) {
+  for (const [key, packageName] of CHILDREN) {
+    // Import child code only after the privacy gate passes; module evaluation can have side effects.
+    const module = await import(packageName)
     const plugin = asCordisPlugin(module, key)
     await ctx.plugin(plugin, config[key] && typeof config[key] === 'object' ? config[key] : {})
   }

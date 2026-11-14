@@ -50,8 +50,9 @@
   ],
   "privacyGate": {
     "privacyReadyDefault": false,
-    "reason": "Legacy shared-memory path is known to inject private QQ/DM content into cross-session context. Do not activate until Memory Access Controller is implemented and verified.",
-    "pluginEntryDisabledByDefault": true
+    "reason": "Legacy shared-memory path is known to inject private QQ/DM content into cross-session context. Do not activate until Memory Access Controller is implemented and verified. Browser client entry is intentionally not registered until the same privacy boundary is enforced client-side.",
+    "pluginEntryDisabledByDefault": true,
+    "clientEntryRegistered": false
   },
   "dataPolicy": {
     "workspaceMutation": false,
