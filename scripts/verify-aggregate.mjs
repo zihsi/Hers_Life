@@ -40,7 +40,6 @@ const expectedPeers = {
   "@deepseek-ai/dsh-session": "*",
   "@deepseek-ai/dsh-system-prompt": "*",
   "@deepseek-ai/dsh-user-approval": "*",
-  "@deepseek-ai/dsh-typert-protocol": "*",
   "@deepseek-ai/dsh-type-meta": "*",
   "react": "^18.2.0"
 }
@@ -58,7 +57,6 @@ const expectedDevDependencies = {
   "@deepseek-ai/dsh-session": "0.0.1-rc.1",
   "@deepseek-ai/dsh-system-prompt": "0.0.1-rc.1",
   "@deepseek-ai/dsh-user-approval": "0.0.1-rc.1",
-  "@deepseek-ai/dsh-typert-protocol": "0.0.1-rc.1",
   "@deepseek-ai/dsh-type-meta": "0.0.1-rc.1",
   "react": "^18.2.0"
 }
