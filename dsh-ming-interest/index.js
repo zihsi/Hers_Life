@@ -31,12 +31,25 @@ export const inject = ['agents', 'timer', 'tools']
 
 const DSH_HOME = process.env.DSH_HOME || path.join(homedir(), '.dsh')
 
+/** 展开 Windows %VAR% / POSIX $VAR，并将相对路径固定解析为绝对路径。 */
+function resolveConfigPath(value, fallback) {
+  let resolved = String(value || fallback || '').trim()
+  resolved = resolved.replace(/%([^%]+)%|\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g, (match, win, braced, plain) => {
+    const key = win || braced || plain
+    return process.env[key] ?? match
+  })
+  if (resolved === '~' || resolved.startsWith('~/') || resolved.startsWith('~\\\\')) {
+    resolved = path.join(homedir(), resolved.slice(2))
+  }
+  return path.resolve(resolved)
+}
+
 const DEFAULTS = {
   enabled: true,
   workspacePath: process.env.MING_WORKSPACE || path.join(DSH_HOME, 'workspace'),
-  /** onebot 的入站录制文件（recordInbound: true 才存在）。 */
+  /** QQ 入站记录文件；可由 OneBot 或 AstrBot 记录器写入。 */
   inboxPath: path.join(DSH_HOME, 'media', 'onebot', 'qq-inbox.jsonl'),
-  /** onebot 的 chatId → sessionId 映射，用来找「群自己的那个会话」。 */
+  /** OneBot 的 chatId → sessionId 映射，用来找「群自己的那个会话」。 */
   chatSessionsPath: path.join(DSH_HOME, 'media', 'onebot', 'chat-sessions.json'),
   /** 兴趣清单（工作区相对路径）。 */
   interestsFile: 'live\\interests.json',
@@ -86,9 +99,9 @@ function normalize(config) {
       : f
   return {
     enabled: c.enabled !== false,
-    workspacePath: path.resolve(str(c.workspacePath, DEFAULTS.workspacePath)),
-    inboxPath: str(c.inboxPath, DEFAULTS.inboxPath),
-    chatSessionsPath: str(c.chatSessionsPath, DEFAULTS.chatSessionsPath),
+    workspacePath: resolveConfigPath(str(c.workspacePath, DEFAULTS.workspacePath)),
+    inboxPath: resolveConfigPath(c.inboxPath, DEFAULTS.inboxPath),
+    chatSessionsPath: resolveConfigPath(c.chatSessionsPath, DEFAULTS.chatSessionsPath),
     interestsFile: str(c.interestsFile, DEFAULTS.interestsFile),
     logFile: str(c.logFile, DEFAULTS.logFile),
     stateFile: str(c.stateFile, DEFAULTS.stateFile),
