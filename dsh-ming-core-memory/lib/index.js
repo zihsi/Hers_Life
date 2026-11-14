@@ -635,6 +635,7 @@ const toolDefs = [
             last_confirmed: now,
           };
           const fileText = noteFileText(meta, content);
+          if (containsCredential(fileText)) return credentialWriteError();
           meta.size = fileText.length;
           await atomicWrite(join(notesDir(), id + '.md'), fileText);
           let notes = [meta, ...existing.filter((n) => n.id !== id)].sort(noteSort);
