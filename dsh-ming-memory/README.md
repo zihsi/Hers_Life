@@ -8,14 +8,16 @@
 它把 persona 与 diary 文件作为输入，读取后注入系统提示词，并把相同来源整理成模型供 Graph 使用。**不会改写 persona / diary 原始文件**；但插件会维护工作区 `live/` 下的衍生共享资料（例如跨会话 feed 与 QQ 共享文本），因此不能把整个插件描述为完全不写磁盘。
 
 ```
-~/.dsh/ 或任意工作区
+<WORKSPACE>/（由 `root` / `MING_WORKSPACE` 指定）
   persona/  人设.md  名字.md  约定.md
   diary/    2026-10-26.md  2026-10-27.md  2026-10-28.md
         │
         └──► 插件读取（只读）──► 系统提示词（会话开场注入）
 ```
 
-归档记忆库与本机设置则位于 `<DSH_HOME>/memory/`、`<DSH_HOME>/ming-memory.json`；未设置 `DSH_HOME` 时，默认回退到 `~/.dsh/`。工作区与 DSH 主目录是两个独立位置。\n\n## 配套
+归档记忆库与本机设置则位于 `<DSH_HOME>/memory/`、`<DSH_HOME>/ming-memory.json`；未设置 `DSH_HOME` 时，默认回退到 `~/.dsh/`。工作区与 DSH 主目录是两个独立位置。
+
+## 配套
 
 配 **[dsh-ming-graph](../dsh-ming-graph/README.md)** 一起用：那边把同一批归档记忆画成一张能读的图——每条记忆一个点，每条边都写清凭什么连。
 
