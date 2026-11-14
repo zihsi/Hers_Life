@@ -17,7 +17,7 @@ window.__ModuleLoader__.load({
       ['discord', 'directMessages'], ['discord', 'mentionRequired'], ['discord', 'observeUnmentioned'],
       ['qq', 'ownerQQ'], ['qq', 'inboxPath'], ['qq', 'chatSessionsPath'],
       ['memory', 'root'], ['memory', 'personaFiles'], ['memory', 'diaryDir'], ['memory', 'diaryCount'], ['memory', 'maxChars'], ['memory', 'diaryChars'], ['memory', 'totalChars'], ['memory', 'qq', 'dir'], ['memory', 'qq', 'hours'], ['memory', 'qq', 'maxLines'], ['memory', 'qq', 'offFile'], ['memory', 'qq', 'webForQq'], ['memory', 'qq', 'webForQqEveryMs'], ['memory', 'qq', 'webForQqLines'],
-      ['interest', 'enabled'], ['interest', 'observeEnabled'], ['interest', 'observePrivate'],
+      ['interest', 'enabled'], ['interest', 'workspacePath'], ['interest', 'inboxPath'], ['interest', 'chatSessionsPath'], ['interest', 'observeEnabled'], ['interest', 'observePrivate'],
       ['interest', 'groups'], ['interest', 'observeGroups'], ['interest', 'quietHours'],
       ['interest', 'pollMs'], ['interest', 'minGapMinutes'], ['interest', 'maxPerHour'], ['interest', 'minChars'], ['interest', 'contextLines'], ['interest', 'pendingMax'], ['interest', 'pendingTtlMinutes'], ['interest', 'interestsFile'], ['interest', 'logFile'], ['interest', 'stateFile'], ['interest', 'offFlag'],
       ['voice', 'root'], ['voice', 'voice'], ['voice', 'rate'], ['voice', 'python'], ['voice', 'ffmpeg'], ['voice', 'powershell'], ['voice', 'timeoutMs'],
@@ -114,7 +114,7 @@ window.__ModuleLoader__.load({
           const isBoolean = options.type === 'boolean'
           const isList = options.type === 'list'
           return h('div', { style: STYLE.field, key: path.join('.') },
-            h('label', { style: STYLE.label }, label(path)),
+            h('label', { style: STYLE.label }, options.label || label(path)),
             isBoolean
               ? h('input', { type: 'checkbox', checked: Boolean(current), onChange: e => update(path, e.target.checked) })
               : h(isList ? 'textarea' : 'input', {
@@ -224,6 +224,9 @@ window.__ModuleLoader__.load({
                 ? h(React.Fragment, null,
                     section('興趣與參與', h(React.Fragment, null,
                       field(['interest','enabled'], { type: 'boolean' }),
+                      field(['interest','workspacePath'], { label: '興趣系統工作區' }),
+                      field(['interest','inboxPath'], { label: '興趣系統 Inbox 路徑' }),
+                      field(['interest','chatSessionsPath'], { label: '興趣系統 Session 對照檔路徑' }),
                       field(['interest','observeEnabled'], { type: 'boolean' }),
                       field(['interest','observePrivate'], { type: 'boolean', hint: '私訊觀察預設關閉；開啟前請確認記憶權限設計。' }),
                       field(['interest','groups'], { type: 'list' }),
