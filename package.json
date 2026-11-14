@@ -15,7 +15,8 @@
     "cordis.patch.yml",
     "README.md",
     "HERS_LIFE_AGENT_INSTALL.md",
-    "hers-life.install.json"
+    "hers-life.install.json",
+    "lib"
   ],
   "repository": {
     "type": "git",
@@ -38,7 +39,8 @@
     "dsh-ming-wake": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-wake",
     "dsh-ming-resume": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-resume",
     "dsh-ming-skill-isolate": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-skill-isolate",
-    "dsh-ming-mousepet": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-mousepet"
+    "dsh-ming-mousepet": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-mousepet",
+    "dsh-hers-life-settings": "git+https://github.com/zihsi/Hers_Life.git#28cbb752e96150eba2f7827bd1af170a7ba4af64&path:/dsh-hers-life-settings"
   },
   "dsh": {
     "bundle": {
@@ -50,14 +52,16 @@
     "@deepseek-ai/dsh-tools": "*",
     "@deepseek-ai/dsh-attachment": "*",
     "@deepseek-ai/dsh-llm": "*",
-    "react": "^18.2.0"
+    "react": "^18.2.0",
+    "@deepseek-ai/schemastery": "^3.19.0"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
     "@deepseek-ai/dsh-tools": "*",
     "@deepseek-ai/dsh-attachment": "*",
     "@deepseek-ai/dsh-llm": "*",
-    "react": "^18.2.0"
+    "react": "^18.2.0",
+    "@deepseek-ai/schemastery": "^3.19.0"
   },
   "scripts": {
     "test:installer-core": "node --test scripts/test-installer-core.mjs",

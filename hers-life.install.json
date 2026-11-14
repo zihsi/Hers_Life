@@ -46,13 +46,15 @@
     "dsh-ming-wake",
     "dsh-ming-resume",
     "dsh-ming-skill-isolate",
-    "dsh-ming-mousepet"
+    "dsh-ming-mousepet",
+    "dsh-hers-life-settings"
   ],
   "privacyGate": {
     "privacyReadyDefault": false,
-    "reason": "Legacy shared-memory path is known to inject private QQ/DM content into cross-session context. Do not activate until Memory Access Controller is implemented and verified. Browser client entry is intentionally not registered until the same privacy boundary is enforced client-side.",
-    "pluginEntryDisabledByDefault": true,
-    "clientEntryRegistered": false
+    "reason": "The root orchestrator may load only its safe initializer while privacyReady is false; the independent settings companion remains available. The twelve functional child plugins are not imported or activated until the non-volatile privacy gate is explicitly reviewed and opened.",
+    "pluginEntryDisabledByDefault": false,
+    "clientEntryRegistered": false,
+    "settingsCompanionEnabled": true
   },
   "dataPolicy": {
     "workspaceMutation": false,
