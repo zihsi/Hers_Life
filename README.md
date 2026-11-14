@@ -14,7 +14,7 @@
 
 Agent 操作规范见 [HERS_LIFE_AGENT_INSTALL.md](HERS_LIFE_AGENT_INSTALL.md)，机器可读规格见 [hers-life.install.json](hers-life.install.json)。
 
-**安全说明：** 当前整合 Bundle 的 Host 插件 row 默认保持 Disabled，且有独立的 `security.privacyReady` 启动闸门。原因是旧版跨会话记忆仍存在私人内容注入风险；必须先完成 Memory Access Controller 与回归测试，才会解除闸门。安装成功不等于功能已经启动。
+**安全说明：** 当前整合 Bundle 的 Host 插件 row 默认保持 Disabled，且有独立的 `security.privacyReady` 启动闸门。子插件只会在服务端闸门通过后才动态载入；DSH Client UI 入口也暂不注册，避免客户端先于服务端权限检查启动。原因是旧版跨会话记忆仍存在私人内容注入风险；必须先完成 Memory Access Controller 与回归测试，才会开放 UI 并解除闸门。安装成功不等于功能已经启动。
 
 ## 这里面有什么
 
