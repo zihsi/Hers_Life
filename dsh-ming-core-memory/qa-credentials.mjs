@@ -62,8 +62,8 @@ try {
     content: '第二条安全测试事实。',
     tags: ['安全测试'],
   });
-  const idA = /\\[([^\\]]+)\\]/.exec(a)?.[1];
-  const idB = /\\[([^\\]]+)\\]/.exec(b)?.[1];
+  const idA = /\[([^\]]+)\]/.exec(a)?.[1];
+  const idB = /\[([^\]]+)\]/.exec(b)?.[1];
   check('正常内容仍可保存', !!idA && !!idB);
 
   const mergeReject = await tools.memory_merge.execute({
@@ -76,7 +76,7 @@ try {
   // 二次防线：即使旧条目已有敏感字串，合并生成的新条目也必须拒绝。
   const notePath = join(notesDir, idA + '.md');
   const oldNote = await readFile(notePath, 'utf8');
-  await writeFile(notePath, oldNote + '\\n' + token + '\\n', 'utf8');
+  await writeFile(notePath, oldNote + '\n' + token + '\n', 'utf8');
   const derivedReject = await tools.memory_merge.execute({
     title: '合并旧资料',
     ids: [idA, idB],
@@ -89,5 +89,5 @@ try {
   await rm(home, { recursive: true, force: true });
 }
 
-console.log('\\n' + (fail.length ? '失败 ' + fail.length + ' 项：' + fail.join(' / ') : '全过（临时目录已删）'));
+console.log('\n' + (fail.length ? '失败 ' + fail.length + ' 项：' + fail.join(' / ') : '全过（临时目录已删）'));
 process.exit(fail.length ? 1 : 0);
