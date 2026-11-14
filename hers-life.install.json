@@ -41,9 +41,9 @@
     "dsh-ming-mousepet"
   ],
   "privacyGate": {
-    "bundleDisabledByDefault": true,
     "privacyReadyDefault": false,
-    "reason": "Legacy shared-memory path is known to inject private QQ/DM content into cross-session context. Do not activate until Memory Access Controller is implemented and verified."
+    "reason": "Legacy shared-memory path is known to inject private QQ/DM content into cross-session context. Do not activate until Memory Access Controller is implemented and verified.",
+    "pluginEntryDisabledByDefault": true
   },
   "dataPolicy": {
     "workspaceMutation": false,

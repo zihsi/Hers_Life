@@ -48,7 +48,7 @@
 1. 確認 Plugin Manager 顯示 `dsh-hers-life` 已安裝。
 2. 確認安裝記錄中的來源分支與解析後 Commit SHA。
 3. 確認 12 個子套件均已由套件管理器解析；若有任何子套件缺失，回報安裝失敗，不要手動補裝。
-4. 確認整合 Bundle 保持 Disabled，且未啟動任何舊的私人記憶共享路徑。
+4. 確認整合 Bundle 的 Host 插件 row 保持 Disabled，且未啟動任何舊的私人記憶共享路徑。
 5. 不要求使用者提供 Token、Cookie 或私人對話作為安裝測試。
 6. 不宣稱已完成 Windows 實機驗收；只有在目標 Host 上實際完成測試才能標記通過。
 
