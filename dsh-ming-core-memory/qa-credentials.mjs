@@ -27,7 +27,7 @@ try {
   };
   apply(ctx);
 
-  check('写入工具已注册', !!tools.memory_write && !!tools.memory_core && !!tools.memory_merge);
+  check('写入工具已注册', !!tools.memory_write && !!tools.memory_core && !!tools.memory_merge && !!tools.persona);
   const token = 'ghp_' + 'A'.repeat(36);
 
   const rejected = await tools.memory_write.execute({
@@ -36,6 +36,14 @@ try {
     tags: ['安全测试'],
   });
   check('memory_write 拦截 GitHub Token', rejected.includes('写入已拒绝') && !rejected.includes(token));
+
+  const personaReject = await tools.persona.execute({
+    action: 'custom',
+    text: '回复风格测试\\napi_key=PersonaSecretValue123456',
+  });
+  const personaFile = await readFile(join(home, 'memory', 'PERSONA.md'), 'utf8');
+  check('persona 自定义风格拦截 API Key', personaReject.includes('写入已拒绝'));
+  check('persona 拒绝后未保存秘密', !personaFile.includes('PersonaSecretValue123456'));
 
   // 读取核心文件，等待插件首次启动完成，避免和 bootstrap 建目录竞争。
   const corePath = join(home, 'memory', 'MEMORY.md');
