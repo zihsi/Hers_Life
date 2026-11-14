@@ -32,7 +32,7 @@ people/_index.json（号码→昵称） ┘
 
 ## 配套
 
-配 **[dsh-ming-memory](https://github.com/zihsi/Hers_Life/tree/sync/local-latest-20261113/dsh-ming-memory)** 一起用：那边读取 persona / diary 原始文件并注入系统提示词，同时维护部分 `live/` 衍生共享资料；这边把可用记忆数据整理成图。
+配 **[dsh-ming-memory](../dsh-ming-memory/README.md)** 一起用：那边读取 persona / diary 原始文件并注入系统提示词，同时维护部分 `live/` 衍生共享资料；这边把可用记忆数据整理成图。
 
 一个管「下一轮用得上」，一个管「回头看都有什么」。装不装对方都能跑，装在一起，图上的点才和提示词里的字是同一批。
 
