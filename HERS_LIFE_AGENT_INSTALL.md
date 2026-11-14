@@ -36,9 +36,9 @@
 
 因此目前整合 Bundle：
 
-- 安裝時預設為 Disabled。
+- 整合 Bundle 安裝後會加入 Profile，但其中的 Host 插件 row 預設為 Disabled。
 - `security.privacyReady` 預設為 `false`。
-- 即使有人手動啟用 Bundle，Host 端組合插件也會在隱私閘門未完成時拒絕啟動子插件。
+- 即使有人手動啟用該 Host 插件 row，組合插件也會在隱私閘門未完成時拒絕啟動子插件。
 - Discord、Interest 與 Mousepet 的首次啟用亦採保守預設。
 
 **不要把「套件已安裝」回報成「整套功能已啟動」。** 待 Memory Access Controller、身份授權及相關回歸測試完成後，才會在後續階段解除閘門。
