@@ -135,9 +135,9 @@ export const Config = z.object({
     root: z.string().default(''),
     voice: z.string().default('zh-CN-XiaoxiaoNeural'),
     rate: z.string().default('+0%'),
-    pythonPath: z.string().default(''),
-    ffmpegPath: z.string().default(''),
-    ffplayPath: z.string().default(''),
+    python: z.string().default(''),
+    ffmpeg: z.string().default(''),
+    timeoutMs: z.number().step(1).min(1000).default(60000),
   }).default({}).volatile(),
   wake: z.object({
     root: z.string().default(''),
@@ -156,6 +156,7 @@ export const Config = z.object({
     cursorMode: z.string().default('companion'),
     cursorHoldMs: z.number().step(1).min(0).default(2600),
     cursorSize: z.number().step(1).min(16).max(256).default(64),
+    toolsPath: z.string().default(''),
     companion: z.object({ enabled: z.boolean().default(false), tickMs: z.number().step(1).min(0).default(0) }).default({}),
   }).default({}).volatile(),
 })
@@ -212,6 +213,7 @@ export async function apply(ctx, rawConfig = {}) {
   const memory = childConfigs.memory
   memory.root = memory.root || workspacePath
   const graph = childConfigs.graph
+  graph.ownerId = graph.ownerId || childConfigs.qq.ownerQQ || ''
   graph.dshMemoryDir = graph.dshMemoryDir || path.join(home, 'memory')
   graph.skillsCwd = graph.skillsCwd || workspacePath
   graph.skillsOffFile = graph.skillsOffFile || path.join(workspacePath, 'skills-off.json')
@@ -240,9 +242,8 @@ export async function apply(ctx, rawConfig = {}) {
 
   const voice = childConfigs.voice
   voice.root = voice.root || workspacePath
-  for (const key of ['pythonPath', 'ffmpegPath', 'ffplayPath']) {
-    if (environment[key]) voice[key] = environment[key]
-  }
+  if (environment.pythonPath) voice.python = environment.pythonPath
+  if (environment.ffmpegPath) voice.ffmpeg = environment.ffmpegPath
 
   const wake = childConfigs.wake
   wake.root = wake.root || workspacePath
@@ -250,6 +251,8 @@ export async function apply(ctx, rawConfig = {}) {
   resume.root = resume.root || workspacePath
   resume.adbPath = environment.adbPath || resume.adbPath || browse.adbPath || ''
   resume.serial = resume.serial || browse.serial || ''
+  const mousepet = childConfigs.mousepet
+  if (environment.dshToolsPath) mousepet.toolsPath = environment.dshToolsPath
   const skillIsolate = childConfigs.skillIsolate
   skillIsolate.root = skillIsolate.root || workspacePath
   skillIsolate.offFile = skillIsolate.offFile || graph.skillsOffFile

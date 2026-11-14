@@ -10,12 +10,12 @@ window.__ModuleLoader__.load({
     const PATHS = [
       ['workspacePath'],
       ['environment', 'pythonPath'], ['environment', 'ffmpegPath'], ['environment', 'ffplayPath'],
-      ['environment', 'adbPath'],
+      ['environment', 'adbPath'], ['environment', 'dshToolsPath'],
       ['discord', 'enabled'], ['discord', 'ownerUserId'], ['discord', 'allowedGuildIds'],
       ['discord', 'allowedChannelIds'], ['discord', 'allowedUserIds'],
       ['discord', 'directMessages'], ['discord', 'mentionRequired'], ['discord', 'observeUnmentioned'],
       ['qq', 'ownerQQ'], ['qq', 'inboxPath'], ['qq', 'chatSessionsPath'],
-      ['memory', 'root'], ['memory', 'diaryCount'], ['memory', 'maxChars'],
+      ['memory', 'root'], ['memory', 'diaryCount'], ['memory', 'maxChars'], ['memory', 'qq', 'dir'], ['memory', 'qq', 'hours'], ['memory', 'qq', 'maxLines'],
       ['interest', 'enabled'], ['interest', 'observeEnabled'], ['interest', 'observePrivate'],
       ['interest', 'groups'], ['interest', 'observeGroups'], ['interest', 'quietHours'],
       ['interest', 'pollMs'], ['interest', 'minGapMinutes'], ['interest', 'maxPerHour'],
@@ -28,12 +28,12 @@ window.__ModuleLoader__.load({
     ]
     const LABELS = {
       workspacePath: '共用工作區',
-      pythonPath: 'Python 執行檔', ffmpegPath: 'FFmpeg 執行檔', ffplayPath: 'FFplay 執行檔', adbPath: 'ADB 執行檔',
+      pythonPath: 'Python 執行檔', ffmpegPath: 'FFmpeg 執行檔', ffplayPath: 'FFplay 執行檔', adbPath: 'ADB 執行檔', dshToolsPath: 'DSH Tools 模組路徑',
       enabled: '啟用功能', ownerUserId: '主人 Discord User ID', allowedGuildIds: '允許的伺服器 ID',
       allowedChannelIds: '允許的頻道 ID', allowedUserIds: '允許的使用者 ID',
       directMessages: '接收私訊', mentionRequired: '群聊必須 @ Bot', observeUnmentioned: '觀察未 @ Bot 的訊息',
       ownerQQ: '主人 QQ 號', inboxPath: 'QQ 入站訊息檔案', chatSessionsPath: 'QQ / Discord Session 對照檔',
-      root: '工作區路徑', diaryCount: '開場讀取日記篇數', maxChars: '記憶注入字數上限',
+      root: '工作區路徑', diaryCount: '開場讀取日記篇數', maxChars: '記憶注入字數上限', dir: 'QQ-Agent 記憶目錄', hours: '讀取最近幾小時', maxLines: '最多讀取幾行',
       observeEnabled: '允許被動觀察', observePrivate: '允許觀察私訊（預設關閉）',
       groups: '允許參與的群組 ID', observeGroups: '允許被動觀察的群組 ID',
       quietHours: '安靜時段', pollMs: '檢查間隔（毫秒）', minGapMinutes: '最短喚醒間隔（分鐘）',
@@ -150,7 +150,7 @@ window.__ModuleLoader__.load({
             setToken('')
             const status = await ctx.remote.credentials.describe([REF])
             if (status.ok) setCredential(status.value[REF] || { configured: false, writable: false })
-            setMessage('Discord Token 已安全儲存；不會寫入一般設定。')
+            setMessage('Discord Token 已安全儲存；不會寫入一般設定。重新啟動 DSH 後連線。')
           } catch (e) { setError(String(e?.message || e)) }
           finally { setBusy(false) }
         }
@@ -182,6 +182,8 @@ window.__ModuleLoader__.load({
                   ...env.workspaceCandidates.map((item, i) => h('button', { key: i, style: STYLE.btn, onClick: () => update(['workspacePath'], item.path) }, (item.exists ? '使用 ' : '建立 ') + item.source + '：' + item.path))) : null,
                 grid(field(['environment','pythonPath']), field(['environment','ffmpegPath'])),
                 grid(field(['environment','ffplayPath']), field(['environment','adbPath'])),
+                field(['environment','dshToolsPath'], { hint: '通常不需要填；只有 DSH Tools 無法自動解析時才需要指定模組檔案。' }),
+                env ? h('div', { style: STYLE.row }, ...[['python','pythonPath'],['ffmpeg','ffmpegPath'],['ffplay','ffplayPath'],['adb','adbPath']].map(([key,target]) => env.commands?.[key] ? h('button', { key, style: STYLE.btn, onClick: () => update(['environment',target], env.commands[key]) }, '使用偵測到的 ' + key) : null)) : null,
                 h('div', { style: STYLE.hint }, '執行檔路徑留空時使用系統 PATH 自動偵測；偵測結果可直接套用。'))))
           : tab === 'discord'
             ? h(React.Fragment, null,
@@ -192,21 +194,22 @@ window.__ModuleLoader__.load({
                     h('input', { type: 'password', autoComplete: 'new-password', value: token, placeholder: credential.configured ? '已設定；輸入新 Token 可替換' : '貼上 Bot Token', style: STYLE.input, onChange: e => setToken(e.target.value) }),
                     h('div', { style: STYLE.hint }, credential.configured ? '已設定（來源：' + (credential.source || 'DSH Credentials') + '）；不會顯示已儲存的值。' : '尚未設定 Token。'),
                     h('div', { style: { display: 'flex', gap: '8px', marginTop: '8px' } },
-                      h('button', { style: STYLE.primary, disabled: busy, onClick: storeToken }, '安全儲存 Token'),
+                      h('button', { style: STYLE.primary, disabled: busy || credential.writable === false, onClick: storeToken }, '安全儲存 Token'),
                       h('button', { style: STYLE.btn, disabled: busy || !credential.configured, onClick: removeToken }, '移除 Token'))),
                   grid(field(['discord','ownerUserId']), field(['discord','directMessages'], { type: 'boolean' })),
                   field(['discord','mentionRequired'], { type: 'boolean' }),
                   field(['discord','observeUnmentioned'], { type: 'boolean' }),
-                  field(['discord','allowedGuildIds'], { type: 'list', hint: '每行一個 ID；留空代表不限制該維度。建議先填入可信伺服器。' }),
-                  field(['discord','allowedChannelIds'], { type: 'list' }),
-                  field(['discord','allowedUserIds'], { type: 'list', hint: '每行一個 ID；主人 ID 會自動加入允許名單。' }))))
+                  field(['discord','allowedGuildIds'], { type: 'list', hint: '每行一個 ID；留空會拒絕所有伺服器訊息。請只加入信任的伺服器。' }),
+                  field(['discord','allowedChannelIds'], { type: 'list', hint: '留空代表不額外限制頻道；仍須通過伺服器與使用者白名單。' }),
+                  field(['discord','allowedUserIds'], { type: 'list', hint: '每行一個 ID；留空時只允許主人。私訊一律只接受主人。' }))))
             : tab === 'qq'
               ? h(React.Fragment, null,
                   section('QQ 與記憶路徑', h(React.Fragment, null,
                     field(['qq','ownerQQ']),
                     field(['qq','inboxPath']),
                     field(['qq','chatSessionsPath']),
-                    field(['memory','root']),
+                    field(['memory','root']), field(['memory','qq','dir']),
+                    grid(field(['memory','qq','hours'], { type: 'number' }), field(['memory','qq','maxLines'], { type: 'number' })),
                     grid(field(['memory','diaryCount'], { type: 'number' }), field(['memory','maxChars'], { type: 'number' })),
                     field(['graph','qqObservations'], { hint: '留空時自動建立工作區內的空白觀察檔；接上 QQ-Agent 後可改為實際 observations.jsonl。' }),
                     field(['graph','syncSeconds'], { type: 'number' }))))
