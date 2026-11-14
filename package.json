@@ -48,5 +48,23 @@
       "platform": "web",
       "immediately": true
     }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/dsh-attachment": "*",
+    "@deepseek-ai/dsh-llm": "*",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/dsh-attachment": "*",
+    "@deepseek-ai/dsh-llm": "*",
+    "react": "^18.2.0"
+  },
+  "scripts": {
+    "test:installer-core": "node --test scripts/test-installer-core.mjs",
+    "check:installer": "node scripts/verify-aggregate.mjs && node --test scripts/test-installer-core.mjs"
   }
 }

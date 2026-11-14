@@ -55,5 +55,7 @@ jobs:
           node --check scripts/verify-aggregate.mjs
       - name: Verify integration bundle contract
         run: node scripts/verify-aggregate.mjs
+      - name: Test installer safety and rollback contracts
+        run: node --test scripts/test-installer-core.mjs
       - name: Resolve all 12 Git subdirectory dependencies
         run: pnpm install --ignore-scripts --config.auto-install-peers=false
