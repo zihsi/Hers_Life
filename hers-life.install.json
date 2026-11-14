@@ -7,7 +7,8 @@
   "packagePath": "/",
   "source": {
     "dependencyCommit": "4880c98e00c634997103c6bc2192a88e7934e05f",
-    "dependencyResolution": "pnpm-git-subdirectory"
+    "dependencyResolution": "pnpm-git-subdirectory",
+    "settingsDependencyCommit": "28cbb752e96150eba2f7827bd1af170a7ba4af64"
   },
   "install": {
     "addPlugin": {
@@ -46,8 +47,7 @@
     "dsh-ming-wake",
     "dsh-ming-resume",
     "dsh-ming-skill-isolate",
-    "dsh-ming-mousepet",
-    "dsh-hers-life-settings"
+    "dsh-ming-mousepet"
   ],
   "privacyGate": {
     "privacyReadyDefault": false,
@@ -65,5 +65,8 @@
   "rollback": {
     "removeOnly": "dsh-hers-life",
     "preserveUserData": true
-  }
+  },
+  "supportPackages": [
+    "dsh-hers-life-settings"
+  ]
 }

@@ -16,7 +16,7 @@
 1. 透過 GitHub 讀取指定分支 HEAD，確認研究基準 Commit 仍在其歷史中；記錄本次解析到的 HEAD SHA。
 2. 確認目前 DSH Host 版本、目前 Profile、Node runtime 與 Plugin Manager 實際使用的 pnpm。優先使用 Host 提供的資訊；CI 已用 pnpm 11.28.5 驗證，但不可假設使用者機器上有全域 pnpm，也不可自行更換 Host 的套件管理器。
 3. 使用 `plugin_manager` 的唯讀列舉操作取得目前已安裝 Bundles。若 12 個舊 Bundle 已存在，不得移除或重複啟用它們。
-4. 直接從 GitHub 讀取指定分支的 `package.json`、`cordis.patch.yml` 與 `hers-life.install.json`，核對套件名稱、版本、Bundle manifest、12 個子套件與 peer 版本。不可把 Git URL 本身當成已驗證的套件內容。
+4. 直接從 GitHub 讀取指定分支的 `package.json`、`cordis.patch.yml` 與 `hers-life.install.json`，核對套件名稱、版本、Bundle manifest、12 個原始功能子套件與 1 個設定支援套件與 peer 版本。不可把 Git URL 本身當成已驗證的套件內容。
 5. 透過 Host 暴露的 Profile 路徑建立安裝前備份。若無法取得明確 Profile 路徑或備份未成功，停止安裝。
 6. 確認 `plugin_manager` 可用。每個管理動作都必須依 Host 權限規則取得 Full Access 或本次操作核准；不得繞過核准。
 7. 若工具不存在、Profile 無法識別、Host 版本不相容或權限不足，停止並清楚回報，不改用手動覆寫 Profile 的方式繞過。
@@ -61,9 +61,9 @@ Rollback 只允許使用「備份當時尚未安裝 dsh-hers-life」的備份，
 
 因此目前整合 Bundle：
 
-- 整合 Bundle 安裝後會加入 Profile，但其中的 Host 插件 row 預設為 Disabled。
-- `security.privacyReady` 預設為 `false`。
-- 即使有人手動啟用該 Host 插件 row，組合插件也會在隱私閘門未完成時拒絕啟動子插件。
+- 根 `hers-life` Host row 會啟動安全初始化，但 `security.privacyReady` 預設為 `false`，因此 12 個功能子插件不會載入。
+- 獨立 `hers-life-settings` row 會啟動設定頁與環境偵測；它不會啟動任何功能子插件。
+- `privacyReady` 是非即時欄位，不會出現在一般設定表單，也不可由設定頁解除。
 - Discord、Interest 與 Mousepet 的首次啟用亦採保守預設。
 
 **不要把「套件已安裝」回報成「整套功能已啟動」。** 目前也刻意不在 Bundle manifest 註冊 DSH Client UI 入口；瀏覽器 UI 原始碼只保留為建置產物，避免 Client 在伺服器端隱私閘門之前先啟動。待 Memory Access Controller、身份授權及相關回歸測試完成後，才會註冊 UI 入口並解除閘門。
@@ -71,9 +71,9 @@ Rollback 只允許使用「備份當時尚未安裝 dsh-hers-life」的備份，
 ## 安裝後檢查
 
 1. 使用 `list_bundles` 確認 `dsh-hers-life` 已安裝，版本符合 `postInstallAssertion`。
-2. 使用 `list_plugins` 確認 `hers-life` row 存在且維持 Disabled。
-3. 核對 Profile lockfile 記錄的 Git commit，以及 12 個子套件均已解析；若有任何子套件缺失或實際套件名稱／版本不符，停止後續啟動並回報，不要手動補裝或刪除不明套件。
-4. 確認整合 Bundle 的 Host 插件 row 保持 Disabled，且未啟動任何舊的私人記憶共享路徑。
+2. 使用 `list_plugins` 確認 `hers-life` 與 `hers-life-settings` 兩個 row 存在；設定 companion 應可用，根插件的 `privacyReady` 必須仍為 `false`。
+3. 核對 Profile lockfile 記錄的 Git commit、12 個原始子套件，以及 `dsh-hers-life-settings` 支援套件均已解析；任何套件缺失或版本不符都要停止並回報，不要手動補裝或刪除不明套件。
+4. 確認根插件只執行安全初始化，12 個功能子插件仍未載入。
 5. 不要求使用者提供 Token、Cookie 或私人對話作為安裝測試。
 6. 不宣稱已完成 Windows 實機驗收；只有在目標 Host 上實際完成測試才能標記通過。
 

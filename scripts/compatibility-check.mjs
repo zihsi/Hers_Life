@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises'
-import { parseArgs, readProfile, resolveProfileDir, CHILDREN, BASELINE_COMMIT, BRANCH } from './lib/installer-core.mjs'
+import { parseArgs, readProfile, resolveProfileDir, CHILDREN, SUPPORT_PACKAGES, BASELINE_COMMIT, BRANCH } from './lib/installer-core.mjs'
 
 const fail = (message) => { console.error('BLOCKED: ' + message); process.exitCode = 2 }
 try {
@@ -26,6 +26,13 @@ try {
     Object.entries(expectedPeers).every(([name, range]) => actual[name] === range)
   if (!peerMatches(pkg.peerDependencies) || !peerMatches(pkg.devDependencies)) {
     errors.push('DSH runtime peer declarations do not match the reviewed compatibility contract.')
+  }
+
+  for (const name of SUPPORT_PACKAGES) {
+    const target = pkg.dependencies?.[name]
+    if (typeof target !== 'string' || !target.includes(spec.source.settingsDependencyCommit) || !target.endsWith('path:/' + name)) {
+      errors.push('Pinned settings support dependency is invalid: ' + name)
+    }
   }
 
   for (const name of CHILDREN) {

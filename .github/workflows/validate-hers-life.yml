@@ -15,6 +15,10 @@ on:
       - 'dsh-ming-*/package.json'
       - 'dsh-ming-*/index.js'
       - 'dsh-ming-*/client.js'
+      - 'dsh-hers-life-settings/**'
+      - 'lib/**'
+      - 'dsh-hers-life-settings/**'
+      - 'lib/**'
   pull_request:
     paths:
       - 'package.json'
@@ -51,6 +55,9 @@ jobs:
         run: |
           node --check index.js
           node --check client.js
+          node --check dsh-hers-life-settings/index.js
+          node --check dsh-hers-life-settings/client.js
+          node --check lib/workspace-initializer.mjs
           node --check scripts/build-client.mjs
           node --check scripts/verify-aggregate.mjs
           node --check scripts/lib/installer-core.mjs
@@ -59,9 +66,12 @@ jobs:
           node --check scripts/rollback.mjs
           node --check scripts/health-check.mjs
           node --check scripts/test-installer-core.mjs
+          node --check scripts/test-workspace-initializer.mjs
       - name: Verify integration bundle contract
         run: node scripts/verify-aggregate.mjs
       - name: Test installer safety and rollback contracts
         run: node --test scripts/test-installer-core.mjs
+      - name: Test non-destructive workspace initialization
+        run: node --test scripts/test-workspace-initializer.mjs
       - name: Resolve all 12 Git subdirectory dependencies
         run: pnpm install --ignore-scripts --config.auto-install-peers=false

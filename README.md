@@ -14,7 +14,7 @@
 
 Agent 操作规范见 [HERS_LIFE_AGENT_INSTALL.md](HERS_LIFE_AGENT_INSTALL.md)，机器可读规格见 [hers-life.install.json](hers-life.install.json)。
 
-**安全说明：** 整合 Bundle 的 Host 插件只会执行安全初始化；`security.privacyReady` 仍默认关闭，12 个功能子插件不会载入。独立的 Hers Life 设置伴随插件保持可用，让使用者能先完成设置。子插件只会在服务端闸门通过后才动态载入；DSH Client UI 入口也暂不注册，避免客户端先于服务端权限检查启动。原因是旧版跨会话记忆仍存在私人内容注入风险；必须先完成 Memory Access Controller 与回归测试，才会开放 UI 并解除闸门。安装成功不等于 12 个功能插件已经启动。
+**安全说明：** 整合 Bundle 的 Host 插件只会执行安全初始化；`security.privacyReady` 仍默认关闭，12 个功能子插件不会载入。独立的 Hers Life 设置伴随插件保持可用，让使用者能先完成设置。子插件只会在服务端闸门通过后才动态载入；DSH Client UI 入口也暂不注册，避免客户端先于服务端权限检查启动。原因是旧版跨会话记忆仍存在私人内容注入风险；必须先完成 Memory Access Controller 与回归测试，才会开放 UI 并解除闸门。安装后可在 DSH Settings → Hers Life 调整常用设置、凭据与环境路径；安装成功不等于 12 个功能插件已经启动。
 
 ## 这里面有什么
 

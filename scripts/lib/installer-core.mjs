@@ -12,6 +12,7 @@ export const CHILDREN = [
   'dsh-ming-browse', 'dsh-ming-voice', 'dsh-ming-wake',
   'dsh-ming-resume', 'dsh-ming-skill-isolate', 'dsh-ming-mousepet',
 ]
+export const SUPPORT_PACKAGES = ['dsh-hers-life-settings']
 export const BASELINE_COMMIT = '4880c98e00c634997103c6bc2192a88e7934e05f'
 export const BRANCH = 'codex/unified-settings-20261114'
 
@@ -183,9 +184,10 @@ export async function checkHealth(profileDir, rootDir = repoRoot()) {
   let installedManifest = null
   let installedPatch = ''
   let installedEntry = ''
+  let packageDir = ''
   try {
     installedManifest = await readJson(installedManifestPath)
-    const packageDir = path.dirname(installedManifestPath)
+    packageDir = path.dirname(installedManifestPath)
     installedPatch = await readFile(path.join(packageDir, 'cordis.patch.yml'), 'utf8')
     installedEntry = await readFile(path.join(packageDir, 'index.js'), 'utf8')
   } catch (error) {
@@ -196,14 +198,32 @@ export async function checkHealth(profileDir, rootDir = repoRoot()) {
   const childDependenciesMatch = CHILDREN.every(name =>
     installedManifest?.dependencies?.[name] === rootPackage.dependencies?.[name],
   )
+  const supportDependenciesMatch = SUPPORT_PACKAGES.every(name =>
+    installedManifest?.dependencies?.[name] === rootPackage.dependencies?.[name],
+  )
+  let settingsManifest = null
+  try {
+    settingsManifest = await readJson(path.join(profileDir, 'node_modules', 'dsh-hers-life-settings', 'package.json'))
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error
+  }
+  let initializerPresent = false
+  try {
+    await access(path.join(packageDir, 'lib', 'workspace-initializer.mjs'))
+    initializerPresent = true
+  } catch {}
   const checks = {
     profileManifestValid: true,
     dependencyDeclared: typeof dependency === 'string',
     bundleSelected: bundles.includes(BUNDLE_NAME),
     packageFilesPresent: installedManifest?.name === BUNDLE_NAME,
     all12ChildDependenciesPinned: childDependenciesMatch,
-    privacyGateTemplateDisabled: /disabled:\s*true/.test(installedPatch) && /privacyReady:\s*false/.test(installedPatch),
-    privacyGateCodeGuardPresent: installedEntry.includes('config?.security?.privacyReady !== true'),
+    settingsCompanionDependencyPinned: supportDependenciesMatch,
+    settingsCompanionClientPresent: settingsManifest?.name === 'dsh-hers-life-settings'
+      && settingsManifest?.dsh?.client?.platform === 'web',
+    privacyGateClosed: !/disabled:\s*true/.test(installedPatch) && /privacyReady:\s*false/.test(installedPatch),
+    privacyGateCodeGuardPresent: installedEntry.includes('security.privacyReady !== true'),
+    workspaceInitializerPresent: initializerPresent,
     pinnedBaseline: rootSpec.baselineCommit === BASELINE_COMMIT,
   }
   const ok = Object.values(checks).every(Boolean)
