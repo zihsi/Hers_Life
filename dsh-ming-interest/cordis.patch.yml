@@ -5,8 +5,8 @@
         enabled: true
         # 留空时使用 MING_WORKSPACE；未设置时回退到 <DSH_HOME>/workspace。
         workspacePath: ''
-        # onebot 的入站录制（recordInbound: true）落在这里。
-        # 不填就用默认（默认按 %USERPROFILE% 拼，本机路径不写进仓里）。
+        # QQ 入站记录文件；可由 OneBot 或 AstrBot 记录器写入。
+        # 默认跟随 DSH_HOME；若自订路径，AstrBot 的 inboxPath 也必须指向同一文件。
         # inboxPath: '%USERPROFILE%\.dsh\media\onebot\qq-inbox.jsonl'
         # chatSessionsPath: '%USERPROFILE%\.dsh\media\onebot\chat-sessions.json'
         interestsFile: 'live\interests.json'
