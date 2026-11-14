@@ -3,7 +3,6 @@ import { parseArgs, resolveProfileDir, verifyBackup, assertFreshInstallBackup, r
 
 try {
   const args = parseArgs(process.argv.slice(2), ['confirm'])
-  if (!args.confirm) throw new Error('Rollback is destructive to the installed bundle. Re-run with --confirm after reviewing the dry-run output.')
   if (!args['profile-name']) throw new Error('--profile-name is required; rollback never guesses the DSH profile name.')
   if (!args['backup-dir']) throw new Error('--backup-dir is required; a verified pre-install metadata backup is mandatory.')
   const profileDir = await resolveProfileDir(args)
@@ -13,6 +12,19 @@ try {
   const present = Object.hasOwn(manifest.dependencies, BUNDLE_NAME) || bundles.includes(BUNDLE_NAME)
   if (!present) {
     console.log(JSON.stringify({ ok: true, changed: false, message: 'Hers Life bundle is not present; no action taken.' }, null, 2))
+    process.exit(0)
+  }
+  const preview = {
+    dryRun: !args.confirm,
+    action: 'dsh plugin --profile ' + args['profile-name'] + ' remove ' + BUNDLE_NAME,
+    profilePath: profileDir,
+    verifiedBackupAt: backup.createdAt,
+    scope: 'Remove only dsh-hers-life through the DSH package manager. Do not restore or overwrite profile files.',
+    preserved: backup.excluded,
+  }
+  if (!args.confirm) {
+    console.log(JSON.stringify(preview, null, 2))
+    console.log('DRY RUN ONLY: review the target and re-run with --confirm to execute.')
     process.exit(0)
   }
   console.log(JSON.stringify({

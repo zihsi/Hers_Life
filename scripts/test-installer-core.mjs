@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import {
-  parseArgs, validateProfileName, isWithin, createBackup, verifyBackup,
+  parseArgs, validateProfileName, isWithin, createBackup, verifyBackup, resolveProfileDir,
   readProfile, buildDshRemoveArgs, checkHealth, assertFreshInstallBackup, CHILDREN, BUNDLE_NAME,
 } from './lib/installer-core.mjs'
 
@@ -23,6 +23,13 @@ async function fixture(t) {
   await writeFile(path.join(profile, 'pnpm-workspace.yaml'), 'packages:\n  - .\n')
   return { temp, profile }
 }
+
+test('profile resolution requires explicit path or DSH_HOME and profile name', async (t) => {
+  const { temp, profile } = await fixture(t)
+  assert.equal(await resolveProfileDir({ 'dsh-home': temp, 'profile-name': 'test-profile' }, {}), profile)
+  await assert.rejects(resolveProfileDir({}, {}), /No default path is guessed/)
+  await assert.rejects(resolveProfileDir({ 'profile-dir': 'relative/path' }, {}), /absolute path/)
+})
 
 test('argument parser rejects positional and duplicate options', () => {
   assert.throws(() => parseArgs(['oops']), /positional/)
