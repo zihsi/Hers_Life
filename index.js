@@ -52,10 +52,12 @@ function asCordisPlugin(module, fallbackName) {
 
 export async function apply(ctx, config = {}) {
   if (config?.security?.privacyReady !== true) {
-    ctx.logger?.warn?.(
-      '[dsh-hers-life] 已安裝，但尚未啟動：跨會話記憶隱私閘門尚未完成。' +
-      '完成 Memory Access Controller 後才可設定 security.privacyReady=true。',
-    )
+    try {
+      console.warn(
+        '[dsh-hers-life] 已安裝，但尚未啟動：跨會話記憶隱私閘門尚未完成。' +
+        '完成 Memory Access Controller 後才可設定 security.privacyReady=true。',
+      )
+    } catch { /* logging must not affect plugin activation */ }
     return
   }
 
