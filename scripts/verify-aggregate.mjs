@@ -27,12 +27,21 @@ assert.equal(pkg.dsh?.client, undefined, 'client UI must remain unregistered unt
 assert.equal(pkg.exports?.['./client'], './client.js')
 assert.deepEqual(Object.keys(pkg.dependencies).sort(), [...expected].sort())
 const expectedPeers = {
-  '@deepseek-ai/cordis': '^4.0.1',
-  '@deepseek-ai/dsh-tools': '*',
-  '@deepseek-ai/dsh-attachment': '*',
-  '@deepseek-ai/dsh-llm': '*',
-  react: '^18.2.0',
+  "@deepseek-ai/cordis": "^4.0.1",
+  "@deepseek-ai/dsh-tools": "*",
+  "@deepseek-ai/dsh-attachment": "*",
+  "@deepseek-ai/dsh-llm": "*",
+  "@deepseek-ai/dsh-brand": "^0.0.1-rc.1",
+  "@deepseek-ai/dsh-invariants": "^0.0.1-rc.1",
+  "@deepseek-ai/dsh-timeout": "^0.0.1-rc.1",
+  "@deepseek-ai/dsh-agent": "^0.0.1-rc.1",
+  "@deepseek-ai/dsh-code-runtime": "^0.0.1-rc.1",
+  "@deepseek-ai/dsh-scope": "^0.0.1-rc.1",
+  "@deepseek-ai/dsh-session": "^0.0.1-rc.1",
+  "@deepseek-ai/dsh-system-prompt": "^0.0.1-rc.1",
+  "react": "^18.2.0"
 }
+
 assert.deepEqual(pkg.peerDependencies, expectedPeers)
 assert.deepEqual(pkg.devDependencies, expectedPeers)
 assert.equal(spec.install.postInstallAssertion.name, 'dsh-hers-life')
