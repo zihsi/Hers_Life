@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import {
   parseArgs, validateProfileName, isWithin, createBackup, verifyBackup,
-  readProfile, buildDshRemoveArgs, checkHealth, CHILDREN, BUNDLE_NAME,
+  readProfile, buildDshRemoveArgs, checkHealth, assertFreshInstallBackup, CHILDREN, BUNDLE_NAME,
 } from './lib/installer-core.mjs'
 
 async function fixture(t) {
@@ -63,6 +63,19 @@ test('backup refuses overwrite and any path overlapping the profile', async (t) 
   const backupDir = path.join(temp, 'backup')
   await createBackup(profile, backupDir)
   await assert.rejects(createBackup(profile, backupDir), /already exists/)
+})
+
+test('backup records whether the bundle existed before backup and rollback refuses old installs', async (t) => {
+  const { temp, profile } = await fixture(t)
+  const backupWithExistingBundle = await createBackup(profile, path.join(temp, 'existing-backup'))
+  assert.throws(() => assertFreshInstallBackup(backupWithExistingBundle), /first-time install/)
+  const profileManifest = JSON.parse(await readFile(path.join(profile, 'package.json'), 'utf8'))
+  delete profileManifest.dependencies[BUNDLE_NAME]
+  profileManifest.dsh.profile.bundles = profileManifest.dsh.profile.bundles.filter(name => name !== BUNDLE_NAME)
+  await writeFile(path.join(profile, 'package.json'), JSON.stringify(profileManifest))
+  const cleanBackup = await createBackup(profile, path.join(temp, 'clean-backup'))
+  assert.deepEqual(cleanBackup.bundleState, { dependencyPresent: false, selected: false })
+  assert.doesNotThrow(() => assertFreshInstallBackup(cleanBackup))
 })
 
 test('backup integrity verification catches changed files and wrong profiles', async (t) => {

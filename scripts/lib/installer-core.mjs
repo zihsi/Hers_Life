@@ -88,6 +88,7 @@ export async function readProfile(profileDir) {
 
 export async function createBackup(profileDir, backupDir) {
   const profile = await realpath(profileDir)
+  const { manifest: profileManifest, bundles: profileBundles } = await readProfile(profile)
   const target = path.resolve(backupDir)
   if (!path.isAbsolute(backupDir)) throw new Error('--backup-dir must be an absolute path.')
   if (isWithin(profile, target) || isWithin(target, profile)) {
@@ -125,6 +126,10 @@ export async function createBackup(profileDir, backupDir) {
       profilePath: profile,
       bundleName: BUNDLE_NAME,
       baselineCommit: BASELINE_COMMIT,
+      bundleState: {
+        dependencyPresent: Object.hasOwn(profileManifest.dependencies, BUNDLE_NAME),
+        selected: profileBundles.includes(BUNDLE_NAME),
+      },
       files,
       excluded: ['node_modules', 'workspace', 'memory', 'diary', 'QQ Inbox', 'Discord sessions', 'Edge profile', 'Mousepet skins', 'AI Cursor PNGs', 'credentials'],
     }
@@ -133,6 +138,12 @@ export async function createBackup(profileDir, backupDir) {
   } catch (error) {
     await rm(target, { recursive: true, force: true })
     throw error
+  }
+}
+
+export function assertFreshInstallBackup(manifest) {
+  if (!manifest.bundleState || manifest.bundleState.dependencyPresent || manifest.bundleState.selected) {
+    throw new Error('Backup does not prove this is a first-time install; refusing to remove a pre-existing bundle.')
   }
 }
 

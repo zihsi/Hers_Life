@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { parseArgs, resolveProfileDir, verifyBackup, readProfile, runDshRemove, BUNDLE_NAME } from './lib/installer-core.mjs'
+import { parseArgs, resolveProfileDir, verifyBackup, assertFreshInstallBackup, readProfile, runDshRemove, BUNDLE_NAME } from './lib/installer-core.mjs'
 
 try {
   const args = parseArgs(process.argv.slice(2), ['confirm'])
@@ -8,6 +8,7 @@ try {
   if (!args['backup-dir']) throw new Error('--backup-dir is required; a verified pre-install metadata backup is mandatory.')
   const profileDir = await resolveProfileDir(args)
   const backup = await verifyBackup(args['backup-dir'], profileDir)
+  assertFreshInstallBackup(backup)
   const { manifest, bundles } = await readProfile(profileDir)
   const present = Object.hasOwn(manifest.dependencies, BUNDLE_NAME) || bundles.includes(BUNDLE_NAME)
   if (!present) {
