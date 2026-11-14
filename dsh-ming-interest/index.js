@@ -38,7 +38,7 @@ function resolveConfigPath(value, fallback) {
     const key = win || braced || plain
     return process.env[key] ?? match
   })
-  if (resolved === '~' || resolved.startsWith('~/') || resolved.startsWith('~\\\\')) {
+  if (resolved === '~' || resolved.startsWith('~/') || resolved.startsWith('~\\')) {
     resolved = path.join(homedir(), resolved.slice(2))
   }
   return path.resolve(resolved)
