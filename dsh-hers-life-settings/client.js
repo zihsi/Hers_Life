@@ -26,7 +26,7 @@ window.__ModuleLoader__.load({
       ['browse', 'idleMinutes'], ['browse', 'minGapMinutes'], ['browse', 'dailyMax'],
       ['browse', 'sessionRounds'], ['browse', 'quietHours'], ['browse', 'holidaysFile'], ['browse', 'agentPreset'], ['browse', 'maxItems'], ['browse', 'maxShots'], ['browse', 'targetMode'], ['browse', 'qqSessionPrefix'], ['browse', 'ownerQQ'], ['browse', 'ownerDiscordId'], ['browse', 'discordSessionPrefix'],
       ['resume', 'adbPath'], ['resume', 'serial'], ['resume', 'pauseMediaOnInterrupt'],
-      ['graph', 'syncSeconds'], ['graph', 'qqObservations'], ['graph', 'skillsCwd'], ['graph', 'skillsOffFile'], ['graph', 'peopleIndex'], ['graph', 'ownerId'], ['graph', 'ownerName'], ['graph', 'maxPeople'], ['graph', 'maxTopics'], ['graph', 'maxEdges'], ['graph', 'timelineDays'], ['graph', 'memoryCard'], ['graph', 'diaryDir'], ['graph', 'diaryDays'], ['graph', 'dshMemoryDir'], ['graph', 'costPricesFile'], ['graph', 'costAutoFile'], ['resume', 'root'], ['resume', 'adbPath'], ['resume', 'serial'], ['skillIsolate', 'root'], ['skillIsolate', 'stateFile'], ['wake', 'root'],
+      ['graph', 'syncSeconds'], ['graph', 'qqObservations'], ['graph', 'skillsCwd'], ['graph', 'skillsOffFile'], ['graph', 'peopleIndex'], ['graph', 'ownerId'], ['graph', 'ownerName'], ['graph', 'maxPeople'], ['graph', 'maxTopics'], ['graph', 'maxEdges'], ['graph', 'timelineDays'], ['graph', 'memoryCard'], ['graph', 'diaryDir'], ['graph', 'diaryDays'], ['graph', 'dshMemoryDir'], ['graph', 'costPricesFile'], ['graph', 'costAutoFile'], ['graph', 'roomLabels'], ['resume', 'root'], ['resume', 'adbPath'], ['resume', 'serial'], ['skillIsolate', 'root'], ['skillIsolate', 'stateFile'], ['wake', 'root'],
     ]
     const LABELS = {
       workspacePath: '共用工作區',
@@ -43,7 +43,7 @@ window.__ModuleLoader__.load({
       serial: 'Android 裝置 Serial', idleMinutes: '閒置多久後啟動（分鐘）',
       dailyMax: '每日瀏覽上限', sessionRounds: '每個瀏覽 Session 輪數',
       pauseMediaOnInterrupt: '被插話時暫停媒體', syncSeconds: '圖譜同步間隔（秒）',
-      qqObservations: 'QQ 觀察紀錄檔', skillsCwd: 'Skill 工作區',
+      qqObservations: 'QQ 觀察紀錄檔', skillsCwd: 'Skill 工作區', roomLabels: 'QQ 群組名稱對照',
       cursorMode: '游標模式', cursorHoldMs: '游標停留時間（毫秒）', cursorSize: '游標尺寸（像素）', toolsPath: 'Mousepet 工具路徑', tickMs: '陪伴模式更新間隔（毫秒）',
       python: '語音 Python 執行檔', ffmpeg: '語音 FFmpeg 執行檔', powershell: '語音 PowerShell 執行檔', timeoutMs: '語音合成逾時（毫秒）',
     }
@@ -77,6 +77,8 @@ window.__ModuleLoader__.load({
     }
     const textValue = (value) => Array.isArray(value) ? value.join('\n') : (value == null ? '' : String(value))
     const parseList = (value) => String(value).split(/[\r\n,，;；]+/).map(x => x.trim()).filter(Boolean)
+    const mapValue = (value) => Object.entries(value && typeof value === 'object' && !Array.isArray(value) ? value : {}).map(([key, name]) => `${key} = ${name}`).join('\n')
+    const parseMap = (value) => Object.fromEntries(String(value).split(/\r?\n/).map(line => { const i = line.indexOf('='); return i < 0 ? null : [line.slice(0, i).trim(), line.slice(i + 1).trim()] }).filter(entry => entry && entry[0] && entry[1]))
     const label = (path) => LABELS[path[path.length - 1]] || path[path.length - 1]
 
     function createPage(ctx, form) {
@@ -113,17 +115,18 @@ window.__ModuleLoader__.load({
           const current = getAt(draft, path)
           const isBoolean = options.type === 'boolean'
           const isList = options.type === 'list'
+          const isMap = options.type === 'map'
           return h('div', { style: STYLE.field, key: path.join('.') },
             h('label', { style: STYLE.label }, options.label || label(path)),
             isBoolean
               ? h('input', { type: 'checkbox', checked: Boolean(current), onChange: e => update(path, e.target.checked) })
-              : h(isList ? 'textarea' : 'input', {
+              : h(isList || isMap ? 'textarea' : 'input', {
                   type: options.type === 'number' ? 'number' : 'text',
-                  rows: isList ? 3 : undefined,
-                  value: isList ? textValue(current) : textValue(current),
+                  rows: isMap ? 5 : isList ? 3 : undefined,
+                  value: isMap ? mapValue(current) : textValue(current),
                   placeholder: options.placeholder || '',
                   style: STYLE.input,
-                  onChange: e => update(path, options.type === 'number' ? Number(e.target.value) : isList ? parseList(e.target.value) : e.target.value),
+                  onChange: e => update(path, options.type === 'number' ? Number(e.target.value) : isList ? parseList(e.target.value) : isMap ? parseMap(e.target.value) : e.target.value),
                 }),
             options.hint ? h('div', { style: STYLE.hint }, options.hint) : null,
           )
@@ -271,7 +274,8 @@ window.__ModuleLoader__.load({
                       grid(field(['graph','maxEdges'], { type: 'number' }), field(['graph','timelineDays'], { type: 'number' })),
                       field(['graph','diaryDir']), field(['graph','dshMemoryDir']),
                       grid(field(['graph','diaryDays'], { type: 'number' }), field(['graph','skillsOffFile'])),
-                      field(['graph','costPricesFile']), field(['graph','costAutoFile']))),
+                      field(['graph','costPricesFile']), field(['graph','costAutoFile']),
+                      field(['graph','roomLabels'], { type: 'map', hint: '每行一組「群組 ID = 群組名稱」。本機 live/qq-groups.json 仍會自動載入；這裡手動填寫的名稱優先。' }))),
                     section('興趣進階', h(React.Fragment, null,
                       grid(field(['interest','minChars'], { type: 'number' }), field(['interest','contextLines'], { type: 'number' })),
                       grid(field(['interest','pendingMax'], { type: 'number' }), field(['interest','pendingTtlMinutes'], { type: 'number' })),
