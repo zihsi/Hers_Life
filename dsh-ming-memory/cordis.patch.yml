@@ -3,7 +3,7 @@
       name: dsh-ming-memory
       config:
         # 指向放 persona/ 和 diary/ 的工作区。也可以不写在这里，
-        # 改放到 ~/.dsh/ming-memory.json 的 root（本机配置不进仓库）。
+        # 改放到 <DSH_HOME>/ming-memory.json 的 root（未设置 DSH_HOME 时默认 ~/.dsh；本机配置不进仓库）。
         # root: '/path/to/your/workspace'
         personaFiles:
           - persona/人设.md
