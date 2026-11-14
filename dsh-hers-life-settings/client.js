@@ -21,6 +21,7 @@ window.__ModuleLoader__.load({
       ['interest', 'groups'], ['interest', 'observeGroups'], ['interest', 'quietHours'],
       ['interest', 'pollMs'], ['interest', 'minGapMinutes'], ['interest', 'maxPerHour'], ['interest', 'minChars'], ['interest', 'contextLines'], ['interest', 'pendingMax'], ['interest', 'pendingTtlMinutes'], ['interest', 'interestsFile'], ['interest', 'logFile'], ['interest', 'stateFile'], ['interest', 'offFlag'],
       ['voice', 'root'], ['voice', 'voice'], ['voice', 'rate'],
+      ['mousepet', 'cursorMode'], ['mousepet', 'cursorHoldMs'], ['mousepet', 'cursorSize'], ['mousepet', 'toolsPath'], ['mousepet', 'companion', 'enabled'], ['mousepet', 'companion', 'tickMs'],
       ['browse', 'enabled'], ['browse', 'adbPath'], ['browse', 'serial'],
       ['browse', 'idleMinutes'], ['browse', 'minGapMinutes'], ['browse', 'dailyMax'],
       ['browse', 'sessionRounds'], ['browse', 'quietHours'], ['browse', 'holidaysFile'], ['browse', 'agentPreset'], ['browse', 'maxItems'], ['browse', 'maxShots'], ['browse', 'targetMode'], ['browse', 'qqSessionPrefix'], ['browse', 'ownerQQ'], ['browse', 'ownerDiscordId'], ['browse', 'discordSessionPrefix'],
@@ -43,6 +44,7 @@ window.__ModuleLoader__.load({
       dailyMax: '每日瀏覽上限', sessionRounds: '每個瀏覽 Session 輪數',
       pauseMediaOnInterrupt: '被插話時暫停媒體', syncSeconds: '圖譜同步間隔（秒）',
       qqObservations: 'QQ 觀察紀錄檔', skillsCwd: 'Skill 工作區',
+      cursorMode: '游標模式', cursorHoldMs: '游標停留時間（毫秒）', cursorSize: '游標尺寸（像素）', toolsPath: 'Mousepet 工具路徑', tickMs: '陪伴模式更新間隔（毫秒）',
     }
     const STYLE = {
       page: { padding: '18px 20px 28px', maxWidth: '920px', color: 'var(--dsw-alias-label-primary)', fontSize: '13px' },
@@ -247,6 +249,12 @@ window.__ModuleLoader__.load({
                       grid(field(['memory','diaryChars'], { type: 'number' }), field(['memory','totalChars'], { type: 'number' })),
                       field(['memory','qq','offFile']), field(['memory','qq','webForQq']),
                       grid(field(['memory','qq','webForQqEveryMs'], { type: 'number' }), field(['memory','qq','webForQqLines'], { type: 'number' })))),
+                    section('Mousepet 桌面互動', h(React.Fragment, null,
+                      field(['mousepet','cursorMode']),
+                      grid(field(['mousepet','cursorHoldMs'], { type: 'number' }), field(['mousepet','cursorSize'], { type: 'number' })),
+                      field(['mousepet','toolsPath']),
+                      field(['mousepet','companion','enabled'], { type: 'boolean' }),
+                      field(['mousepet','companion','tickMs'], { type: 'number' }))),
                     section('記憶圖譜與成本', h(React.Fragment, null,
                       grid(field(['graph','ownerId']), field(['graph','ownerName'])),
                       field(['graph','peopleIndex']), field(['graph','memoryCard']),
