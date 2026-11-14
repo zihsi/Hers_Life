@@ -185,7 +185,7 @@ window.__ModuleLoader__.load({
                 grid(field(['environment','ffplayPath']), field(['environment','powershellPath'])),
                 field(['environment','adbPath']),
                 field(['environment','dshToolsPath'], { hint: '通常不需要填；只有 DSH Tools 無法自動解析時才需要指定模組檔案。' }),
-                env ? h('div', { style: STYLE.row }, ...[['python','pythonPath'],['ffmpeg','ffmpegPath'],['ffplay','ffplayPath'],['powershell','powershellPath'],['adb','adbPath']].map(([key,target]) => env.commands?.[key] ? h('button', { key, style: STYLE.btn, onClick: () => update(['environment',target], env.commands[key]) }, '使用偵測到的 ' + key) : null)) : null,
+                env ? h('div', { style: STYLE.row }, ...[['python','pythonPath'],['ffmpeg','ffmpegPath'],['ffplay','ffplayPath'],['powershell','powershellPath'],['adb','adbPath'],['dshToolsModule','dshToolsPath']].map(([key,target]) => env.commands?.[key] ? h('button', { key, style: STYLE.btn, onClick: () => update(['environment',target], env.commands[key]) }, '使用偵測到的 ' + key) : null)) : null,
                 h('div', { style: STYLE.hint }, '執行檔路徑留空時使用系統 PATH 自動偵測；偵測結果可直接套用。'))))
           : tab === 'discord'
             ? h(React.Fragment, null,

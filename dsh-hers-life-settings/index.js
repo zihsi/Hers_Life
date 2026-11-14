@@ -1,5 +1,6 @@
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { access } from 'node:fs/promises'
 
@@ -83,6 +84,7 @@ async function environmentReport() {
       ffplay: findOnPath(windows ? 'ffplay.exe' : 'ffplay'),
       adb: findOnPath(windows ? 'adb.exe' : 'adb'),
       dsh: findOnPath(windows ? 'dsh.exe' : 'dsh'),
+      dshToolsModule: (() => { try { return fileURLToPath(import.meta.resolve('@deepseek-ai/dsh-tools')) } catch { return '' } })(),
       powershell: findOnPath(windows ? ['pwsh.exe', 'powershell.exe'] : ['pwsh']),
     },
   }
