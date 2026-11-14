@@ -37,12 +37,12 @@ try {
   });
   check('memory_write 拦截 GitHub Token', rejected.includes('写入已拒绝') && !rejected.includes(token));
 
+  // 读取核心文件，等待插件首次启动完成，避免和 bootstrap 建目录竞争。
+  const corePath = join(home, 'memory', 'MEMORY.md');
+  const beforeCore = await readFile(corePath, 'utf8');
   const notesDir = join(home, 'memory', 'notes');
   const filesAfterReject = (await readdir(notesDir)).filter((name) => name.endsWith('.md'));
   check('拒绝写入后没有新增归档文件', filesAfterReject.length === 0, String(filesAfterReject.length));
-
-  const corePath = join(home, 'memory', 'MEMORY.md');
-  const beforeCore = await readFile(corePath, 'utf8');
   const coreReject = await tools.memory_core.execute({
     action: 'append',
     section: '安全测试',
