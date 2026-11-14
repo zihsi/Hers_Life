@@ -25,7 +25,7 @@
 - **归档记忆按需检索**：长尾事实一条一个 markdown 文件（`notes/<id>.md`，带 YAML front-matter），索引只把**最近 12 条**的标题与标签注入提示词，正文留给 `memory_search` / `memory_read` 按需拉取——核心记忆保持精炼，历史却不丢。
 - **纯本地检索，无依赖**：打分完全在本地算（标题命中 +3 / 标签命中 +3 / 正文每次出现 +1 / 多词整串命中 +2），命中处自动截取上下文片段返回。**没有向量库、没有 embedding 服务、没有 sidecar 进程**，离线可用。
 - **七个模型工具**：`memory_write`（写归档）、`memory_core`（按 `##` 分节增删改核心记忆）、`memory_search`、`memory_read`、`memory_list`（可按标签过滤）、`memory_delete`（删除并留墓碑占位）、`persona`（读写回复风格）。
-- **受限使用政策与凭证拦截**：提示词只允许记录机器、环境、项目、工具与做法等非个人事实；禁止保存关于人的判断、偏好画像、情绪、私人内容或未经同意的对话转述。`memory_write`、`memory_core` 与 `memory_merge` 另有程序级扫描，会拒绝常见 API Key、Token、Bearer、Cookie、密码字段与私钥格式；这不是完整的秘密资料分类器，无法保证识别所有自定义凭证，手动编辑记忆文件也不经过该拦截。
+- **受限使用政策与凭证拦截**：提示词只允许记录机器、环境、项目、工具与做法等非个人事实；禁止保存关于人的判断、偏好画像、情绪、私人内容或未经同意的对话转述。`memory_write`、`memory_core`、`memory_merge` 与 `persona` 自定义风格（含设置页 API）另有程序级扫描，会拒绝常见 API Key、Token、Bearer、Cookie、密码字段与私钥格式；这不是完整的秘密资料分类器，无法保证识别所有自定义凭证，手动编辑记忆文件也不经过该拦截。
 - **AI 回复风格设置页**：在 DSH 设置页注册「AI 回复风格」区块——总开关 + 11 个内置风格预设（`default` / `warm` / `concise` / `rigorous` / `humorous` / `gentle` / `socratic` / `tsundere` / `storyteller` / `roast` / `minimalist`）点选即生效，另有「自定义」卡片可写入最多 4000 字符的自定义风格。风格文本与核心记忆并列注入系统提示。
 - **零构建、零运行时依赖**：纯 ESM JavaScript，Node 原生 `fs` 直读直写，`dsh plugin add` 即用，无需编译。
 - **写入原子化**：所有落盘走「临时文件 + rename」，索引与笔记不会因中断而写坏；`index.json` 损坏时会自动从 `notes/` 重建。
