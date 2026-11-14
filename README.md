@@ -6,6 +6,16 @@
 
 它们不是一个框架，是同一个东西的十二个面：会记得、会看图、会动手、会说话、会自己出去逛。
 
+## 统一安装入口（开发中）
+
+本仓新增了统一入口 Bundle：`dsh-hers-life`。Agent 安装与 Plugins → Add plugin 使用同一个 Git Repository 安装目标：
+
+`https://github.com/zihsi/Hers_Life.git#codex/unified-settings-20261114`
+
+Agent 操作规范见 [HERS_LIFE_AGENT_INSTALL.md](HERS_LIFE_AGENT_INSTALL.md)，机器可读规格见 [hers-life.install.json](hers-life.install.json)。
+
+**安全说明：** 当前整合 Bundle 默认保持 Disabled，且有独立的 `security.privacyReady` 启动闸门。原因是旧版跨会话记忆仍存在私人内容注入风险；必须先完成 Memory Access Controller 与回归测试，才会解除闸门。安装成功不等于功能已经启动。
+
 ## 这里面有什么
 
 | 包 | 干什么 |

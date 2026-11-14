@@ -1,0 +1,51 @@
+# One installable bundle; the child plugins remain separate packages under the hood.
+# Disabled until the Memory Access Controller closes the known private-memory injection path.
+- insert:
+    - id: hers-life
+      name: dsh-hers-life
+      disabled: true
+      config:
+        security:
+          privacyReady: false
+        coreMemory: {}
+        memory:
+          personaFiles:
+            - persona/人設.md
+            - persona/名字.md
+            - persona/約定.md
+          diaryDir: diary
+          diaryCount: 3
+          maxChars: 12000
+        graph:
+          syncSeconds: 120
+        discord:
+          enabled: false
+          directMessages: true
+          mentionRequired: true
+          observeUnmentioned: false
+          allowedGuildIds: []
+          allowedChannelIds: []
+          allowedUserIds: []
+          ownerUserIds: []
+        interest:
+          enabled: false
+          observeEnabled: false
+          observePrivate: false
+          groups: []
+          observeGroups: []
+        bilibiliAccount: {}
+        browse: {}
+        voice:
+          root: ''
+          voice: zh-CN-XiaoxiaoNeural
+          rate: '+0%'
+        wake: {}
+        resume: {}
+        skillIsolate: {}
+        mousepet:
+          cursorMode: companion
+          cursorHoldMs: 2600
+          cursorSize: 64
+          companion:
+            enabled: false
+            tickMs: 0

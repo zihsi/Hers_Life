@@ -1,0 +1,52 @@
+{
+  "name": "dsh-hers-life",
+  "version": "0.1.0",
+  "description": "Unified installer and composition bundle for the Hers Life DSH plugin suite.",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md",
+    "HERS_LIFE_AGENT_INSTALL.md",
+    "hers-life.install.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zihsi/Hers_Life.git",
+    "directory": "."
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "dsh-ming-core-memory": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-core-memory",
+    "dsh-ming-memory": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-memory",
+    "dsh-ming-graph": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-graph",
+    "dsh-ming-discord": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-discord",
+    "dsh-ming-interest": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-interest",
+    "dsh-ming-bilibili-account": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-bilibili-account",
+    "dsh-ming-browse": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-browse",
+    "dsh-ming-voice": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-voice",
+    "dsh-ming-wake": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-wake",
+    "dsh-ming-resume": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-resume",
+    "dsh-ming-skill-isolate": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-skill-isolate",
+    "dsh-ming-mousepet": "git+https://github.com/zihsi/Hers_Life.git#4880c98e00c634997103c6bc2192a88e7934e05f&path:/dsh-ming-mousepet"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}

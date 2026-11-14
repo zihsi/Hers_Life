@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "repository": "zihsi/Hers_Life",
+  "branch": "codex/unified-settings-20261114",
+  "baselineCommit": "4880c98e00c634997103c6bc2192a88e7934e05f",
+  "packageName": "dsh-hers-life",
+  "packagePath": "/",
+  "source": {
+    "dependencyCommit": "4880c98e00c634997103c6bc2192a88e7934e05f",
+    "dependencyResolution": "pnpm-git-subdirectory"
+  },
+  "install": {
+    "addPlugin": {
+      "input": "https://github.com/zihsi/Hers_Life.git#codex/unified-settings-20261114",
+      "kind": "git-repository"
+    },
+    "agent": {
+      "tool": "plugin_manager",
+      "action": "install_bundle",
+      "target": "https://github.com/zihsi/Hers_Life.git#codex/unified-settings-20261114"
+    },
+    "resolvedCommitMustBeRecorded": true
+  },
+  "runtimeRequirements": {
+    "node": ">=22",
+    "pnpm": ">=11.28.5",
+    "dsh": "verify-with-running-host"
+  },
+  "children": [
+    "dsh-ming-core-memory",
+    "dsh-ming-memory",
+    "dsh-ming-graph",
+    "dsh-ming-discord",
+    "dsh-ming-interest",
+    "dsh-ming-bilibili-account",
+    "dsh-ming-browse",
+    "dsh-ming-voice",
+    "dsh-ming-wake",
+    "dsh-ming-resume",
+    "dsh-ming-skill-isolate",
+    "dsh-ming-mousepet"
+  ],
+  "privacyGate": {
+    "bundleDisabledByDefault": true,
+    "privacyReadyDefault": false,
+    "reason": "Legacy shared-memory path is known to inject private QQ/DM content into cross-session context. Do not activate until Memory Access Controller is implemented and verified."
+  },
+  "dataPolicy": {
+    "workspaceMutation": false,
+    "credentialMigration": false,
+    "profileBackupBeforeUpgrade": true,
+    "neverOverwriteExistingUserData": true
+  },
+  "rollback": {
+    "removeOnly": "dsh-hers-life",
+    "preserveUserData": true
+  }
+}
