@@ -15,7 +15,7 @@
         └──► 插件读取（只读）──► 系统提示词（会话开场注入）
 ```
 
-## 配套
+归档记忆库与本机设置则位于 `<DSH_HOME>/memory/`、`<DSH_HOME>/ming-memory.json`；未设置 `DSH_HOME` 时，默认回退到 `~/.dsh/`。工作区与 DSH 主目录是两个独立位置。\n\n## 配套
 
 配 **[dsh-ming-graph](../dsh-ming-graph/README.md)** 一起用：那边把同一批归档记忆画成一张能读的图——每条记忆一个点，每条边都写清凭什么连。
 
