@@ -19,6 +19,7 @@ try {
     "@deepseek-ai/dsh-tools": "*",
     "@deepseek-ai/dsh-attachment": "*",
     "@deepseek-ai/dsh-llm": "*",
+    "@deepseek-ai/schemastery": "^3.19.0",
     "react": "^18.2.0"
   }
   const peerMatches = actual => actual &&

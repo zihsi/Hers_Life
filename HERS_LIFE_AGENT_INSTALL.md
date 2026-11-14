@@ -66,7 +66,7 @@ Rollback 只允許使用「備份當時尚未安裝 dsh-hers-life」的備份，
 - `privacyReady` 是非即時欄位，不會出現在一般設定表單，也不可由設定頁解除。
 - Discord、Interest 與 Mousepet 的首次啟用亦採保守預設。
 
-**不要把「套件已安裝」回報成「整套功能已啟動」。** 目前也刻意不在 Bundle manifest 註冊 DSH Client UI 入口；瀏覽器 UI 原始碼只保留為建置產物，避免 Client 在伺服器端隱私閘門之前先啟動。待 Memory Access Controller、身份授權及相關回歸測試完成後，才會註冊 UI 入口並解除閘門。
+**不要把「套件已安裝」回報成「整套功能已啟動」。** 目前只有獨立的設定 companion 註冊 DSH Client UI；它只讀取根插件的設定表單並管理 DSH Credentials，不會啟動任何功能子插件。12 個功能插件的 Client UI 仍未註冊，避免它們在伺服器端隱私閘門之前先啟動。待 Memory Access Controller、身份授權及相關回歸測試完成後，才會開放功能 UI 並解除閘門。
 
 ## 安裝後檢查
 

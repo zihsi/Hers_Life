@@ -14,7 +14,7 @@
 
 Agent 操作规范见 [HERS_LIFE_AGENT_INSTALL.md](HERS_LIFE_AGENT_INSTALL.md)，机器可读规格见 [hers-life.install.json](hers-life.install.json)。
 
-**安全说明：** 整合 Bundle 的 Host 插件只会执行安全初始化；`security.privacyReady` 仍默认关闭，12 个功能子插件不会载入。独立的 Hers Life 设置伴随插件保持可用，让使用者能先完成设置。子插件只会在服务端闸门通过后才动态载入；DSH Client UI 入口也暂不注册，避免客户端先于服务端权限检查启动。原因是旧版跨会话记忆仍存在私人内容注入风险；必须先完成 Memory Access Controller 与回归测试，才会开放 UI 并解除闸门。安装后可在 DSH Settings → Hers Life 调整常用设置、凭据与环境路径；安装成功不等于 12 个功能插件已经启动。
+**安全说明：** 整合 Bundle 的 Host 插件只会执行安全初始化；`security.privacyReady` 仍默认关闭，12 个功能子插件不会载入。独立的 Hers Life 设置伴随插件保持可用，让使用者能先完成设置。子插件只会在服务端闸门通过后才动态载入；只有独立设置 companion 的 UI 会先注册，它不会加载任何功能插件。12 个功能插件的 Client UI 仍暂不注册。原因是旧版跨会话记忆仍存在私人内容注入风险；必须先完成 Memory Access Controller 与回归测试，才会开放功能 UI 并解除闸门。安装后可在 DSH Settings → Hers Life 调整常用设置、凭据与环境路径；安装成功不等于 12 个功能插件已经启动。
 
 ## 这里面有什么
 
@@ -56,7 +56,7 @@ Discord 由 `dsh-ming-discord` 直接接入 DSH：服务器频道与私讯各自
 
 ## 隐私
 
-Bilibili 登录态由 `dsh-ming-bilibili-account` 通过 DSH Credentials 保存；`MING_BILI_COOKIE` 是凭证引用名，不是 Cookie 内容。旧版 `bili_credential.json` 只用于迁移；登出会记录本机登出状态，避免迁移来源让登录态复活。
+Bilibili 登录态由 `dsh-ming-bilibili-account` 通过 DSH Credentials 保存；`MING_BILI_COOKIE` 是凭证引用名，不是 Cookie 内容。Discord Bot Token 也由 Hers Life 设置页写入 DSH Credentials，不写入一般设置文件。旧版 `bili_credential.json` 只用于迁移；登出会记录本机登出状态，避免迁移来源让登录态复活。
 
 Token、Discord / QQ 使用者 ID、群号、私人聊天、个人工作区内容、环境变量值、备份、`node_modules`、pnpm store、运行日志与测试输出都不应提交到仓库。仓库只保存通用配置范例与不含秘密的安装说明。
 
@@ -65,10 +65,10 @@ Token、Discord / QQ 使用者 ID、群号、私人聊天、个人工作区内�
 | `MING_WORKSPACE` | **统一工作区根目录**；Memory、Interest、Discord、Browse、Voice、Wake、Resume、Skill Isolate 未显式指定 `root` / `workspacePath` 时共用此路径 |
 | `DSH_HOME` | DSH 主目录；未设置时使用 `%USERPROFILE%\\.dsh`，用于插件本机配置、Discord inbox / session map、Mousepet 资料，以及 Voice 默认工作区等路径 |
 | Bilibili Cookie | 存在 DSH Credentials 的 `MING_BILI_COOKIE`；账号、字幕与社交工具共用，不写入仓库或聊天记录 |
-| `MING_OWNER_QQ` | 本人 QQ ID；部分本人指令需要 |
-| `MING_OWNER_DISCORD_ID` | 本人 Discord ID；可选，启用本人私讯指令时设置 |
+| `MING_OWNER_QQ` | 旧环境兼容回退；新设置请在 DSH Settings → Hers Life 填写 |
+| `MING_OWNER_DISCORD_ID` | 旧环境兼容回退；新设置请在 DSH Settings → Hers Life 填写 |
 | `MING_DISCORD_ALLOWED_USER_IDS` | 可选 Discord 使用者 ID 白名单，逗号分隔 |
-| `DISCORD_BOT_TOKEN` | Discord Bot Token，只放 Windows 使用者环境变量 |
+| `DISCORD_BOT_TOKEN` | Discord Bot Token 优先从 DSH Credentials 读取；环境变量仅作旧环境兼容回退 |
 | `MING_FFPLAY` | 试听用 ffplay 路径；默认从 PATH 查找 |
 | `MING_GRAPH_CONFIG` | 星图本机配置位置 |
 

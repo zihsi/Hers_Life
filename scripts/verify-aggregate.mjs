@@ -39,6 +39,7 @@ const expectedPeers = {
   "@deepseek-ai/dsh-tools": "*",
   "@deepseek-ai/dsh-attachment": "*",
   "@deepseek-ai/dsh-llm": "*",
+  "@deepseek-ai/schemastery": "^3.19.0",
   "react": "^18.2.0"
 }
 
@@ -58,15 +59,20 @@ assert.equal(spec.install.agent.action, 'install_bundle')
 assert.equal(spec.install.postInstallAssertion.name, pkg.name)
 assert.equal(spec.privacyGate.clientEntryRegistered, false)
 assert.match(patch, /name:\s*dsh-hers-life/)
-assert.match(patch, /disabled:\s*true/)
+assert.doesNotMatch(patch, /disabled:\s*true/)
+assert.match(patch, /name:\s*dsh-hers-life-settings/)
 assert.match(patch, /privacyReady:\s*false/)
-assert.match(index, /config\?\.security\?\.privacyReady !== true/)
-assert.ok(index.indexOf('config?.security?.privacyReady !== true') < index.indexOf('await import(packageName)'), 'child modules must not evaluate before the privacy gate')
+assert.match(index, /security\.privacyReady !== true/)
+assert.match(index, /initializeWorkspace/)
+assert.match(index, /export const Config = z\.object/)
+assert.ok(index.indexOf('if (security.privacyReady !== true)') < index.indexOf('await import(packageName)'), 'child modules must not evaluate before the privacy gate')
 const settingsClient = await read('dsh-hers-life-settings/client.js')
-assert.match(settingsClient, /ctx\\.configForms\\.get\\('hers-life'\\)/)
-assert.match(settingsClient, /ctx\\.remote\\.credentials\\.set/)
+const discord = await read('dsh-ming-discord/index.js')
+assert.match(settingsClient, /ctx\.configForms\.get\('hers-life'\)/)
+assert.match(settingsClient, /ctx\.remote\.credentials\.set/)
 assert.match(settingsClient, /autoComplete: 'new-password'/)
-assert.match(index, /ctx\\.credentials.resolve/)
+assert.match(discord, /ctx\.credentials\.resolve/)
+assert.match(discord, /!cfg\.allowedGuildIds\.length/)
 for (const id of ['dsh-ming-memory', 'dsh-ming-graph', 'dsh-ming-mousepet', 'dsh-hers-life']) {
   assert.ok(client.includes(`id: '${id}'`), `missing client module ${id}`)
 }
