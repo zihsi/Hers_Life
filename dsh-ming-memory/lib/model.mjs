@@ -18,7 +18,7 @@ import os from 'node:os'
 // 记忆侧的默认值：graph 的 DEFAULTS 从这份展开，本机配置照旧覆盖它
 export const MEMORY_DEFAULTS = {
   // DSH 侧归档记忆（index.json 可能滞后，notes 目录才是全的，所以扫目录）
-  dshMemoryDir: path.join(os.homedir(), '.dsh', 'memory'),
+  dshMemoryDir: path.join(process.env.DSH_HOME || path.join(os.homedir(), '.dsh'), 'memory'),
   // QQ-Agent 侧的观察库；留空 = 不读 QQ 侧
   qqObservations: '',
   // 群友档案索引（号码 → 昵称；昵称会改，认人只认号）；留空 = 不读
