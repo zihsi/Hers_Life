@@ -29,7 +29,7 @@ try {
   if (Object.hasOwn(after.manifest.dependencies, BUNDLE_NAME) || after.bundles.includes(BUNDLE_NAME)) {
     throw new Error('Removal command returned success but the bundle remains in the profile manifest.')
   }
-  console.log('ROLLBACK COMPLETE: only ' + BUNDLE_NAME + ' was removed through DSH Plugin Manager.')
+  console.log('PROFILE ROLLBACK COMPLETE: only ' + BUNDLE_NAME + ' was removed through DSH Plugin Manager. If this Host has no HMR or reports restart-required, restart DSH before treating the running composition as rolled back.')
 } catch (error) {
   console.error('ROLLBACK FAILED: ' + error.message)
   process.exitCode = 2

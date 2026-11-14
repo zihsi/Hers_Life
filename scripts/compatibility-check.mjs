@@ -13,6 +13,18 @@ try {
   const warnings = []
   if (process.versions.node.split('.')[0] < 22) errors.push('Installer runtime Node.js must be >=22.')
   if (pkg.name !== 'dsh-hers-life') errors.push('Root package name does not match dsh-hers-life.')
+  if (pkg.version !== spec.install.expected?.version || pkg.version !== '0.1.0') errors.push('Root package version differs from the install spec.')
+  const expectedPeers = {
+    '@deepseek-ai/cordis': '^4.0.1',
+    '@deepseek-ai/dsh-tools': '*',
+    '@deepseek-ai/dsh-attachment': '*',
+    '@deepseek-ai/dsh-llm': '*',
+    react: '^18.2.0',
+  }
+  if (JSON.stringify(pkg.peerDependencies) !== JSON.stringify(expectedPeers) ||
+      JSON.stringify(pkg.devDependencies) !== JSON.stringify(expectedPeers)) {
+    errors.push('DSH runtime peer declarations do not match the reviewed compatibility contract.')
+  }
   if (spec.branch !== BRANCH || spec.baselineCommit !== BASELINE_COMMIT) errors.push('Install spec branch or research baseline changed unexpectedly.')
   for (const name of CHILDREN) {
     const target = pkg.dependencies?.[name]
@@ -23,8 +35,9 @@ try {
   if (!args['plugin-manager-available']) warnings.push('DSH Plugin Manager availability has not been confirmed by the running Host.')
   if (!args['host-version']) warnings.push('Running DSH version was not supplied; do not assume compatibility.')
   const alreadyInstalled = Object.hasOwn(manifest.dependencies, 'dsh-hers-life') || bundles.includes('dsh-hers-life')
+  if (alreadyInstalled) warnings.push('dsh-hers-life is already present in this Profile; do not install it again. Run the health check or plan a separate upgrade.')
   const report = {
-    readyForPluginManagerAttempt: errors.length === 0 && args['plugin-manager-available'] === true && Boolean(args['host-version']),
+    readyForPluginManagerAttempt: errors.length === 0 && !alreadyInstalled && args['plugin-manager-available'] === true && Boolean(args['host-version']),
     hostCompatibilityConfirmed: false,
     errors,
     warnings,
