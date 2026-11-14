@@ -221,7 +221,7 @@ export async function checkHealth(profileDir, rootDir = repoRoot()) {
     settingsCompanionDependencyPinned: supportDependenciesMatch,
     settingsCompanionClientPresent: settingsManifest?.name === 'dsh-hers-life-settings'
       && settingsManifest?.dsh?.client?.platform === 'web',
-    settingsCompanionRowPresent: /name:\\s*dsh-hers-life-settings/.test(installedPatch),
+    settingsCompanionRowPresent: /name:\s*dsh-hers-life-settings/.test(installedPatch),
     privacyGateClosed: !/disabled:\s*true/.test(installedPatch) && /privacyReady:\s*false/.test(installedPatch),
     privacyGateCodeGuardPresent: installedEntry.includes('security.privacyReady !== true'),
     workspaceInitializerPresent: initializerPresent,
