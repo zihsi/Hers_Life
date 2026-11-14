@@ -42,10 +42,12 @@ function asCordisPlugin(module, fallbackName) {
   if (!module || typeof module.apply !== 'function') {
     throw new TypeError(`[dsh-hers-life] invalid child plugin: ${fallbackName}`)
   }
-  return Object.assign((ctx, config) => module.apply(ctx, config), {
-    name: typeof module.name === 'string' ? module.name : fallbackName,
-    inject: Array.isArray(module.inject) ? module.inject : [],
+  const plugin = (ctx, config) => module.apply(ctx, config)
+  Object.defineProperties(plugin, {
+    name: { value: typeof module.name === 'string' ? module.name : fallbackName, configurable: true },
+    inject: { value: Array.isArray(module.inject) ? module.inject : [], configurable: true },
   })
+  return plugin
 }
 
 export async function apply(ctx, config = {}) {

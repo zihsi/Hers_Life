@@ -8215,9 +8215,10 @@ window.__ModuleLoader__.load({
           if (!mod || typeof mod.apply !== 'function') {
             throw new Error('[dsh-hers-life] missing client module: ' + id)
           }
-          const plugin = Object.assign((childCtx) => mod.apply(childCtx), {
-            name: id,
-            inject: Array.isArray(mod.inject) ? mod.inject : [],
+          const plugin = (childCtx) => mod.apply(childCtx)
+          Object.defineProperties(plugin, {
+            name: { value: id, configurable: true },
+            inject: { value: Array.isArray(mod.inject) ? mod.inject : [], configurable: true },
           })
           await ctx.plugin(plugin)
         }
