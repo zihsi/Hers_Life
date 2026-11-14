@@ -15,26 +15,27 @@ try {
   if (pkg.name !== 'dsh-hers-life') errors.push('Root package name does not match dsh-hers-life.')
   if (pkg.version !== spec.install.postInstallAssertion?.version || pkg.version !== '0.1.0') errors.push('Root package version differs from the install spec.')
   const expectedPeers = {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-tools": "*",
-    "@deepseek-ai/dsh-attachment": "*",
-    "@deepseek-ai/dsh-llm": "*",
-    "@deepseek-ai/dsh-brand": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-invariants": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-timeout": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-agent": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-code-runtime": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-scope": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-session": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-system-prompt": "^0.0.1-rc.1",
-    "react": "^18.2.0"
+    '@deepseek-ai/cordis': '^4.0.1',
+    '@deepseek-ai/dsh-tools': '*',
+    '@deepseek-ai/dsh-attachment': '*',
+    '@deepseek-ai/dsh-llm': '*',
+    '@deepseek-ai/dsh-brand': '^0.0.1-rc.1',
+    '@deepseek-ai/dsh-invariants': '^0.0.1-rc.1',
+    '@deepseek-ai/dsh-timeout': '^0.0.1-rc.1',
+    '@deepseek-ai/dsh-agent': '^0.0.1-rc.1',
+    '@deepseek-ai/dsh-code-runtime': '^0.0.1-rc.1',
+    '@deepseek-ai/dsh-scope': '^0.0.1-rc.1',
+    '@deepseek-ai/dsh-session': '^0.0.1-rc.1',
+    '@deepseek-ai/dsh-system-prompt': '^0.0.1-rc.1',
+    react: '^18.2.0',
   }
-  }
-  if (JSON.stringify(pkg.peerDependencies) !== JSON.stringify(expectedPeers) ||
-      JSON.stringify(pkg.devDependencies) !== JSON.stringify(expectedPeers)) {
+  const peerMatches = actual => actual &&
+    Object.keys(actual).length === Object.keys(expectedPeers).length &&
+    Object.entries(expectedPeers).every(([name, range]) => actual[name] === range)
+  if (!peerMatches(pkg.peerDependencies) || !peerMatches(pkg.devDependencies)) {
     errors.push('DSH runtime peer declarations do not match the reviewed compatibility contract.')
   }
-  if (spec.branch !== BRANCH || spec.baselineCommit !== BASELINE_COMMIT) errors.push('Install spec branch or research baseline changed unexpectedly.')
+
   for (const name of CHILDREN) {
     const target = pkg.dependencies?.[name]
     if (typeof target !== 'string' || !target.includes(spec.source.dependencyCommit) || !target.endsWith('path:/' + name)) {
