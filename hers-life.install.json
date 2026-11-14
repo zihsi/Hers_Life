@@ -28,7 +28,10 @@
   },
   "runtimeRequirements": {
     "node": ">=22",
-    "pnpm": ">=11.28.5",
+    "pnpm": {
+      "ciVerified": "11.28.5",
+      "host": "Use the DSH Plugin Manager supplied package-manager invocation when available; its own install check is authoritative."
+    },
     "dsh": "verify-with-running-host"
   },
   "children": [

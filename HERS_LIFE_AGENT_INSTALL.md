@@ -14,7 +14,7 @@
 ## 安裝前檢查
 
 1. 透過 GitHub 讀取指定分支 HEAD，確認研究基準 Commit 仍在其歷史中；記錄本次解析到的 HEAD SHA。
-2. 確認目前 DSH Host 版本、目前 Profile、Node 與 pnpm 版本。優先使用 Host 提供的資訊，不猜測安裝目錄。
+2. 確認目前 DSH Host 版本、目前 Profile、Node runtime 與 Plugin Manager 實際使用的 pnpm。優先使用 Host 提供的資訊；CI 已用 pnpm 11.28.5 驗證，但不可假設使用者機器上有全域 pnpm，也不可自行更換 Host 的套件管理器。
 3. 使用 `plugin_manager` 的唯讀列舉操作取得目前已安裝 Bundles。若 12 個舊 Bundle 已存在，不得移除或重複啟用它們。
 4. 對 Git 目標先執行 `inspect`。Git inspect 只確認來源形式／主機，不能當成已讀取遠端 package.json；真正套件名稱、版本、`dsh.bundle` 與 DSH peer 相容性必須由安裝階段下載後驗證。
 5. 透過 Host 暴露的 Profile 路徑建立安裝前備份。若無法取得明確 Profile 路徑或備份未成功，停止安裝。
@@ -36,6 +36,26 @@
 不要自行執行 PowerShell、修改 Profile JSON、建立 Junction、安裝全域 Node/pnpm，或寫入使用者工作區。由 DSH Plugin Manager 管理 Profile 套件與 Lockfile。
 
 若安裝回報 `pendingBuilds`，先列出需要執行的相依套件建置腳本及用途，取得使用者對該批腳本的明確核准後才可傳入 `approvedBuilds`；不得預先全數放行。
+
+## 本機安裝器工具（僅在取得明確 Profile 路徑後使用）
+
+這些 Node 腳本只處理 Profile 的套件管理 metadata，不會搜尋或修改工作區／記憶資料。它們不會猜測 Profile 路徑：
+
+```powershell
+node scripts/compatibility-check.mjs --profile-dir "絕對 Profile 路徑" --host-version "Host 回報版本" --plugin-manager-available
+node scripts/backup.mjs --profile-dir "絕對 Profile 路徑" --backup-dir "Profile 外的絕對備份路徑"
+node scripts/health-check.mjs --profile-dir "絕對 Profile 路徑"
+```
+
+`compatibility-check` 的 `readyForPluginManagerAttempt` 只代表本機靜態檢查通過且 Host 已確認 Plugin Manager 可用；`hostCompatibilityConfirmed` 仍為 false，真正的 DSH peer 相容性由 Plugin Manager 在安裝時判斷。它不是安裝成功保證。
+
+首次安裝的回復命令必須在核對備份與差異、取得使用者明確同意後才執行：
+
+```powershell
+node scripts/rollback.mjs --profile-dir "絕對 Profile 路徑" --profile-name "實際 Profile 名稱" --backup-dir "原備份絕對路徑" --confirm
+```
+
+Rollback 只允許使用「備份當時尚未安裝 dsh-hers-life」的備份，並透過 `dsh plugin --profile <name> remove dsh-hers-life` 執行。這個階段不支援把已存在的 Hers Life 安裝降版或回復舊版本；遇到升級情境必須停止並另做差異式升級回復設計。
 
 ## 重要：本階段的安全啟動閘門
 
