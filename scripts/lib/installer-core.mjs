@@ -149,11 +149,17 @@ export function assertFreshInstallBackup(manifest) {
 
 export async function verifyBackup(backupDir, profileDir) {
   const backup = await realpath(backupDir)
+  const profile = await realpath(profileDir)
+  if (isWithin(profile, backup) || isWithin(backup, profile)) {
+    throw new Error('Verified backup directory must be outside the profile directory.')
+  }
   const manifest = await readJson(path.join(backup, 'backup-manifest.json'))
   if (manifest.schemaVersion !== 1 || manifest.kind !== 'hers-life-profile-metadata-backup') {
     throw new Error('Unrecognized backup manifest.')
   }
-  const profile = await realpath(profileDir)
+  if (manifest.bundleName !== BUNDLE_NAME || manifest.baselineCommit !== BASELINE_COMMIT) {
+    throw new Error('Backup belongs to a different bundle or research baseline.')
+  }
   if (path.resolve(manifest.profilePath) !== path.resolve(profile)) {
     throw new Error('Backup belongs to a different profile path.')
   }

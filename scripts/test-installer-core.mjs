@@ -85,6 +85,13 @@ test('backup records whether the bundle existed before backup and rollback refus
   assert.doesNotThrow(() => assertFreshInstallBackup(cleanBackup))
 })
 
+test('backup verification rejects a backup directory inside the profile', async (t) => {
+  const { profile } = await fixture(t)
+  const inside = path.join(profile, 'nested-backup')
+  await mkdir(inside)
+  await assert.rejects(verifyBackup(inside, profile), /outside the profile/)
+})
+
 test('backup integrity verification catches changed files and wrong profiles', async (t) => {
   const { temp, profile } = await fixture(t)
   const backupDir = path.join(temp, 'backup')
