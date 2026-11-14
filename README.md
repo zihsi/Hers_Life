@@ -42,7 +42,7 @@ Discord 由 `dsh-ming-discord` 直接接入 DSH：服务器频道与私讯各自
 
 ## 安装与完整文件
 
-本仓使用 DSH profile 的本地 `link:` 依赖，不发布 npm。请先看：
+本仓不发布 npm。**一般使用者优先使用新的 `dsh-hers-life` Git 整合 Bundle**（见 [Agent 自动安装与 Add plugin 指南](HERS_LIFE_AGENT_INSTALL.md)）；下方旧式 `link:` 安装流程保留给开发与旧 Profile 迁移使用。请先看：
 
 - [Windows 11 完整安装指南](INSTALL.md)
 - [十二个插件配置说明](CONFIGURATION.md)

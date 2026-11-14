@@ -1,6 +1,6 @@
 # Windows 11 安装指南（DSH Desktop）
 
-本文记录本仓十二个 DSH bundles 在 Windows 11 + DeepSeek Harness Desktop 中的安装方式。它不是通用 DSH 安装器；请先安装并能正常启动 DSH Desktop，再执行本指南。
+本文记录本仓十二个独立 DSH bundles 的旧式本地 `link:` 安装方式，主要供开发与旧 Profile 迁移使用。**一般使用者请优先使用 [HERS_LIFE_AGENT_INSTALL.md](HERS_LIFE_AGENT_INSTALL.md) 的统一 Git Bundle 安装方式**，或在 Plugins → Add plugin 输入 `https://github.com/zihsi/Hers_Life.git#codex/unified-settings-20261114`。本文件中的历史安装分支与版本仅供追溯，不得覆盖本项目固定研究基准。
 
 ## 1. 已验证环境与边界
 
