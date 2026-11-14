@@ -17,8 +17,6 @@ on:
       - 'dsh-ming-*/client.js'
       - 'dsh-hers-life-settings/**'
       - 'lib/**'
-      - 'dsh-hers-life-settings/**'
-      - 'lib/**'
   pull_request:
     paths:
       - 'package.json'
@@ -30,6 +28,8 @@ on:
       - 'dsh-ming-*/package.json'
       - 'dsh-ming-*/index.js'
       - 'dsh-ming-*/client.js'
+      - 'dsh-hers-life-settings/**'
+      - 'lib/**'
 
 permissions:
   contents: read
@@ -73,5 +73,5 @@ jobs:
         run: node --test scripts/test-installer-core.mjs
       - name: Test non-destructive workspace initialization
         run: node --test scripts/test-workspace-initializer.mjs
-      - name: Resolve all 12 Git subdirectory dependencies
+      - name: Resolve 12 functional children and the settings companion
         run: pnpm install --ignore-scripts --config.auto-install-peers=false
