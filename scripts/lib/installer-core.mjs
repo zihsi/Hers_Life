@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { access, copyFile, lstat, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
+import { access, copyFile, lstat, mkdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -102,33 +102,38 @@ export async function createBackup(profileDir, backupDir) {
   const parent = path.dirname(target)
   await mkdir(parent, { recursive: true })
   await mkdir(target, { recursive: false })
-  const files = []
-  for (const name of PROFILE_FILES) {
-    const source = path.join(profile, name)
-    try {
-      const meta = await lstat(source)
-      if (!meta.isFile()) throw new Error('Refusing to copy non-regular profile metadata file: ' + name)
-      await copyFile(source, path.join(target, name))
-      files.push({ name, size: meta.size, sha256: await sha256(path.join(target, name)) })
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error
+  try {
+    const files = []
+    for (const name of PROFILE_FILES) {
+      const source = path.join(profile, name)
+      try {
+        const meta = await lstat(source)
+        if (!meta.isFile()) throw new Error('Refusing to copy non-regular profile metadata file: ' + name)
+        await copyFile(source, path.join(target, name))
+        files.push({ name, size: meta.size, sha256: await sha256(path.join(target, name)) })
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error
+      }
     }
+    if (!files.some(file => file.name === 'package.json')) {
+      throw new Error('Profile package.json was not backed up; backup is incomplete.')
+    }
+    const manifest = {
+      schemaVersion: 1,
+      kind: 'hers-life-profile-metadata-backup',
+      createdAt: new Date().toISOString(),
+      profilePath: profile,
+      bundleName: BUNDLE_NAME,
+      baselineCommit: BASELINE_COMMIT,
+      files,
+      excluded: ['node_modules', 'workspace', 'memory', 'diary', 'QQ Inbox', 'Discord sessions', 'Edge profile', 'Mousepet skins', 'AI Cursor PNGs', 'credentials'],
+    }
+    await writeFile(path.join(target, 'backup-manifest.json'), JSON.stringify(manifest, null, 2) + '\n', { flag: 'wx' })
+    return manifest
+  } catch (error) {
+    await rm(target, { recursive: true, force: true })
+    throw error
   }
-  if (!files.some(file => file.name === 'package.json')) {
-    throw new Error('Profile package.json was not backed up; backup is incomplete.')
-  }
-  const manifest = {
-    schemaVersion: 1,
-    kind: 'hers-life-profile-metadata-backup',
-    createdAt: new Date().toISOString(),
-    profilePath: profile,
-    bundleName: BUNDLE_NAME,
-    baselineCommit: BASELINE_COMMIT,
-    files,
-    excluded: ['node_modules', 'workspace', 'memory', 'diary', 'QQ Inbox', 'Discord sessions', 'Edge profile', 'Mousepet skins', 'AI Cursor PNGs', 'credentials'],
-  }
-  await writeFile(path.join(target, 'backup-manifest.json'), JSON.stringify(manifest, null, 2) + '\n', { flag: 'wx' })
-  return manifest
 }
 
 export async function verifyBackup(backupDir, profileDir) {

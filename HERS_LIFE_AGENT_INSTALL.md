@@ -16,8 +16,10 @@
 1. 透過 GitHub 讀取指定分支 HEAD，確認研究基準 Commit 仍在其歷史中；記錄本次解析到的 HEAD SHA。
 2. 確認目前 DSH Host 版本、目前 Profile、Node 與 pnpm 版本。優先使用 Host 提供的資訊，不猜測安裝目錄。
 3. 使用 `plugin_manager` 的唯讀列舉操作取得目前已安裝 Bundles。若 12 個舊 Bundle 已存在，不得移除或重複啟用它們。
-4. 確認 `plugin_manager` 可用。每個管理動作都必須依 Host 權限規則取得 Full Access 或本次操作核准；不得繞過核准。
-5. 若工具不存在、Profile 無法識別、Host 版本不相容或權限不足，停止並清楚回報，不改用手動覆寫 Profile 的方式繞過。
+4. 對 Git 目標先執行 `inspect`。Git inspect 只確認來源形式／主機，不能當成已讀取遠端 package.json；真正套件名稱、版本、`dsh.bundle` 與 DSH peer 相容性必須由安裝階段下載後驗證。
+5. 透過 Host 暴露的 Profile 路徑建立安裝前備份。若無法取得明確 Profile 路徑或備份未成功，停止安裝。
+6. 確認 `plugin_manager` 可用。每個管理動作都必須依 Host 權限規則取得 Full Access 或本次操作核准；不得繞過核准。
+7. 若工具不存在、Profile 無法識別、Host 版本不相容或權限不足，停止並清楚回報，不改用手動覆寫 Profile 的方式繞過。
 
 ## 安裝動作
 
@@ -25,10 +27,15 @@
 
 - `action`: `install_bundle`
 - `target`: `https://github.com/zihsi/Hers_Life.git#codex/unified-settings-20261114`
+- `expected`: `{ name: "dsh-hers-life", version: "0.1.0" }`
+
+安裝操作必須使用 Plugin Manager 的 `install_bundle`，並提供預期套件名稱與版本。Plugin Manager 會驗證實際下載結果及 DSH peer／`engines.dsh` 相容性；相容性檢查失敗時不得授予版本豁免來強行安裝。
 
 安裝器會安裝根目錄的 `dsh-hers-life` 整合 Bundle。該 Bundle 以 pnpm Git 子目錄依賴取得 12 個既有插件；不得再逐一手動安裝 12 次。
 
 不要自行執行 PowerShell、修改 Profile JSON、建立 Junction、安裝全域 Node/pnpm，或寫入使用者工作區。由 DSH Plugin Manager 管理 Profile 套件與 Lockfile。
+
+若安裝回報 `pendingBuilds`，先列出需要執行的相依套件建置腳本及用途，取得使用者對該批腳本的明確核准後才可傳入 `approvedBuilds`；不得預先全數放行。
 
 ## 重要：本階段的安全啟動閘門
 
@@ -54,7 +61,8 @@
 
 ## 失敗與回復
 
-- 優先使用 Plugin Manager 自己的安裝交易回復。
-- 安裝失敗後確認 Profile 的 `package.json` 與 `pnpm-lock.yaml` 已恢復。
-- 若安裝成功但使用者要求回復，先列出安裝前後 Bundle 差異，再經核准只移除 `dsh-hers-life`。
+- 優先使用 Plugin Manager 自己的安裝交易回復。Git 套件相容性驗證在下載後才會完成；失敗時 Plugin Manager 會嘗試還原 Profile manifest／lockfile，仍須檢查最終狀態。
+- 安裝失敗後確認 Profile 的 `package.json` 與 `pnpm-lock.yaml` 已恢復；`pnpm-workspace.yaml` 可能保留建置腳本核准紀錄，必須另行檢查，不得直接覆蓋。
+- 若安裝成功但使用者要求回復，先列出安裝前後 Bundle 差異，確認備份完整，再經核准透過 DSH Plugin Manager 移除 `dsh-hers-life`。不可直接把整份舊 package.json／lockfile 覆蓋回去，避免抹掉安裝後其他正常變更。
+- 本倉 `scripts/backup.mjs`、`scripts/health-check.mjs`、`scripts/rollback.mjs` 提供明確路徑的本機操作工具；都不會猜測 Profile 路徑。Rollback 預設拒絕執行，必須提供 `--confirm` 及同一 Profile 的完整備份。
 - 不刪除既有 12 個 Bundle、工作區資料、記憶、日記、QQ Inbox、Discord Session、Edge Profile、Mousepet 皮膚或 AI Cursor PNG。
