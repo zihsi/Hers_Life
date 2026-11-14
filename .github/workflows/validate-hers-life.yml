@@ -1,0 +1,55 @@
+name: Hers Life integration validation
+
+on:
+  push:
+    branches:
+      - codex/unified-settings-20261114
+    paths:
+      - 'package.json'
+      - 'index.js'
+      - 'client.js'
+      - 'cordis.patch.yml'
+      - 'hers-life.install.json'
+      - 'scripts/**'
+      - '.github/workflows/validate-hers-life.yml'
+      - 'dsh-ming-*/package.json'
+      - 'dsh-ming-*/index.js'
+      - 'dsh-ming-*/client.js'
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'index.js'
+      - 'client.js'
+      - 'cordis.patch.yml'
+      - 'hers-life.install.json'
+      - 'scripts/**'
+      - 'dsh-ming-*/package.json'
+      - 'dsh-ming-*/index.js'
+      - 'dsh-ming-*/client.js'
+
+permissions:
+  contents: read
+
+jobs:
+  integration-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.28.5
+      - name: Check JavaScript syntax
+        run: |
+          node --check index.js
+          node --check client.js
+          node --check scripts/build-client.mjs
+          node --check scripts/verify-aggregate.mjs
+      - name: Verify integration bundle contract
+        run: node scripts/verify-aggregate.mjs
+      - name: Resolve all 12 Git subdirectory dependencies
+        run: pnpm install --ignore-scripts --config.auto-install-peers=false
