@@ -35,8 +35,8 @@ const expectedPeers = {
 }
 assert.deepEqual(pkg.peerDependencies, expectedPeers)
 assert.deepEqual(pkg.devDependencies, expectedPeers)
-assert.equal(spec.install.expected.name, 'dsh-hers-life')
-assert.equal(spec.install.expected.version, pkg.version)
+assert.equal(spec.install.postInstallAssertion.name, 'dsh-hers-life')
+assert.equal(spec.install.postInstallAssertion.version, pkg.version)
 for (const name of expected) {
   const target = pkg.dependencies[name]
   assert.ok(target.includes(spec.source.dependencyCommit), `${name} must be pinned to dependencyCommit`)
@@ -46,7 +46,7 @@ assert.equal(spec.repository, 'zihsi/Hers_Life')
 assert.equal(spec.branch, 'codex/unified-settings-20261114')
 assert.equal(spec.baselineCommit, '4880c98e00c634997103c6bc2192a88e7934e05f')
 assert.equal(spec.install.agent.action, 'install_bundle')
-assert.equal(spec.install.expected.name, pkg.name)
+assert.equal(spec.install.postInstallAssertion.name, pkg.name)
 assert.equal(spec.privacyGate.clientEntryRegistered, false)
 assert.match(patch, /name:\s*dsh-hers-life/)
 assert.match(patch, /disabled:\s*true/)

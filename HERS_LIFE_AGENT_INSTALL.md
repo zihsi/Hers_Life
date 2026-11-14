@@ -16,7 +16,7 @@
 1. 透過 GitHub 讀取指定分支 HEAD，確認研究基準 Commit 仍在其歷史中；記錄本次解析到的 HEAD SHA。
 2. 確認目前 DSH Host 版本、目前 Profile、Node runtime 與 Plugin Manager 實際使用的 pnpm。優先使用 Host 提供的資訊；CI 已用 pnpm 11.28.5 驗證，但不可假設使用者機器上有全域 pnpm，也不可自行更換 Host 的套件管理器。
 3. 使用 `plugin_manager` 的唯讀列舉操作取得目前已安裝 Bundles。若 12 個舊 Bundle 已存在，不得移除或重複啟用它們。
-4. 對 Git 目標先執行 `inspect`。Git inspect 只確認來源形式／主機，不能當成已讀取遠端 package.json；真正套件名稱、版本、`dsh.bundle` 與 DSH peer 相容性必須由安裝階段下載後驗證。
+4. 直接從 GitHub 讀取指定分支的 `package.json`、`cordis.patch.yml` 與 `hers-life.install.json`，核對套件名稱、版本、Bundle manifest、12 個子套件與 peer 版本。不可把 Git URL 本身當成已驗證的套件內容。
 5. 透過 Host 暴露的 Profile 路徑建立安裝前備份。若無法取得明確 Profile 路徑或備份未成功，停止安裝。
 6. 確認 `plugin_manager` 可用。每個管理動作都必須依 Host 權限規則取得 Full Access 或本次操作核准；不得繞過核准。
 7. 若工具不存在、Profile 無法識別、Host 版本不相容或權限不足，停止並清楚回報，不改用手動覆寫 Profile 的方式繞過。
@@ -27,9 +27,7 @@
 
 - `action`: `install_bundle`
 - `target`: `https://github.com/zihsi/Hers_Life.git#codex/unified-settings-20261114`
-- `expected`: `{ name: "dsh-hers-life", version: "0.1.0" }`
-
-安裝操作必須使用 Plugin Manager 的 `install_bundle`，並提供預期套件名稱與版本。Plugin Manager 會驗證實際下載結果及 DSH peer／`engines.dsh` 相容性；相容性檢查失敗時不得授予版本豁免來強行安裝。
+目前上游 `plugin_manager` 工具的 `install_bundle` 參數只有 `target`、`enabled`、`approvedBuilds`、`registry` 等欄位，**沒有 `expected` 參數，也沒有 `inspect` action**。不要傳入工具 schema 不支援的欄位。Plugin Manager 會檢查 DSH peer／`engines.dsh` 相容性與 Bundle 宣告；安裝後必須再呼叫 `list_bundles` 和 `list_plugins`，核對實際安裝的名稱、版本及插件 row 狀態。預期值記錄在 `hers-life.install.json` 的 `postInstallAssertion`。相容性檢查失敗時不得授予版本豁免來強行安裝。
 
 安裝器會安裝根目錄的 `dsh-hers-life` 整合 Bundle。該 Bundle 以 pnpm Git 子目錄依賴取得 12 個既有插件；不得再逐一手動安裝 12 次。
 
@@ -72,9 +70,9 @@ Rollback 只允許使用「備份當時尚未安裝 dsh-hers-life」的備份，
 
 ## 安裝後檢查
 
-1. 確認 Plugin Manager 顯示 `dsh-hers-life` 已安裝。
-2. 確認安裝記錄中的來源分支與解析後 Commit SHA。
-3. 確認 12 個子套件均已由套件管理器解析；若有任何子套件缺失，回報安裝失敗，不要手動補裝。
+1. 使用 `list_bundles` 確認 `dsh-hers-life` 已安裝，版本符合 `postInstallAssertion`。
+2. 使用 `list_plugins` 確認 `hers-life` row 存在且維持 Disabled。
+3. 核對 Profile lockfile 記錄的 Git commit，以及 12 個子套件均已解析；若有任何子套件缺失或實際套件名稱／版本不符，停止後續啟動並回報，不要手動補裝或刪除不明套件。
 4. 確認整合 Bundle 的 Host 插件 row 保持 Disabled，且未啟動任何舊的私人記憶共享路徑。
 5. 不要求使用者提供 Token、Cookie 或私人對話作為安裝測試。
 6. 不宣稱已完成 Windows 實機驗收；只有在目標 Host 上實際完成測試才能標記通過。

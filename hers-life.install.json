@@ -20,11 +20,11 @@
       "target": "https://github.com/zihsi/Hers_Life.git#codex/unified-settings-20261114"
     },
     "resolvedCommitMustBeRecorded": true,
-    "expected": {
+    "gitCompatibilityCheck": "DSH Plugin Manager is authoritative; Git package metadata is verified after fetch.",
+    "postInstallAssertion": {
       "name": "dsh-hers-life",
       "version": "0.1.0"
-    },
-    "gitCompatibilityCheck": "DSH Plugin Manager is authoritative; Git package metadata is verified after fetch."
+    }
   },
   "runtimeRequirements": {
     "node": ">=22",

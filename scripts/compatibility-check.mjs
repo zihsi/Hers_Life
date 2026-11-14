@@ -13,7 +13,7 @@ try {
   const warnings = []
   if (process.versions.node.split('.')[0] < 22) errors.push('Installer runtime Node.js must be >=22.')
   if (pkg.name !== 'dsh-hers-life') errors.push('Root package name does not match dsh-hers-life.')
-  if (pkg.version !== spec.install.expected?.version || pkg.version !== '0.1.0') errors.push('Root package version differs from the install spec.')
+  if (pkg.version !== spec.install.postInstallAssertion?.version || pkg.version !== '0.1.0') errors.push('Root package version differs from the install spec.')
   const expectedPeers = {
     '@deepseek-ai/cordis': '^4.0.1',
     '@deepseek-ai/dsh-tools': '*',
