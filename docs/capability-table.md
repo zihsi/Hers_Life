@@ -18,7 +18,7 @@
 
 | 功能 | 目前實作 | 邊界／注意事項 | 程式位置 |
 |---|---|---|---|
-| 跨會話事件記憶 | Discord 事件寫入 `live/discord-memory.jsonl`，保留 message、author、guild、channel、thread、session 等來源欄位 | 這是可追溯事件索引，不是把每個頻道所有訊息無限制塞入每次提示 | `dsh-ming-discord/memory.js`, `dsh-ming-discord/events.js` |
+| 跨會話事件記憶 | Discord 事件寫入 `live/discord-memory.jsonl`，保留 message、author、guild、channel、thread、session 等來源欄位 | 這是可追溯事件索引，不是把每個頻道所有訊息無限制塞入每次提示 | `dsh-ming-discord/memory.js`, `dsh-ming-discord/discord/events.js` |
 | 跨頻道／伺服器召回 | 可設定同伺服器跨頻道、跨伺服器召回 | 關閉相應設定後，不應把該範圍的事件提供給其他會話 | `dsh-ming-discord/memory.js`, 設定頁 |
 | 私訊背景 | Owner 私訊可依設定在 Owner 的其他私訊會話共享；也可選擇在 Owner 本人於公開頻道發言時作為隱去來源的背景 | 不會把 Owner 私訊背景提供給其他成員；需要最嚴格隔離時，關閉「允許 Owner 私訊作為公開頻道背景」 | `dsh-ming-discord/memory.js` |
 | 人格／日記開場 | `dsh-ming-memory` 從工作區人格檔與最近日記組成開場注入 | 該插件本身是讀取／注入，不應描述成它會自行改寫人格檔 | `dsh-ming-memory/` |
