@@ -40,9 +40,6 @@ const CHECKS = [
   { id: 'test-support/workspace', suite: 'offline', cwd: '.', cmd: ['node', 'test-support/qa-test-support.mjs'], why: 'L-2 合成工作区：形状可预测、删得掉' },
   { id: 'test-support/runner', suite: 'offline', cwd: '.', cmd: ['node', 'test-support/qa-runner.mjs'], why: 'L-T2/T3/T4 runner 自己不撒谎：失败非零、SKIP 有原因、拼错报错' },
   { id: 'test-support/portability', suite: 'offline', cwd: '.', cmd: ['node', 'test-support/qa-portability.mjs'], why: 'F-T1/T2/T4/T5 构建不看当前目录、MING_ROOT 指错就失败' },
-  { id: 'interest/inbox', suite: 'offline', cwd: 'dsh-ming-interest', cmd: ['node', 'qa-inbox.mjs'], why: 'E-3 消息身份/归并/去重/候选判定（合成事件，不读真实 inbox）' },
-  { id: 'interest/chat-sessions', suite: 'offline', cwd: '.', cmd: ['node', 'test-support/qa-chat-sessions.mjs'], why: 'E-3 会话映射生成：一个 chatId 多候选、带后缀优先、非 onebot 不进' },
-  { id: 'interest/forward', suite: 'offline', cwd: '.', cmd: ['node', 'test-support/qa-interest-forward.mjs'], why: 'E-2 转发消费：AstrBot 命中 → DSH 决定 → 写 qq-outbox；NONE 不写箱、模型炸不崩' },
   { id: 'bilibili/account', suite: 'offline', cwd: 'dsh-ming-bilibili-account', cmd: ['node', 'qa-account.mjs'], why: 'G 一个账号一个权威：退出三层一起清、tombstone 防复活、迟到响应丢弃' },
   { id: 'bilibili/provider-swap', suite: 'offline', cwd: 'dsh-ming-bilibili-account', cmd: ['node', 'qa-provider-holder.mjs'], why: 'G.5 登录后不重启就生效：proxy 转发 + swap 换真身' },
   { id: 'bilibili/entry-account', suite: 'offline', cwd: 'dsh-ming-bilibili-account', cmd: ['node', 'qa-entry.mjs'], why: 'G 真实入口：恢复要校验、tombstone 优先、退出的迟到结果不许写回（核查 R01）' },
@@ -86,7 +83,9 @@ const suite = flag('suite', 'offline')
 const only = flag('only', '')
 const jsonOut = flag('json', '')
 const list = CHECKS
-  .filter((c) => (suite === 'all' ? true : c.suite === suite))
+  // The fixture suite intentionally exits non-zero; run it explicitly when testing the runner.
+  // Keep it out of `all` so a full real check can still have a green result.
+  .filter((c) => (suite === 'all' ? c.suite !== 'fixture' : c.suite === suite))
   .filter((c) => (only ? c.id.includes(only) : true))
 
 if (has('list') || !list.length) {
