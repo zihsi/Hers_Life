@@ -40,7 +40,7 @@ import { openMyBrowser } from './browser-launch.mjs'
 export const name = 'ming-browse'
 
 /** agents.create / resume 要 agents；ctx.interval 要 timer。其余服务按可选处理。 */
-export const inject = ['agents', 'timer', 'tools']
+export const inject = ['agents', 'timer', 'tools', 'hersLifeDiscord']
 
 /** 刷手机专用会话 id。固定，不随机：重启后 resume 同一个，历史连得上。 */
 const BROWSE_SESSION_ID = 'ming-browse'

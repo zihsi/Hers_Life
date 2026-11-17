@@ -311,7 +311,10 @@ export function apply(ctx, pluginConfig = {}) {
     const mediaType = ext === '.mp3' ? 'audio/mpeg' : ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'application/octet-stream'
     return bridge.sayFiles(String(channelId), [{ buffer, mediaType, name: path.basename(target) }], caption)
   }
-  ctx.hersLifeDiscord = {
+  // Publish a real Cordis service so sibling plugins can inject this API.
+  // A property assigned to this plugin's child context is not a reliable
+  // cross-plugin interface.
+  ctx.provide('hersLifeDiscord', {
     say: (channelId, text, options) => bridge?.say(channelId, text, options) ?? Promise.reject(new Error('Discord 尚未連線')),
     sayFiles: (channelId, files, text) => bridge?.sayFiles(channelId, files, text) ?? Promise.reject(new Error('Discord 尚未連線')),
     sendToOwner,
@@ -322,7 +325,7 @@ export function apply(ctx, pluginConfig = {}) {
     get workspace() { return settings.resolve().workspace },
     get status() { return status },
     get bridge() { return bridge },
-  }
+  })
   ctx.tools?.register?.({
     name: 'discord_send_to_owner',
     description: '透過 Discord 私訊向設定頁中的 Owner 發送文字。',
