@@ -166,7 +166,7 @@ export class DiscordInterestStore {
   snapshot() {
     const now = Date.now()
     const off = this.isOff()
-    const quiet = inQuietHours(this.settings.get('interest.quietHours', '01:00-08:00'))
+    const quiet = inQuietHours(this.settings.get('interest.quietHours', '01:00-08:00'), new Date(now))
     const wakesLastHour = this.wakeTimes.filter((at) => now - at < 3600000).length
     const maxPerHour = Number(this.settings.get('interest.maxPerHour', 3)) || 3
     const sinceWakeMs = this.lastWake ? now - this.lastWake : null
