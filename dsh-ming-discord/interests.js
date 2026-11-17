@@ -165,15 +165,29 @@ export class DiscordInterestStore {
 
   snapshot() {
     const now = Date.now()
+    const off = this.isOff()
+    const quiet = inQuietHours(this.settings.get('interest.quietHours', '01:00-08:00'))
+    const wakesLastHour = this.wakeTimes.filter((at) => now - at < 3600000).length
+    const maxPerHour = Number(this.settings.get('interest.maxPerHour', 3)) || 3
+    const sinceWakeMs = this.lastWake ? now - this.lastWake : null
+    const minGapMs = Math.max(1, Number(this.settings.get('interest.minGapMinutes', 20)) || 20) * 60000
+    const skip = []
+    if (off) skip.push('已手動暫停')
+    if (quiet) skip.push('目前處於靜默時段')
+    if (wakesLastHour >= maxPerHour) skip.push('已達每小時上限')
+    if (sinceWakeMs !== null && sinceWakeMs < minGapMs) {
+      skip.push('全域冷卻中')
+    }
     return {
       config: this.config,
       state: {
         at: new Date(now).toISOString(),
-        quiet: inQuietHours(this.settings.get('interest.quietHours', '01:00-08:00')),
-        off: this.isOff(),
-        wakesLastHour: this.wakeTimes.filter((at) => now - at < 3600000).length,
-        maxPerHour: Number(this.settings.get('interest.maxPerHour', 3)) || 3,
-        sinceWakeMs: this.lastWake ? now - this.lastWake : null,
+        quiet,
+        off,
+        skip: skip.join('；'),
+        wakesLastHour,
+        maxPerHour,
+        sinceWakeMs,
       },
       learned: Object.entries(this.stats)
         .sort((a, b) => Number(b[1]?.count || 0) - Number(a[1]?.count || 0))
