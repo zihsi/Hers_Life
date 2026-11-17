@@ -50,6 +50,11 @@ const ctx = {
     fn({ effect: () => {}, webServer: { register: () => ({ dispose() {} }) } })
   },
   interval: (fn) => { ctx.__tick = fn },
+  hersLifeDiscord: {
+    workspace: ws,
+    isOwner: (id) => String(id) === OWNER,
+    sendToOwner: async () => [],
+  },
   agents: {
     list: () => [...live.values()],
     get: (id) => live.get(id),
@@ -69,11 +74,6 @@ const ctx = {
 apply(ctx, {
   enabled: true,
   workspacePath: ws,
-  // 2026-11-17（L-1）：审的是「开关只认她私聊」，就必须把「她是谁」喂进去。
-  // 原来这里没给 ownerQQ，默认是空串，于是两条开关用例一直空转失败——
-  // 真实机器上是 ~/.dsh 的本机配置给的，测试里没人给。
-  ownerQQ: OWNER,
-  targetMode: 'self',
   // 2026-11-17：这一套审的是**点按词表**（哪些字样算写操作），不是授权政策。
   // 默认值同日改成 browse_only 之后，tap 会在政策层先被拒，词表就测不到了。
   // 所以这里显式置 legacy —— 政策本身由 qa-permissions.mjs 负责。
@@ -88,36 +88,47 @@ apply(ctx, {
   serial: '127.0.0.1:16448',
 })
 
-const fire = async (sessionId, text) => {
-  const ev = { type: 'user/message', data: { content: [{ type: 'text', text }] } }
-  const ses = { id: sessionId, header: { id: sessionId, cwd: ws } }
+const fire = async (sessionId, userId, conversationType, text) => {
+  const ev = {
+    type: 'user/message',
+    data: {
+      source: { kind: 'plugin:hers-life-discord', userId: String(userId) },
+      content: [{ type: 'text', text }],
+    },
+  }
+  const ses = {
+    id: sessionId,
+    header: {
+      id: sessionId,
+      cwd: ws,
+      meta: { hersLife: { platform: 'discord', conversationType } },
+    },
+  }
   for (const fn of handlers.get('session/event') || []) fn(ses, ev)
   await sleep(50)
 }
-const wrap = (qq, body) => `<user_message qq="${qq}" nickname="x">\n${body}\n</user_message>`
 
-// ------------------------------------------------ 1. 开关只认她私聊
+// ------------------------------------------------ 1. 只接受 Owner 的 Discord DM 控制
 await clean()
 
-await fire('onebot-group-0000000', wrap('123456', '别刷了'))
-ok(!existsSync(pauseFile), '群里陌生人说「别刷了」→ 不停', '文件被写了')
+await fire('discord-channel-guild-1-channel-1', '123456', 'channel', '别刷了')
+ok(!existsSync(pauseFile), '公开频道里的陌生成员不能停用自由活动')
 
-await fire('onebot-group-0000000', wrap(OWNER, '别刷了'))
-ok(!existsSync(pauseFile), '她自己发在群里也不算（群里容易看错主语）', '文件被写了')
+await fire('discord-channel-guild-1-channel-1', OWNER, 'channel', '别刷了')
+ok(!existsSync(pauseFile), 'Owner 在公开频道发出的控制词也不执行')
 
-await fire('onebot-private-123456', wrap('123456', '随便刷吧'))
-ok(!existsSync(unlimitedFile), '陌生人私聊说「随便刷吧」→ 不放开额度', '文件被写了')
+await fire('discord-dm-stranger', '123456', 'dm', '不限量')
+ok(!existsSync(unlimitedFile), '非 Owner 的 Discord DM 不能开放额度')
 
-await fire('onebot-private-0000000', wrap(OWNER, '别刷了'))
-ok(existsSync(pauseFile), '她私聊说「别刷了」→ 停今天', '文件没写')
+await fire('discord-dm-owner', OWNER, 'dm', '别刷了')
+ok(existsSync(pauseFile), 'Owner Discord DM「别刷了」→ 停今天')
 
 await clean()
-await fire('onebot-private-0000000', wrap(OWNER, '可以刷了'))
-ok(!existsSync(pauseFile), '她私聊说「可以刷了」→ 恢复', '文件还在')
+await fire('discord-dm-owner', OWNER, 'dm', '可以刷了')
+ok(!existsSync(pauseFile), 'Owner Discord DM「可以刷了」→ 恢复')
 
-// 她私聊说「随便刷吧」应当真的放开（别把闸修成聋子）
-await fire('onebot-private-0000000', wrap(OWNER, '不限量'))
-ok(existsSync(unlimitedFile), '她私聊说「不限量」→ 额度真放开了（别把闸修成聋子）', '文件没写')
+await fire('discord-dm-owner', OWNER, 'dm', '不限量')
+ok(existsSync(unlimitedFile), 'Owner Discord DM「不限量」→ 额度开放')
 await clean()
 
 // ------------------------------------------------ 2. 查不到前台 ⇒ 写操作一律拒

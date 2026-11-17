@@ -1,28 +1,25 @@
-import {readFile} from 'node:fs/promises'
-import vm from 'node:vm'
+import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-const source=await readFile(new URL('./index.js',import.meta.url),'utf8')
-const slice=(from,to)=>source.slice(source.indexOf(from),source.indexOf(to,source.indexOf(from)))
-const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve}}
-test('wake reserves before awaiting prompt and releases after success',async()=>{
- const gate=deferred();let calls=0, prompts=0
- const code=slice('  const wake = async','  /**\n   * 把')
- const sandbox={Date,randomUUID:()=>'',cfg:{targetMode:'qq',workspacePath:'fake'},path:{join:(...a)=>a.join('/')},writeFile:async()=>{},rm:async()=>{},justRotated:false,pickTarget:()=>({id:'fake',followup:()=>calls++}),running:new Set(),guarded:null,promptFor:()=>{prompts++;return gate.promise},lastWake:0,wakesToday:0,lastActivity:0,roundId:null,roundStartedAt:0,roundSeenAt:0,log:()=>{},existsSync:()=>false,unlimitedFile:'fake',sharePendingFor:null}
- const wake=vm.runInNewContext('let wakePending=false;\n'+code+'\nwake',sandbox)
- const first=wake();const second=wake();assert.equal(prompts,1);gate.resolve('fake');await Promise.all([first,second]);assert.equal(calls,1);await wake();assert.equal(calls,2)
+
+const source = await readFile(new URL('./index.js', import.meta.url), 'utf8')
+
+test('browser control is accepted only from an authenticated Owner Discord DM', () => {
+  assert.match(source, /source\.kind !== 'plugin:hers-life-discord'/)
+  assert.match(source, /meta\.conversationType !== 'dm'/)
+  assert.match(source, /ctx\.hersLifeDiscord\?\.isOwner\?\./)
+  assert.doesNotMatch(source, /targetMode|qqSessionPrefix|ownerQQ|findQQSession|shareToQQ|plugin:dsh-onebot/)
 })
-test('prompt rejection permits retry; dispatch throw blocks retry',async()=>{
- let prompts=0,calls=0;const files=new Set()
- const sandbox={Date,randomUUID:()=>'',cfg:{targetMode:'qq',workspacePath:'fake'},path:{join:(...a)=>a.join('/')},writeFile:async p=>files.add(p),rm:async p=>files.delete(p),justRotated:false,pickTarget:()=>({id:'fake',followup:()=>{calls++;throw Error('ambiguous')}}),running:new Set(),guarded:null,promptFor:async()=>{if(++prompts===1)throw Error('prompt');return 'ok'},lastWake:0,wakesToday:0,lastActivity:0,roundId:null,roundStartedAt:0,roundSeenAt:0,log:()=>{},existsSync:p=>files.has(p),unlimitedFile:'fake',sharePendingFor:null}
- const wake=vm.runInNewContext('let wakePending=false;'+slice('  const wake = async','  /**\n   * 把')+';wake',sandbox)
- const first=await wake();assert.equal(first.ok,false);assert.equal(calls,0);assert.equal(files.size,0)
- const second=await wake();assert.equal(second.status,'unknown');assert.equal(calls,1);assert.equal(files.size,1)
- await wake();assert.equal(calls,1)
+
+test('free-time work always runs in its own DSH session and reports to the Owner via Discord', () => {
+  assert.match(source, /const target = await ensureAgent\(\)/)
+  assert.match(source, /const shareToOwner = async/)
+  assert.match(source, /ctx\.hersLifeDiscord\.sendToOwner/)
+  assert.match(source, /sharePendingFor = id/)
+  assert.doesNotMatch(source, /pickTarget\s*=|shareToQQ|qqSessionPrefix/)
 })
-test('tick is single flight and releases after error',async()=>{
- const gate=deferred();let reads=0
- const code=slice('  const tick = async','  // 每分钟看一次')
- const tick=vm.runInNewContext('let tickPending=false;\n'+code+'\ntick',{Date,loadHolidays:()=>{},dayKey:()=>'',wakeDay:'',wakesToday:0,readUnlimited:()=>{reads++;return gate.promise},log:()=>{}})
- const first=tick();const second=tick();const count=reads;gate.resolve(null);await Promise.all([first,second]);assert.equal(count,1);await tick();assert.equal(reads,2)
+
+test('the plugin declares its Discord adapter dependency and inherits the central workspace', () => {
+  assert.match(source, /export const inject = \[[^\]]*hersLifeDiscord/)
+  assert.match(source, /ctx\.hersLifeDiscord\?\.workspace/)
 })

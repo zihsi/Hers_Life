@@ -53,6 +53,23 @@ function safeRelativeList(value, fallback) {
   const source = Array.isArray(value) ? value : fallback
   return [...new Set(source.map((item) => safeRelativePath(item)).filter(Boolean))]
 }
+export function isDiaryFilename(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})\.md$/.exec(path.posix.basename(String(value ?? '')))
+  if (!match) return false
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3])
+  if (year < 1000) return false
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+}
+export function isDiaryPath(value, diaryDir) {
+  const relative = String(value ?? '').replace(/\\/g, '/')
+  const root = safeRelativePath(diaryDir, DEFAULTS.diaryDir)
+  if (!relative || relative.startsWith('/') || /^[a-zA-Z]:/.test(relative)) return false
+  const parts = relative.split('/')
+  if (parts.some((part) => !part || part === '.' || part === '..')) return false
+  return parts.length === root.split('/').length + 1 &&
+    relative.startsWith(root + '/') && isDiaryFilename(relative)
+}
 export class SettingsStore {
   constructor(config = {}, options = {}) {
     this.home = options.home || path.join(os.homedir(), '.dsh')
@@ -76,10 +93,18 @@ export class SettingsStore {
       const secret = JSON.parse(await readFile(this.secretsFile, 'utf8'))
       this.token = typeof secret.discordBotToken === 'string' ? secret.discordBotToken.trim() : ''
     } catch {}
+    // Migrate any legacy plaintext token into the separate secret file, then
+    // remove token-shaped fields from the ordinary settings JSON.
+    const legacyToken = this.settings.discord?.token || this.settings.discord?.botToken
+    const hadLegacySecret = ['token', 'botToken', 'tokenInput', 'tokenConfigured']
+      .some((key) => Object.prototype.hasOwnProperty.call(this.settings.discord || {}, key))
+    if (!this.token && typeof legacyToken === 'string' && legacyToken.trim()) await this.saveToken(legacyToken)
+    for (const key of ['token', 'botToken', 'tokenInput', 'tokenConfigured']) delete this.settings.discord[key]
     this.settings.workspace = path.resolve(String(this.settings.workspace || DEFAULTS.workspace))
     this.settings.ownerIds = cleanStringList(this.settings.ownerIds)
     this.settings.personaFiles = safeRelativeList(this.settings.personaFiles, DEFAULTS.personaFiles)
     this.settings.diaryDir = safeRelativePath(this.settings.diaryDir, DEFAULTS.diaryDir)
+    if (hadLegacySecret) await this.save()
     return this
   }
   get(key, fallback) {
@@ -94,11 +119,18 @@ export class SettingsStore {
   isOwner(id) { return this.ownerIds().includes(String(id ?? '')) }
   hasToken() { return this.token.length > 0 }
   publicConfig() {
+    const discord = { ...this.settings.discord }
+    // Tokens belong only in hers-life-secrets.json; never echo legacy plaintext
+    // token fields back through the settings API.
+    delete discord.token
+    delete discord.botToken
+    delete discord.tokenInput
+    delete discord.tokenConfigured
     return {
       ...this.settings,
       workspace: this.resolve().workspace,
       ownerIds: this.ownerIds(),
-      discord: { ...this.settings.discord, tokenConfigured: this.hasToken() },
+      discord: { ...discord, tokenConfigured: this.hasToken() },
     }
   }
   async save() {

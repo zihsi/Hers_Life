@@ -1,7 +1,7 @@
 import path from 'node:path'
 import os from 'node:os'
 import { cp, mkdir, readFile, rename, stat, writeFile, readdir } from 'node:fs/promises'
-import { SettingsStore } from './settings.js'
+import { SettingsStore, isDiaryFilename, isDiaryPath } from './settings.js'
 import { DiscordSessionPool } from './pool.js'
 import { DiscordBrain } from './memory.js'
 import { DiscordInterestStore } from './interests.js'
@@ -272,7 +272,7 @@ export function apply(ctx, pluginConfig = {}) {
             const paths = new Set(['AGENTS.md', ...settings.get('personaFiles', [])])
             const diaryRoot = path.join(root, diaryDir)
             try {
-              const names = (await readdir(diaryRoot)).filter((name) => /^\\d{4}-\\d{2}-\\d{2}\\.md$/i.test(name)).sort().reverse().slice(0, 12)
+              const names = (await readdir(diaryRoot)).filter((name) => /^\d{4}-\d{2}-\d{2}\.md$/i.test(name)).sort().reverse().slice(0, 12)
               for (const name of names) paths.add(diaryDir + '/' + name)
             } catch {}
             const now = new Date()
@@ -282,7 +282,7 @@ export function apply(ctx, pluginConfig = {}) {
             for (const relative of paths) {
               const normalized = String(relative).replace(/\\/g, '/')
               const isPersona = settings.get('personaFiles', []).includes(normalized)
-              const isAllowedDiary = normalized.startsWith(diaryDir + '/') && /^\\d{4}-\\d{2}-\\d{2}\\.md$/.test(path.posix.basename(normalized))
+              const isAllowedDiary = normalized.startsWith(diaryDir + '/') && isDiaryFilename(normalized)
               if (normalized !== 'AGENTS.md' && !isPersona && !isAllowedDiary) continue
               const target = path.resolve(root, normalized)
               const rel = path.relative(root, target)
@@ -302,7 +302,7 @@ export function apply(ctx, pluginConfig = {}) {
             const diaryDir = String(settings.get('diaryDir', 'diary') || 'diary').replace(/\\/g, '/')
             const isPersona = settings.get('personaFiles', []).includes(relative)
             const isRules = relative === 'AGENTS.md'
-            const isDiary = relative.startsWith(diaryDir + '/') && /^\\d{4}-\\d{2}-\\d{2}\\.md$/.test(path.posix.basename(relative))
+            const isDiary = isDiaryPath(relative, diaryDir)
             if (!isPersona && !isRules && !isDiary) throw new Error('只能編輯已設定的人設檔、AGENTS.md 或日期格式日記')
             const root = settings.resolve().workspace
             const target = path.resolve(root, relative)

@@ -2,8 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import os from 'node:os'
 import path from 'node:path'
-import { mkdtemp, rm, mkdir } from 'node:fs/promises'
-import { SettingsStore } from '../settings.js'
+import { mkdtemp, rm, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { readDiscord } from '../../dsh-ming-memory/lib/model.mjs'
+import { readDiscordEvents } from '../../dsh-ming-memory/lib/neuron.mjs'
+import { SettingsStore, isDiaryFilename, isDiaryPath } from '../settings.js'
 import { DiscordSessionPool } from '../pool.js'
 import { DiscordBrain } from '../memory.js'
 
@@ -95,6 +97,105 @@ test('shared memory recalls across guilds and hides private source attribution',
       kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'owner-1',
     }, 'discord-channel-guild-b-chan-b')
     assert.doesNotMatch(noPrivate, /主人提過 RTX 5080/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('settings never return legacy plaintext tokens and reject paths outside workspace', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-settings-'))
+  try {
+    const settings = new SettingsStore({
+      workspace: root,
+      discord: { token: 'legacy-secret-token', botToken: 'legacy-bot-secret' },
+    }, { home: root })
+    const publicConfig = settings.publicConfig()
+    assert.equal(publicConfig.discord.tokenConfigured, false)
+    assert.doesNotMatch(JSON.stringify(publicConfig), /legacy-secret-token|legacy-bot-secret/)
+    await assert.rejects(settings.patch({ personaFiles: ['../outside.md'] }), /相對路徑/)
+    const diarySettings = new SettingsStore({ workspace: root }, { home: root })
+    await assert.rejects(diarySettings.patch({ diaryDir: '../outside' }), /相對路徑/)
+    assert.equal(isDiaryFilename('2026-11-18.md'), true)
+    assert.equal(isDiaryFilename('2026-13-40.md'), false)
+    assert.equal(isDiaryPath('diary/2026-11-18.md', 'diary'), true)
+    assert.equal(isDiaryPath('diary/../2026-11-18.md', 'diary'), false)
+    assert.equal(isDiaryPath('../diary/2026-11-18.md', 'diary'), false)
+    assert.equal(isDiaryPath('diary/sub/2026-11-18.md', 'diary'), false)
+    assert.equal(isDiaryFilename('notes.md'), false)
+
+    const legacyHome = path.join(root, 'legacy')
+    await mkdir(legacyHome, { recursive: true })
+    const oldSettingsFile = path.join(legacyHome, 'hers-life.json')
+    await writeFile(oldSettingsFile, JSON.stringify({ discord: { token: 'legacy-migrated-token' } }), 'utf8')
+    const migrated = new SettingsStore({}, { home: legacyHome })
+    await migrated.load()
+    assert.equal(migrated.hasToken(), true)
+    assert.doesNotMatch(await readFile(oldSettingsFile, 'utf8'), /legacy-migrated-token/)
+    assert.match(await readFile(path.join(legacyHome, 'hers-life-secrets.json'), 'utf8'), /legacy-migrated-token/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('Discord memory model and graph retain guild, channel, thread and author provenance', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-provenance-'))
+  try {
+    const file = path.join(root, 'live', 'discord-memory.jsonl')
+    await mkdir(path.dirname(file), { recursive: true })
+    const event = {
+      id: 'event-1', at: '2026-11-18T00:00:00.000Z', platform: 'discord',
+      messageId: 'message-1', sessionId: 'discord-thread-guild-1-thread-1',
+      role: 'user', text: 'Thread 裡提到跨伺服器共同記憶。',
+      guildId: 'guild-1', guildName: 'Lab',
+      channelId: 'thread-1', channelName: 'project-chat', threadId: 'thread-1',
+      conversationType: 'thread', authorId: 'user-1', authorName: 'tester',
+      scope: 'guild',
+    }
+    await writeFile(file, JSON.stringify(event) + '\n', 'utf8')
+    const modelRows = await readDiscord({ workspace: root, discordMemoryFile: file })
+    assert.equal(modelRows.length, 1)
+    assert.equal(modelRows[0].side, 'discord')
+    assert.equal(modelRows[0].subjectId, 'user-1')
+    assert.match(modelRows[0].roomLabel, /Lab.*#project-chat.*Thread thread-1/)
+    const neuronRows = await readDiscordEvents(file)
+    assert.equal(neuronRows.length, 1)
+    assert.equal(neuronRows[0].guildId, 'guild-1')
+    assert.equal(neuronRows[0].threadId, 'thread-1')
+    assert.equal(neuronRows[0].subjectName, 'tester')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('Discord memory ledger deduplicates and compacts to the configured event limit', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-compact-'))
+  try {
+    await mkdir(path.join(root, 'live'), { recursive: true })
+    const file = path.join(root, 'live', 'discord-memory.jsonl')
+    const rows = []
+    for (let i = 0; i < 1002; i += 1) {
+      rows.push({
+        id: 'event-' + i, at: new Date(Date.now() - (1002 - i) * 1000).toISOString(),
+        botId: 'bot', channelId: 'channel', messageId: 'message-' + i,
+        role: 'user', text: 'provenance item ' + i,
+      })
+    }
+    // Same Discord message key: newest entry wins.
+    rows.push({ ...rows[1001], id: 'event-duplicate', text: 'latest duplicate revision' })
+    await writeFile(file, rows.map((row) => JSON.stringify(row)).join('\n') + '\n', 'utf8')
+    const config = { memory: { maxEvents: 1000 } }
+    const settings = { home: root, get(key, fallback) {
+      const value = key.split('.').reduce((at, part) => at == null ? undefined : at[part], config)
+      return value === undefined ? fallback : value
+    } }
+    const brain = new DiscordBrain({ workspace: root, settings })
+    await brain.load()
+    await brain.queue
+    assert.equal(brain.events.length, 1000)
+    const persisted = (await readFile(file, 'utf8')).trim().split(/\r?\n/)
+    assert.equal(persisted.length, 1000)
+    assert.ok(persisted.some((line) => JSON.parse(line).text === 'latest duplicate revision'))
+    assert.ok(!persisted.some((line) => JSON.parse(line).messageId === 'message-0'))
   } finally {
     await rm(root, { recursive: true, force: true })
   }

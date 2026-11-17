@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { apply, __internals } from './index.js'
 
-const steer = (text = '刚才那个是什么？', id = 'one') => [{ id, source: { kind: 'plugin:dsh-onebot' }, content: [{ type: 'text', text }] }]
+const steer = (text = '刚才那个是什么？', id = 'one') => [{ id, source: { kind: 'plugin:hers-life-discord' }, content: [{ type: 'text', text }] }]
 async function setup(t, { failRead = false, pauseMediaOnInterrupt = true } = {}) {
   const root = await mkdtemp(path.join(tmpdir(), 'ming-resume-test-'))
   await mkdir(path.join(root, 'live'))
@@ -58,7 +58,7 @@ test('explicit stop does not force old task or automatically restart video', asy
 })
 test('stop after an ordinary interruption relinquishes automatic playback', async t => {
   const h = await setup(t), a = { id: 'a' }
-  await h.step(a, 0, steer()); await h.step(a, 0, steer('<user_message qq="123">请暂停</user_message>', 'two'))
+  await h.step(a, 0, steer()); await h.step(a, 0, steer('<user_message discord="123">请暂停</user_message>', 'two'))
   await h.stop(a, 0); assert.deepEqual(h.keys, [85])
 })
 test('host cancellation does not resume media paused by this plugin', async t => {

@@ -79,7 +79,6 @@ const ctx = {
 apply(ctx, {
   enabled: true,
   workspacePath: ws,
-  targetMode: 'self',
   sessionRounds: PER_SESSION,
   dailyMax: 8,
   minGapMinutes: 1,
@@ -184,7 +183,6 @@ const ctx2 = {
 apply(ctx2, {
   enabled: true,
   workspacePath: ws2,
-  targetMode: 'self',
   sessionRounds: PER_SESSION,
   dailyMax: 8,
   minGapMinutes: 0,

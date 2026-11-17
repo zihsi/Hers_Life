@@ -1,0 +1,71 @@
+name: Hers Life Discord CI
+
+on:
+  push:
+    branches:
+      - discord-dsh-only
+  pull_request:
+    branches:
+      - main
+      - discord-dsh-only
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run unit and reliability tests
+        run: |
+          node --test \
+            dsh-ming-discord/test/core.test.mjs \
+            dsh-ming-browse/reliability.test.mjs \
+            dsh-ming-resume/reliability.test.mjs \
+            dsh-ming-skill-isolate/reliability.test.mjs \
+            dsh-ming-wake/reliability.test.mjs \
+            dsh-ming-graph/fingerprint-cache.test.mjs
+
+      - name: Run deterministic distribution and pricing checks
+        run: |
+          node dsh-ming-browse/heartbeat.test.mjs
+          node dsh-ming-graph/price-index.test.mjs
+
+      - name: Check syntax of Discord-only integration modules
+        shell: bash
+        run: |
+          files=(
+            dsh-ming-discord/index.js
+            dsh-ming-discord/settings.js
+            dsh-ming-discord/memory.js
+            dsh-ming-discord/pool.js
+            dsh-ming-discord/client.js
+            dsh-ming-discord/discord/bridge.js
+            dsh-ming-memory/index.js
+            dsh-ming-memory/lib/model.mjs
+            dsh-ming-memory/lib/neuron.mjs
+            dsh-ming-graph/index.js
+            dsh-ming-graph/client.js
+            dsh-ming-graph/src/neuron-view.js
+            dsh-ming-core-memory/lib/rag.js
+            dsh-ming-browse/index.js
+            dsh-ming-voice/index.js
+            dsh-ming-resume/index.js
+            dsh-ming-wake/index.js
+            dsh-ming-skill-isolate/index.js
+            dsh-ming-mousepet/index.js
+            dsh-ming-activities/index.js
+          )
+          for file in "${files[@]}"; do
+            echo "Checking $file"
+            node --check "$file"
+          done
