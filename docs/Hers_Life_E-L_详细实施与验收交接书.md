@@ -1,5 +1,8 @@
 # Hers_Life：剩余 E–L 的详细实施与验收交接书
 
+> **歷史文件／已被 Discord-only 重構取代。** 本文描述的是 2026-11-17 以前的 QQ、OneBot、AstrBot 與舊分支施工規劃，不是 `discord-dsh-only` 的現行規格或待辦清單。請以倉庫根目錄 `README.md`、`dsh-ming-discord/README.md`、`docs/capability-table.md` 為準；本文僅供追溯決策背景。
+
+
 版本：2026-11-17 · 用途：交给维护者及其 DeepSeek 助手，按项选择、实施和验收。
 
 **本文是后续施工说明。本轮只编写文档，没有实施 E–L，也没有替维护者合并、发布或改变运行配置。**
