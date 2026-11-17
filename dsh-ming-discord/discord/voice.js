@@ -295,6 +295,13 @@ export class VoiceConnection extends EventEmitter {
   }
 
   async connect() {
+    // Discord requires DAVE E2EE for non-Stage voice channels since March 2026.
+    // Do not open a socket that advertises no DAVE support: the gateway rejects
+    // that connection with 4017, so an unencrypted fallback is not viable.
+    const dave = loadDavey(this.logger)
+    if (dave === null) {
+      throw new Error('voice: DAVE native addon is unavailable; Discord requires DAVE E2EE for voice channels (close 4017). Verify discord/dave/davey.node is present and loadable.')
+    }
     this.state = 'connecting'
     this.openedAt = Date.now()
     const url = 'wss://' + String(this.endpoint).replace(/:80$/, '') + '/?v=8'
@@ -347,11 +354,8 @@ export class VoiceConnection extends EventEmitter {
       this.logger?.warn('voice: socket error')
     }))
     await new Promise((resolve) => ws.addEventListener('open', resolve, { once: true }))
-    // Advertising DAVE support is mandatory: Discord closes a client that
-    // claims version 0 with 4017 before it ever answers READY. `loadDavey`
-    // returns null when the addon is missing, and then there is nothing honest
-    // to advertise, so the connection proceeds without E2EE and logs the reason.
-    const dave = loadDavey(this.logger)
+    // DAVE was verified before opening the voice socket; identify with the
+    // highest protocol version exposed by the bundled native implementation.
     const identify = {
       server_id: this.guildId,
       user_id: this.userId,
