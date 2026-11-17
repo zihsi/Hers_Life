@@ -1,9 +1,9 @@
 {
   "name": "dsh-ming-graph",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "type": "module",
-  "description": "记忆神经元：每条真记忆一个点，每条边都带「凭什么连」的理由（读盘与建图在 dsh-ming-memory/lib）",
+  "description": "记忆神经元与星图：整合 DSH 归档记忆与 Discord 会话事件，保留服务器／频道／Thread 来源。",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",

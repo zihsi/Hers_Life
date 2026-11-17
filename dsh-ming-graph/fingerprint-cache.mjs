@@ -68,7 +68,9 @@ export function sourceLoader(file, importer=url=>import(url)) {
   })
 }
 export function graphDependencies(cfg) {
-  return [{dir:path.join(cfg.dshMemoryDir,'notes'),kind:'notes'}, {file:cfg.qqObservations,kind:'observations'}, {file:cfg.peopleIndex,kind:'people'}]
+  const deps = [{ dir: path.join(cfg.dshMemoryDir, 'notes'), kind: 'notes' }]
+  if (cfg.discordMemoryFile) deps.push({ file: cfg.discordMemoryFile, kind: 'observations' })
+  return deps
 }
 export function neuronDependencies(cfg, source) {
   return [...graphDependencies(cfg),{file:path.join(cfg.dshMemoryDir,'recall-log.jsonl'),kind:'recall'},{file:source,kind:'source'}]

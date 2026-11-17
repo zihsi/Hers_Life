@@ -1,11 +1,20 @@
 {
   "name": "dsh-ming-wake",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "真会落盘的定时唤醒：工具写 dueAt，插件扫描后调 agents.resume。实验品。",
   "main": "index.js",
-  "exports": { ".": "./index.js" },
-  "files": ["index.js", "cordis.patch.yml"],
-  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
 }

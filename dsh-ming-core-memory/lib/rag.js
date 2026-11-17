@@ -2,21 +2,30 @@
 //
 // 为什么放在这个插件里：memory_search 查的是「我下过的结论」（BM25 关键词），
 // 而「她说过什么」「那段我怎么写的」在原话里，只有向量搜得到。
-// 两套索引都是 工作区 的脚本建的（scripts\doc-emb / chat-embed / qq-embed），
+// 两套索引都是 工作区 的脚本建的（scripts\doc-emb / chat-embed），
 // 这里只读，不写、不建索引。
 //
 // 三层，各管一段：
 //   doc = 我写过的字（日记/见闻/learned/reading/writing/day/people/live）
 //   web = DSH 网页会话（chat-corpus）
-//   qq  = QQ 群与私聊（qq-corpus，含旧壳 QQ-Agent）
+//   web  = DSH 網頁會話（chat-corpus）
 //
 // 嵌入服务 127.0.0.1:18091（bge-base-zh-v1.5-q8_0），不在时返回 unavailable 由调用方说明，
 // **不要假装成功**。
 
 import { readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { homedir } from 'node:os'
 
-const LIVE = process.env.MING_WORKSPACE ? join(process.env.MING_WORKSPACE, 'live') : ''
+function resolveWorkspace() {
+  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
+  try {
+    const settings = JSON.parse(readFileSync(join(homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    if (typeof settings.root === 'string' && settings.root.trim()) return settings.root
+  } catch {}
+  return ''
+}
+const LIVE = resolveWorkspace() ? join(resolveWorkspace(), 'live') : ''
 const ENDPOINT = process.env.EMB_ENDPOINT || 'http://127.0.0.1:18091/v1/embeddings'
 const MODEL = process.env.EMB_MODEL || 'bge-base-zh-v1.5-q8_0'
 const DIM = 768
@@ -25,7 +34,6 @@ const PREFIX = '为这个句子生成表示以用于检索相关文章：'
 const LAYERS = {
   doc: { emb: 'doc-emb.f32', ids: 'doc-emb-ids.json', corpus: null, manifest: 'doc-emb.manifest.json' },
   web: { emb: 'chat-emb.f32', ids: 'chat-emb-ids.json', corpus: 'chat-corpus.jsonl', manifest: 'chat-emb.manifest.json' },
-  qq: { emb: 'qq-emb.f32', ids: 'qq-emb-ids.json', corpus: 'qq-corpus.jsonl', manifest: 'qq-emb.manifest.json' },
 }
 
 const cache = new Map() // layer -> { sig, vecs, ids, rows }
@@ -275,8 +283,7 @@ function snippetOf(layer, entry, index, row) {
     text,
     file: '',
     title: r.chatKey || '',
-    // 2026-11-17（J-1）：web 和 qq 两层共用这段，原来一律写 'qq'——
-    // 于是 web 命中被标成 QQ 原话。按层名写。
+    // web 命中按其实际索引層標記。
     src: layer,
     chatKey: r.chatKey,
     t0: r.t0,
@@ -290,8 +297,8 @@ function snippetOf(layer, entry, index, row) {
  * @returns {{hits: Array, layers: string[], status: string, issues: Array, service: string}}
  */
 export async function ragSearch(query, { layer = 'all', k = 5, since = '', until = '' } = {}) {
-  const want = layer === 'all' ? ['doc', 'web', 'qq'] : [layer].filter((x) => LAYERS[x])
-  if (!want.length) throw new Error('layer 只认 doc / web / qq / all')
+  const want = layer === 'all' ? ['doc', 'web'] : [layer].filter((x) => LAYERS[x])
+  if (!want.length) throw new Error('layer 只認 doc / web / all')
 
   const entries = new Map()
   const issues = []

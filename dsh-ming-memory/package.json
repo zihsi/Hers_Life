@@ -1,9 +1,9 @@
 {
   "name": "dsh-ming-memory",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
-  "description": "溟的开场记忆：把 persona 与最近几篇日记拼进系统提示词（只读，不回写）",
+  "description": "开场记忆：把人格文件与最近几篇日记拼进系统提示词；Discord 对话由共享事件记忆层统一管理。",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",

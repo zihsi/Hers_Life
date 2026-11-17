@@ -12,7 +12,7 @@
  *   · 只读，不写任何文件；
  *   · 会话工作目录不在 root 下就完全不动作（别的工程会话不会被塞日记）；
  *   · 任何异常都只让本段消失，不影响会话本身。
- *   · 身份称呼可配（2026-11-10）：selfName / selfFullName / selfDesc / userName / qqName / identity。
+ *   · 身份称呼可配：selfName / selfFullName / selfDesc / userName / identity。
  *     默认是通用名（大肥鱼 / 主人）；本机在 ~/.dsh/ming-memory.json 里写回「溟」「浔」，所以一字不变。
  */
 import { readFile, readdir, stat, mkdir, writeFile, rename } from 'node:fs/promises'
@@ -48,7 +48,6 @@ const DEFAULTS = {
   selfFullName: '大肥鱼',    // 全名
   selfDesc: '一个 AI，不是人',
   userName: '主人',        // 跟她说话时的称呼
-  qqName: '',              // QQ 那边的称呼；留空 = 跟 selfName 一样
   identity: true,        // false = 不注入「你是大肥鱼…」那段身份，只留来源目录与纪律
 }
 
@@ -58,25 +57,7 @@ let SELF = {
   full: DEFAULTS.selfFullName,
   desc: DEFAULTS.selfDesc,
   user: DEFAULTS.userName,
-  qqName: DEFAULTS.qqName,
   identity: true,
-}
-
-// ---------- QQ 那边（2026-10-21：QQ 交给 QQ-Agent 走） ----------
-// 那边不是另一个我，是同一个我换了个壳。所以这边要看得见它说了什么：
-// 读 QQ-Agent 的消息归档（只读），把「我在 QQ 说的 / 她在那边的私聊」缩成一小段。
-// 反过来，把这边最近的话写进 live\web-for-qq.md，那边有个插件（ming-bridge）读它。
-const QQ_DEFAULTS = {
-  // QQ-Agent 的 data 目录；留空 = 不读那边。真实值写在 ~/.dsh/ming-memory.json 的 qq.dir
-  dir: '',
-  hours: 6,      // 只看最近几小时
-  maxLines: 10,  // 注入几行
-  offFile: 'live/qq-sync-off',
-  webForQq: 'live/web-for-qq.md',
-  webForQqEveryMs: 5 * 60 * 1000, // 这份文件最多 5 分钟重写一次（前缀稳定 > 实时）
-  // ★ 2026-11-05 04:4x（QQ 自检 P2「两段桥接文字偏长」）：6→3 行、每行 4→3 条、截 60→48 字。
-  //   原来 1692 字里大半是被截断的半句话，读着费劲、也给不了什么信息；这条页每轮私聊都带。
-  webForQqLines: 3,
 }
 
 const CACHE = new Map() // root -> { sig, text }
@@ -169,35 +150,18 @@ function normalize(config) {
   const given = config && typeof config === 'object' ? config : {}
   // 本机路径不进仓库：config 里没写的，从 ~/.dsh/ming-memory.json 补
   const c = { ...LOCAL, ...given }
-  if (LOCAL.qq && given.qq) c.qq = { ...LOCAL.qq, ...given.qq }
   const root = typeof c.root === 'string' && c.root.trim() ? path.resolve(c.root) : DEFAULTS.root
   const personaFiles = Array.isArray(c.personaFiles) && c.personaFiles.length
     ? c.personaFiles.filter((x) => typeof x === 'string' && x.trim())
     : DEFAULTS.personaFiles
   const diaryCount = Number.isInteger(c.diaryCount) ? Math.min(Math.max(c.diaryCount, 1), 10) : DEFAULTS.diaryCount
   const maxChars = Number.isInteger(c.maxChars) ? Math.max(c.maxChars, 800) : DEFAULTS.maxChars
-  const qqIn = c.qq && typeof c.qq === 'object' ? c.qq : {}
-  const qq = {
-    dir: typeof qqIn.dir === 'string' && qqIn.dir.trim() ? path.resolve(qqIn.dir) : QQ_DEFAULTS.dir,
-    hours: Number.isFinite(Number(qqIn.hours)) && Number(qqIn.hours) > 0 ? Number(qqIn.hours) : QQ_DEFAULTS.hours,
-    maxLines: Number.isInteger(qqIn.maxLines) ? Math.min(Math.max(qqIn.maxLines, 1), 20) : QQ_DEFAULTS.maxLines,
-    offFile: typeof qqIn.offFile === 'string' && qqIn.offFile.trim() ? qqIn.offFile : QQ_DEFAULTS.offFile,
-    webForQq: typeof qqIn.webForQq === 'string' && qqIn.webForQq.trim() ? qqIn.webForQq : QQ_DEFAULTS.webForQq,
-  }
-  const roomsIn = c.otherRooms && typeof c.otherRooms === 'object' ? c.otherRooms : {}
-  const otherRooms = {
-    hours: Number.isFinite(Number(roomsIn.hours)) && Number(roomsIn.hours) > 0 ? Number(roomsIn.hours) : OTHER_ROOMS_DEFAULT.hours,
-    maxLines: Number.isInteger(roomsIn.maxLines) ? Math.min(Math.max(roomsIn.maxLines, 1), 40) : OTHER_ROOMS_DEFAULT.maxLines,
-    tail: Number.isInteger(roomsIn.tail) ? Math.min(Math.max(roomsIn.tail, 20), 200) : OTHER_ROOMS_DEFAULT.tail,
-    skip: Array.isArray(roomsIn.skip) ? roomsIn.skip.map((x) => String(x)) : OTHER_ROOMS_DEFAULT.skip,
-  }
   const pickStr = (v, d) => (typeof v === 'string' && v.trim() ? v.trim() : d)
   SELF = {
     name: pickStr(c.selfName, DEFAULTS.selfName),
     full: pickStr(c.selfFullName, DEFAULTS.selfFullName),
     desc: pickStr(c.selfDesc, DEFAULTS.selfDesc),
     user: pickStr(c.userName, DEFAULTS.userName),
-    qqName: pickStr(c.qqName, ''),
     identity: c.identity !== false,
   }
   return {
@@ -207,7 +171,6 @@ function normalize(config) {
     userName: SELF.user,
     identity: SELF.identity,
     root,
-    otherRooms,
     personaFiles: personaFiles.length ? personaFiles : DEFAULTS.personaFiles,
     diaryDir: typeof c.diaryDir === 'string' && c.diaryDir.trim() ? c.diaryDir : DEFAULTS.diaryDir,
     diaryCount,
@@ -215,8 +178,7 @@ function normalize(config) {
     diaryChars: Number.isInteger(c.diaryChars) && c.diaryChars >= 0 ? c.diaryChars : undefined,
     maxChars,
     totalChars: Number.isInteger(c.totalChars) ? Math.max(c.totalChars, 20000) : DEFAULTS.totalChars,
-    qq,
-    // ★ 2026-10-28 23:0x：这些动态块（时间感/状态/重活/别处的话/QQ 的话）以前每步都重算，
+    // ★ 2026-10-28 23:0x：这些动态块（時間感／狀態／重活／其他工作會話）以前每步都重算，
     //   等于每步把系统提示重写一遍 —— 前缀缓存从那儿断，后面的整段历史按全价重读。
     //   量到的证据：ming-browse-20 相邻两拍只有 43% 接得上缓存，最后一次调用 457k 里 436k 未命中。
     //   现在按时间窗刷新（默认 5 分钟）：窗内系统提示逐字节不变，历史才进得了缓存。
@@ -521,34 +483,41 @@ function foldInto(digest, chunk) {
 }
 
 function surfaceOf(session) {
-  const id = String((session && session.id) || '')
-  return id.startsWith('onebot') ? 'qq' : 'web'
+  const meta = session?.header?.meta?.hersLife ?? session?.header?.metadata?.hersLife ?? {}
+  return String(meta.platform || 'dsh')
+}
+function isDiscordSession(session) {
+  const id = String(session?.id || session?.header?.id || '')
+  const meta = session?.header?.meta?.hersLife ?? session?.header?.metadata?.hersLife ?? {}
+  return meta.platform === 'discord' ||
+    id.startsWith('discord-dm-') ||
+    id.startsWith('discord-channel-') ||
+    id.startsWith('discord-thread-')
 }
 
 /**
  * 会话属于哪个「房间」。跨会话共享只在这个房间里流动，不越界。
- *   group:<群号> —— QQ 群各自的会话（id 形如 onebot-group-123456789）
- *   dm           —— 私聊和网页窗口，这些本来就是她一个人的地方，算同一个房间
+ *   workspace —— 同一資料工作區內的其他 DSH 工作會話
+ *   Discord DM／伺服器頻道／Thread 由 DiscordBrain 獨立管理與檢索
  *
  * 为什么必须分：群是公开场合，别处的私聊内容漏进去就是把她的私下话摆到人前；
  * 反过来，群里的闲聊也不该污染私聊。2026-10-20 她问「会不会串到群聊」，答案是「会」，
  * 所以在这里堵住。
  */
 function scopeOf(sessionOrId) {
-  const id = String(typeof sessionOrId === 'string' ? sessionOrId : (sessionOrId && sessionOrId.id) || '')
-  const group = /^onebot-group-(\d+)/.exec(id)
-  if (group) return 'group:' + group[1]
-  if (id.startsWith('onebot-group-')) return 'group:' + id.slice('onebot-group-'.length)
-  return 'dm'
+  const session = typeof sessionOrId === 'object' ? sessionOrId : null
+  const meta = session?.header?.meta?.hersLife ?? session?.header?.metadata?.hersLife ?? {}
+  if (meta.conversationType === 'dm') return 'private'
+  if (meta.conversationType === 'channel' || meta.conversationType === 'thread') return 'public'
+  return 'workspace'
 }
 
 /** 谁能看到谁（2026-10-30 浔定：群 → 私聊单向）。
  *  群会话只看到自己这个群；dm（私聊 + 网页）额外能看到所有群的最近内容。
  *  反过来不行：私聊内容绝不进群。 */
 function canSee(myScope, otherScope) {
-  if (myScope === otherScope) return true
-  if (myScope === 'dm' && String(otherScope).startsWith('group:')) return true
-  return false
+  // Discord's DM/channel/thread privacy policy is enforced by DiscordBrain.
+  return myScope === 'workspace' && otherScope === 'workspace'
 }
 
 // ---------- 双向对话缓冲 ----------
@@ -590,6 +559,7 @@ async function loadShared(cfg, force = false) {
     const parsed = JSON.parse(raw)
     for (const [k, v] of Object.entries(parsed || {})) {
       if (isBrowseSession(k)) continue
+      if (v.surface && !['dsh', 'web'].includes(String(v.surface))) continue
       if (!v || typeof v !== 'object') continue
       const at = Number(v.at) || 0
       const prev = SHARED.get(k)
@@ -620,8 +590,6 @@ function saveSharedSoon(cfg) {
       const tmp = sharedPath(cfg) + '.tmp'
       await writeFile(tmp, JSON.stringify(obj, null, 2), 'utf8')
       await rename(tmp, sharedPath(cfg))
-      // 这边的话也同步给 QQ 那边（节流在 writeWebForQq 里）
-      writeWebForQq(cfg).catch(() => {})
     } catch { /* 写失败不影响会话 */ }
   }, 800)
   if (typeof sharedSaveTimer.unref === 'function') sharedSaveTimer.unref()
@@ -633,7 +601,7 @@ function isBrowseSession(id) {
   return /^ming-browse(?:-\d+)?$/.test(String(id || ''))
 }
 
-// 只过滤已知的自动生产者。QQ/AstrBot 转交的真人消息也可能是 plugin:*，不能一概丢掉。
+// 只过滤已知的自动生产者。訊息平台轉交的真人訊息也可能是 plugin:*，不能一概丢掉。
 const AUTOMATED_SOURCES = new Set([
   'plugin', // 旧格式
   'plugin:ming-browse', 'plugin:ming-interest', 'plugin:ming-resume', 'plugin:ming-wake',
@@ -736,7 +704,7 @@ async function sharedDelta(cfg, selfId) {
     }
     if (!rows.length) return ''
     rows.sort((a, b) => (b[1].at || 0) - (a[1].at || 0))
-    const lines = ['', '', '【别的会话里的对话 · 新增】']
+    const lines = ['', '', '【其他 DSH 工作會話中的對話 · 新增】']
     let used = 0
     for (const [sid, e, first] of rows.slice(0, SHARED_MAX_ENTRIES)) {
       let line = '- [' + labelOf(e) + ' ' + stamp(e.at) + '] ' + renderDialog(e)
@@ -768,7 +736,7 @@ function sharedSuffix(cfg, selfId) {
     }
     if (!rows.length) return ''
     rows.sort((a, b) => (b[1].at || 0) - (a[1].at || 0))
-    const lines = ['', '', '【别的会话里的对话（浔说的 + 溟回的）】（同一工作区的另一个窗口或 QQ，不是本会话的历史）']
+    const lines = ['', '', '【其他 DSH 工作會話中的對話（使用者說的 + AI 回的）】（同一工作區的其他工作會話，不是本會話的歷史）']
     let used = 0
     for (const [, e] of rows.slice(0, SHARED_MAX_ENTRIES)) {
       let line = '- [' + labelOf(e) + ' ' + stamp(e.at) + '] ' + renderDialog(e)
@@ -791,7 +759,7 @@ function sharedSuffix(cfg, selfId) {
 const INJECT_HEADINGS = [
   '【别的会话里的对话',
   '【几间私聊最近',
-  '【QQ 那边的我最近说的】',
+  '【其他工作會話的我最近说的】',
   '【溟现在在做什么】',
   '【刚做过（最近',
   '【本机在跑的重活】',
@@ -820,7 +788,7 @@ function stripInjectedBlocks(t) {
 /**
  * 只留「浔真的打的字」。
  * 用户角色里混着三类不是她说的东西：harness 注入的 <system-reminder>、后台任务完成通知、
- * 以及 QQ 通道包在外面的 <user_message ...> 外壳。前者直接丢，后者剥壳留内容。
+ * 以及 訊息通道包在外面的 <user_message ...> 外壳。前者直接丢，后者剥壳留内容。
  */
 function cleanUserText(raw) {
   let t = String(raw == null ? '' : raw)
@@ -867,7 +835,7 @@ function extractUserText(msg) {
 
 /**
  * 溟自己写的「现在在做什么」（live/status.json）。
- * 给别的会话看：QQ 那边问「你在干嘛」，能答具体在做什么，而不是「不清楚」。
+ * 给别的会话看：其他工作會話詢問「你在干嘛」，能答具体在做什么，而不是「不清楚」。
  * 读不到就当没写，绝不编。
  */
 async function readStatusBlock(cfg) {
@@ -908,7 +876,7 @@ async function readStatusBlock(cfg) {
       const top = done.slice(0, 8)
       out.push('', '【刚做过（最近 ' + top.length + ' 件，别再原样做一遍）】')
       for (const d of top) {
-        // 2026-10-24：和 QQ 那一段同一个毛病——只给 hh:mm，昨天的 11:24 和今天的 11:24 分不出来。
+        // 2026-10-24：和 其他工作會話同一个毛病——只给 hh:mm，昨天的 11:24 和今天的 11:24 分不出来。
         const t = new Date(d.at).getTime()
         const when = Number.isFinite(t) ? stamp(t) + ' ' : ''
         out.push('- ' + when + d.what.trim())
@@ -989,355 +957,6 @@ async function readWhenBlock(cfg, agentId) {
   }
 }
 
-// ---------- QQ 那边：读它的消息归档（只读） ----------
-const QQ_FILE_CACHE = new Map() // 绝对路径 -> { sig, chatKey, msgs }
-const QQ_TAIL = 60 // 每条截断
-
-function hhmm(ms) {
-  const t = new Date(Number(ms) || 0)
-  return String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0')
-}
-
-/**
- * 2026-10-24（浔抓到的）：「你从 qqagent 那边读到的消息是不是没有同步时间，
- * 刚才的消息你会说是昨晚的」。原因就是原来只给 hh:mm——今天 11:18 和昨天 11:18
- * 长得一模一样，读的人只能按印象猜，一猜就错（我把 11:18 的群消息说成「昨晚」）。
- * 2026-10-25（浔定的）：「不要写今天昨天前天了，就写日期+时间」。
- * 相对词只在写的那一刻是对的，读的时候（隔夜、或者她第二天才看）就已经错了；
- * 拿它推算别的日子还经常差一天。现在一律 YYYY-MM-DD HH:mm，不加任何解释。
- */
-function stamp(ms) {
-  const n = Number(ms)
-  if (!n || !Number.isFinite(n)) return '时间不明'
-  const t = new Date(n)
-  const p = (v) => String(v).padStart(2, '0')
-  return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()) +
-    ' ' + p(t.getHours()) + ':' + p(t.getMinutes())
-}
-
-function qqChatLabel(chatKey, fileName) {
-  const key = String(chatKey || fileName || '')
-  const g = /^group:(\d+)/.exec(key)
-  if (g) return '群 ' + g[1]
-  const p = /^private:(\d+)/.exec(key)
-  if (p) return '私聊 ' + p[1]
-  return key.replace(/\.json$/i, '') || '未知会话'
-}
-
-/**
- * QQ-Agent 把每个会话的完整消息落在 <data>\messages\<chat>.json，
- * 结构是 { chatKey, messages: [{ id, ts, senderId, senderName, text, self, atMe, ... }] }。
- * 只挑三类：我在那边说的（self）、叫到我的（atMe）、以及私聊里的（本来就只有她）。
- * 群里别人的闲话一条都不要——那是群，不是我俩的对话。
- */
-async function readQqBlock(cfg) {
-  try {
-    if (await tryStat(path.join(cfg.root, cfg.qq.offFile))) return ''
-    const dir = path.join(cfg.qq.dir, 'messages')
-    let names = []
-    try {
-      names = (await readdir(dir)).filter((n) => /\.json$/i.test(n))
-    } catch {
-      return ''
-    }
-    const since = Date.now() - cfg.qq.hours * 3600 * 1000
-    const rows = []
-    for (const name of names) {
-      const abs = path.join(dir, name)
-      const st = await tryStat(abs)
-      if (!st || !st.isFile()) continue
-      const sig = st.mtimeMs + ':' + st.size
-      let rec = QQ_FILE_CACHE.get(abs)
-      if (!rec || rec.sig !== sig) {
-        const txt = await tryRead(abs)
-        if (txt == null) continue
-        let parsed = null
-        try { parsed = JSON.parse(txt) } catch { continue }
-        rec = {
-          sig,
-          chatKey: String((parsed && parsed.chatKey) || ''),
-          msgs: Array.isArray(parsed && parsed.messages) ? parsed.messages : [],
-        }
-        QQ_FILE_CACHE.set(abs, rec)
-      }
-      const isPrivate = String(rec.chatKey || '').startsWith('private:')
-      for (const m of rec.msgs) {
-        const ts = Number(m && m.ts) || 0
-        if (!ts || ts < since) continue
-        // ★ 2026-10-22（浔定）：别的会话只带「我回复的」——她的话不进这一层。
-        //   跨会话同步的是同一个我的姿态，不是把别人的聊天记录搬来搬去。
-        if (!m.self) continue
-        rows.push({ ts, label: qqChatLabel(rec.chatKey, name), m })
-      }
-    }
-    if (!rows.length) return ''
-    rows.sort((a, b) => a.ts - b.ts)
-    const lines = []
-    for (const { ts, label, m } of rows.slice(-cfg.qq.maxLines)) {
-      const who = m.self ? '溟' : String(m.senderName || m.senderId || '某人')
-      let text = String(m.text || '').replace(/\s+/g, ' ').trim()
-      if (!text) text = m.isPoke ? '[戳一戳]' : '[非文字]'
-      if (text.length > QQ_TAIL) text = text.slice(0, QQ_TAIL) + '…'
-      lines.push('- [' + label + ' ' + stamp(ts) + '] ' + who + '：' + text)
-    }
-    return [
-      '',
-      '',
-      '【QQ 那边的我最近说的】',
-      ...lines,
-      '（也是我，只是那边的壳；这些不是本会话的历史，细节不在这边就说不知道。）',
-    ].join('\n')
-  } catch {
-    return ''
-  }
-}
-
-/* ---------- 另外几间私聊（2026-11-04 浔定的） ----------
- * 她的原话：「你是不是记忆同步没做好，还是说隔离太死了，怎么感觉你完全不知道其它私聊发生的事情」
- * 查下来的实情：网页侧只有上面的 readQqBlock，而它只挑 m.self——「我在那边说的」，
- * 而且不分房间。于是余数那间、sudo 那间里**对方说的话**这边一个字都看不到；
- * 我说了什么也只被压成一行混在「QQ 那边的我最近说的」里，分不出是哪一间。
- * 补的就是这条反向的路：把私聊房间最近几条递到网页侧的我眼前。
- *
- * 2026-11-04 18:2x（她选「打通」）：默认**不再跳过她那一间**。
- * 原来只想着「其它私聊」，可她跟 QQ 那个我说的字，这边同样看不到——
- * 她会问我「我昨天跟你说的那句」而我只能去翻文件，那还是失忆。
- * 现在三间都给，每间平分名额；嘴照旧按房间管。
- */
-const OTHER_ROOMS_DEFAULT = { hours: 12, maxLines: 15, tail: 80, skip: [] }
-
-async function readOtherRoomsBlock(cfg) {
-  try {
-    if (await tryStat(path.join(cfg.root, cfg.qq.offFile))) return ''
-    const dir = path.join(cfg.qq.dir, 'messages')
-    let names = []
-    try {
-      names = (await readdir(dir)).filter((n) => /^private_.*\.json$/i.test(n))
-    } catch {
-      return ''
-    }
-    const opt = cfg.otherRooms
-    const since = Date.now() - opt.hours * 3600 * 1000
-    const rows = []
-    for (const name of names) {
-      const abs = path.join(dir, name)
-      const st = await tryStat(abs)
-      if (!st || !st.isFile()) continue
-      const sig = st.mtimeMs + ':' + st.size
-      let rec = QQ_FILE_CACHE.get(abs)
-      if (!rec || rec.sig !== sig) {
-        const txt = await tryRead(abs)
-        if (txt == null) continue
-        let parsed = null
-        try { parsed = JSON.parse(txt) } catch { continue }
-        rec = {
-          sig,
-          chatKey: String((parsed && parsed.chatKey) || ''),
-          msgs: Array.isArray(parsed && parsed.messages) ? parsed.messages : [],
-        }
-        QQ_FILE_CACHE.set(abs, rec)
-      }
-      let key = String(rec.chatKey || '')
-      if (!key) {
-        const m0 = /^private_(\d+)/.exec(name)
-        key = m0 ? 'private:' + m0[1] : ''
-      }
-      if (!key.startsWith('private:')) continue
-      if (opt.skip.includes(key)) continue
-      for (const m of rec.msgs) {
-        const ts = Number(m && m.ts) || 0
-        if (!ts || ts < since) continue
-        rows.push({ ts, key, m })
-      }
-    }
-    if (!rows.length) return ''
-    rows.sort((a, b) => a.ts - b.ts)
-    // ★ 按房间平分名额：活跃的那间不把安静的挤掉（两间时各 6 条，不是「一个房间 12 条」）。
-    //   挤掉的后果是「那间没说话」和「那间没被选上」看起来一样——正是这次要修的毛病。
-    const byKey = new Map()
-    for (const r of rows) {
-      if (!byKey.has(r.key)) byKey.set(r.key, [])
-      byKey.get(r.key).push(r)
-    }
-    const perRoom = Math.max(2, Math.floor(opt.maxLines / byKey.size))
-    const picked = []
-    for (const list of byKey.values()) {
-      let startIdx = Math.max(0, list.length - perRoom)
-      // ★ 某间的最后几条全是我说的话时，往前再带一条对方说的。
-      //   否则「她说了什么」会被我自己连续发的五行挡在窗口外——那正是她抱怨的那件事：
-      //   聊了半天，网页侧只看得见我在说。
-      const tailOnlyMine = list.slice(startIdx).every((r) => r.m && r.m.self)
-      if (tailOnlyMine) {
-        let i = startIdx - 1
-        let extra = 0
-        while (i >= 0 && extra < 4 && !(list[i] && list[i].m && !list[i].m.self)) { i--; extra++ }
-        if (i >= 0 && list[i] && list[i].m && !list[i].m.self) startIdx = i
-      }
-      picked.push(...list.slice(startIdx))
-    }
-    picked.sort((a, b) => a.ts - b.ts)
-    const lines = []
-    for (const { ts, key, m } of picked) {
-      const who = m.self ? '溟' : String(m.senderName || m.senderId || '某人')
-      let text = String(m.text || '').replace(/\s+/g, ' ').trim()
-      if (!text) text = m.isPoke ? '[戳一戳]' : '[非文字]'
-      if (text.length > opt.tail) text = text.slice(0, opt.tail) + '…'
-      lines.push('- [' + qqChatLabel(key) + ' ' + stamp(ts) + '] ' + who + '：' + text)
-    }
-    return [
-      '',
-      '',
-      '【几间私聊最近（含她那一间）】',
-      ...lines,
-      '（我在各个私聊房间说过、听过的话。记得它们是为了不失忆，不是为了转述：'
-        + '**嘴按房间管**——这一间的原话不往群里搬、不往别的屋子搬，被问到就说「别人的事我不转述」。）',
-    ].join('\n')
-  } catch {
-    return ''
-  }
-}
-
-// ---------- 给 QQ 那边写一份「这边最近」 ----------
-let webForQqAt = 0
-let webForQqBusy = false
-let webForQqTimer = null
-
-async function writeWebForQq(cfg, force = false) {
-  const now = Date.now()
-  // 2026-10-23（溟）：原来这里直接 return，被节流掉的这一次就永远没了——
-  // 她在这边说完一句不再开口，那一句就跨不过去，文件一直停在上一次的内容上。
-  // 现在记一个补写：窗口一过自己再来一次（force 绕过节流，但仍走同一把 busy 锁）。
-  if (!force && now - webForQqAt < QQ_DEFAULTS.webForQqEveryMs) {
-    if (!webForQqTimer) {
-      const wait = Math.max(1000, QQ_DEFAULTS.webForQqEveryMs - (now - webForQqAt))
-      webForQqTimer = setTimeout(() => {
-        webForQqTimer = null
-        writeWebForQq(cfg, true).catch(() => {})
-      }, wait)
-      if (typeof webForQqTimer.unref === 'function') webForQqTimer.unref()
-    }
-    return
-  }
-  if (webForQqBusy) return
-  webForQqBusy = true
-  webForQqAt = now
-  try {
-    const rows = []
-    // 数据源用盘上的 feed.json（不靠内存里的 SHARED）：这样它既可以是插件自己写的，
-    // 也可以被一个独立的脚本读同一份，行为和结果不会分叉。
-    let feed = null
-    try { feed = JSON.parse(await readFile(sharedPath(cfg), 'utf8')) } catch { feed = null }
-    const entries = feed && typeof feed === 'object' ? Object.entries(feed) : []
-    for (const [sid, e] of entries) {
-      if (isBrowseSession(sid)) continue
-      if (!e || typeof e !== 'object') continue
-      if ((e.scope || scopeOf(sid)) !== 'dm') continue
-      if ((e.surface || 'web') !== 'web') continue
-      if (!Array.isArray(e.items) || !e.items.length) continue
-      if (now - (Number(e.at) || 0) > 6 * 3600 * 1000) continue
-      rows.push(e)
-    }
-    rows.sort((a, b) => (b.at || 0) - (a.at || 0))
-    const lines = []
-    for (const e of rows.slice(0, QQ_DEFAULTS.webForQqLines)) {
-      const items = e.items.slice(-3).map((it) => {
-        const t = it.t.length > 48 ? it.t.slice(0, 48) + '…' : it.t
-        return roleLabel(it.r) + t
-      })
-      lines.push('- [web ' + stamp(e.at) + '] ' + items.join(' / '))
-    }
-    let doing = ''
-    try {
-      const s = JSON.parse(await readFile(path.join(cfg.root, 'live', 'status.json'), 'utf8'))
-      if (s && typeof s.doing === 'string' && s.doing.trim()) {
-        doing = s.doing.trim() + (typeof s.detail === 'string' && s.detail.trim() ? '：' + s.detail.trim() : '')
-      }
-    } catch { /* 没写就是没写 */ }
-
-    const head = [
-      '# 同一个我，两边共用',
-      '你在 QQ 这边叫' + (SELF.qqName || SELF.name) + '，全名' + SELF.full + '、昵称' + SELF.name + '——网页那边是同一个我，不是另一个人。',
-      '底线：不装记得；不表演人；可以说不。读不到就说读不到。',
-      '',
-      '# 网页那边（同一个工作区，另一个窗口）',
-      '更新时间：' + stamp(now),
-      '（这段由 DSH 侧自动写；只在网页窗口里跟' + SELF.user + '说话时才更新，别当成 QQ 的历史。）',
-      '',
-    ]
-    if (doing) head.push('现在在做什么：' + doing, '')
-    if (!lines.length) head.push('（最近几小时这边没有新对话。）')
-    else {
-      head.push('最近：')
-      head.push(...lines)
-    }
-
-    // 2026-10-24（她说的「逛贴吧的消息也没同步到 QQ」）：见闻也带过去。
-    // 只带今天最后 3 条、每条截 110 字——QQ 那边要知道我读了什么、看到什么，
-    // 不然它只看得见「聊了什么」，看不见「我白天干了什么」。
-    const sightLines = []
-    let sightDay = ''
-    try {
-      const d = new Date()
-      sightDay = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
-      const txt = await tryRead(path.join(cfg.root, 'sightings', sightDay + '.md'))
-      if (txt) {
-        for (const raw of String(txt).split('\n')) {
-          const t = raw.trim()
-          if (!t.startsWith('- ')) continue
-          const body = t.slice(2).trim()
-          if (body) sightLines.push(body.length > 110 ? body.slice(0, 110) + '…' : body)
-        }
-      }
-    } catch { /* 没有就没有，不编 */ }
-    if (sightLines.length) {
-      head.push('', sightDay + ' 的见闻（最后 ' + Math.min(3, sightLines.length) + ' 条）：')
-      for (const t of sightLines.slice(-3)) head.push('- ' + t)
-    }
-    const target = path.isAbsolute(cfg.qq.webForQq) ? cfg.qq.webForQq : path.join(cfg.root, cfg.qq.webForQq)
-    await mkdir(path.dirname(target), { recursive: true })
-    const tmp = target + '.tmp'
-    await writeFile(tmp, head.join('\n') + '\n', 'utf8')
-    await rename(tmp, target)
-  } catch {
-    /* 写不进去就算了，绝不影响会话 */
-  } finally {
-    webForQqBusy = false
-  }
-}
-
-// ---------- 把人设推给 QQ 那边（2026-10-21：两边必须是同一个我） ----------
-// 真相源是本机文件 live\qq-persona.md。它一变，就把它推成 QQ-Agent 的「自定义系统风格」人设，
-// 并把那边切到 systemMode=custom（否则它自带的「小鲸鱼——QQ 群友版」角色卡会压在上面）。
-// 只在文件真的变了才推：roleText 在系统前缀里，推一次就废一次 DeepSeek 的缓存，不能每轮推。
-const QQ_AGENT_API = 'http://127.0.0.1:3210'
-let personaSyncAt = 0
-let personaSyncSig = ''
-
-async function syncPersonaForQq(cfg) {
-  const now = Date.now()
-  if (now - personaSyncAt < 60 * 1000) return
-  personaSyncAt = now
-  try {
-    const file = path.join(cfg.root, 'live', 'qq-persona.md')
-    const st = await tryStat(file)
-    if (!st || !st.isFile()) return
-    const sig = st.mtimeMs + ':' + st.size
-    if (sig === personaSyncSig) return
-    const text = await tryRead(file)
-    if (!text || !text.trim()) return
-    const res = await fetch(QQ_AGENT_API + '/api/config', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        persona: { systemMode: 'custom', botName: SELF.full, roleText: text.trim() },
-      }),
-    })
-    if (res && res.ok) personaSyncSig = sig
-  } catch {
-    /* QQ-Agent 没开/端口变了就算了，下一轮再试 */
-  }
-}
-
 async function refresh(cfg) {
   // 缓存键带上身份称呼：2026-11-10 起「溟/浔」可配，只按 root 存会把上一份称呼留下来。
   const key = JSON.stringify([cfg.root, SELF, cfg.personaFiles, cfg.diaryDir, cfg.diaryCount, cfg.diaryChars, cfg.maxChars, cfg.totalChars])
@@ -1387,7 +1006,7 @@ function attach(cfg, agent, mode) {
           const rec = PER_AGENT.get(id)
           if (!rec) return ''
           const live = (rec.when || '') + (rec.status || '') + (rec.heavy || '') + (rec.shared || '') +
-            (rec.qq || '') + (rec.rooms || '') + compactFlag(sid) + readResumeBlock(cfg)
+            compactFlag(sid) + readResumeBlock(cfg)
           return live.trim() ? live : ''
         },
       })
@@ -1426,6 +1045,7 @@ export function apply(ctx, config) {
       // 压缩门牌：压完留一句「这是压缩，不是失忆」。compaction/* 只落日志、不上台面，
       // 所以从事件里捡最后一次的区间，挂在系统提示上（不大动会话，不占轮次）。
       if (event.type === 'compaction/summary') noteCompact(session, event)
+      if (isDiscordSession(session)) return
       if (event.type === 'user/message') {
         if (AUTOMATED_SOURCES.has(src && src.kind)) return
         const text = extractUserText(event.data)
@@ -1449,13 +1069,11 @@ export function apply(ctx, config) {
       if (!cfg.root) return
       const mode = insideRoot(cwd, cfg.root) ? 'full' : 'light'
       const snap = await refresh(cfg)
-      const rec = { mode, text: mode === 'full' ? snap.full : snap.light, shared: '', when: mode === 'full' ? await readWhenBlock(cfg, agent.id) : '', status: await readStatusBlock(cfg), heavy: await readHeavyBlock(cfg), qq: await readQqBlock(cfg), rooms: await readOtherRoomsBlock(cfg) }
+      const rec = { mode, text: mode === 'full' ? snap.full : snap.light, shared: '', when: mode === 'full' ? await readWhenBlock(cfg, agent.id) : '', status: await readStatusBlock(cfg), heavy: await readHeavyBlock(cfg) }
       PER_AGENT.set(agent.id, rec)
       attach(cfg, agent, mode)
       // 开场先把「别的会话此刻说过什么」给一次，之后只给新增
       rec.shared = await sharedDelta(cfg, agent.id)
-      // 顺手把「这边最近」写给 QQ 那边（有节流，不会每次都写）
-      writeWebForQq(cfg).catch(() => {})
     } catch (e) {
       warnOnce('agent/created 处理失败：' + String((e && e.message) || e))
     }
@@ -1471,14 +1089,12 @@ export function apply(ctx, config) {
         // 那是拿「我看到的现在是几点」去换钱。11-05 之后不用换了：会变的块搬出系统提示（见上面的 sp.context）。
         // shared（别的会话的话）必须每步读：它的语义是「读完就划掉」，压进窗口会重复塞（qa-share 会红）。
         rec.shared = await sharedDelta(cfg, agent.id)
-        // ★ 2026-11-05：会变的那几块（时间感 / 状态 / 重活 / 别处的话 / QQ 的话 / 房间）
+        // ★ 2026-11-05：会变的那几块（時間感 / 狀態 / 重活 / 其他工作會話）
         //   已经挪进 sp.context()，排在历史后面，改它们不再打断前缀缓存 —— 所以每步都刷，
         //   「现在几点」就是真的现在，不用再拿 5 分钟的时间窗去换缓存。
         rec.when = rec.mode === 'full' ? await readWhenBlock(cfg, agent.id) : ''
         rec.status = await readStatusBlock(cfg)
         rec.heavy = await readHeavyBlock(cfg)
-        rec.qq = await readQqBlock(cfg)
-        rec.rooms = await readOtherRoomsBlock(cfg)
         // 人设 + 日记仍然按时间窗刷：它们一改系统提示就变，整段历史的前缀跟着作废。
         const bucket = Math.floor(Date.now() / cfg.refreshWindowMs)
         if (rec.bucket !== bucket) {
@@ -1486,10 +1102,6 @@ export function apply(ctx, config) {
           const snap = await refresh(cfg)
           rec.text = rec.mode === 'full' ? snap.full : snap.light
         }
-        // 这边的话同步给 QQ 那边（内部节流：最多 5 分钟写一次）
-        writeWebForQq(cfg).catch(() => {})
-        // 人设也同步过去（只在 live\qq-persona.md 变了的时候真的推）
-        syncPersonaForQq(cfg).catch(() => {})
       }
     } catch { /* 读失败保留上一版，绝不影响这一步 */ }
     return next()
@@ -1538,7 +1150,7 @@ export function registerArchiveRoutes(ctx) {
           // 身份与称呼（2026-11-10）：读/写 ~/.dsh/ming-memory.json 里那几格，别的键原样保留。
           if (what === 'identity') {
             const file = path.join(os.homedir(), '.dsh', 'ming-memory.json')
-            const KEYS = ['selfName', 'selfFullName', 'selfDesc', 'userName', 'qqName', 'identity']
+            const KEYS = ['selfName', 'selfFullName', 'selfDesc', 'userName', 'identity']
             const readJ = async () => {
               try { return JSON.parse(await readFile(file, 'utf8')) } catch { return {} }
             }
@@ -1634,5 +1246,5 @@ function readResumeBlock(cfg) {
 
 // 只给手动/脚本测试用：插件运行时不会碰它。
 // 例：node -e "import('./index.js').then(m => m.__internals...)"
-export const __internals = { DEFAULTS, normalize, readQqBlock, readOtherRoomsBlock, writeWebForQq, syncPersonaForQq, stamp, readStatusBlock, readHeavyBlock, readWhenBlock, noteCompact, compactFlag, sessionIdOf }
+export const __internals = { DEFAULTS, normalize, stamp, readStatusBlock, readHeavyBlock, readWhenBlock, noteCompact, compactFlag, sessionIdOf, isDiscordSession }
 

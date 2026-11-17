@@ -1,7 +1,7 @@
 /**
  * dsh-ming-graph —— 记忆关系图（Host 半端）
  *
- * 只读，不算命：把两侧记忆（DSH 归档 notes / QQ-Agent observations）读进来，
+ * 只读，不算命：把两侧记忆（DSH 歸檔 notes / Discord 事件）读进来，
  * 自己算成一坨 JSON，经 webServer 路由交给浏览器那半边画。
  * 全程不经过模型。
  *
@@ -17,7 +17,7 @@ import path from 'node:path'
 import os from 'node:os'
 import * as neuronStatic from '../dsh-ming-memory/lib/neuron.mjs'
 import {
-  readDsh, readQQ, readPeople, readDiaries, build, parseFront, MEMORY_DEFAULTS,
+  readDsh, readDiscord, readPeople, readDiaries, build, parseFront, MEMORY_DEFAULTS,
 } from '../dsh-ming-memory/lib/model.mjs'
 import { fileURLToPath } from 'node:url'
 import { mergePeople } from './people-merge.mjs'
@@ -49,6 +49,10 @@ export const name = 'dsh-ming-graph'
 function resolveWorkspace() {
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
+    const central = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    if (central && central.root) return String(central.root)
+  } catch { /* first-run setup may not have written the central file yet */ }
+  try {
     const f = process.env.MING_GRAPH_CONFIG || path.join(os.homedir(), '.dsh', 'ming-graph.json')
     const j = JSON.parse(readFileSync(f, 'utf8'))
     if (j && j.workspace) return String(j.workspace)
@@ -59,7 +63,7 @@ function resolveWorkspace() {
 const WORKSPACE = (() => { const w = resolveWorkspace(); return w ? path.normalize(w) : '' })()
 
 const DEFAULTS = {
-  // 记忆侧默认值（notes 目录、QQ 观察库、群友索引、记忆卡、日记目录）在 memory 那边，
+  // 记忆側預設值（notes、Discord 事件、記憶卡、日記目錄）由 memory 套件提供，
   // 这里展开它，本机配置照旧覆盖（~/.dsh/ming-graph.json）
   ...MEMORY_DEFAULTS,
   syncSeconds: 120,
@@ -71,12 +75,15 @@ const DEFAULTS = {
   costPricesFile: process.env.MING_COST_PRICES || (WORKSPACE ? WORKSPACE + '\\live\\cost-prices.json' : ''),
   // 2026-11-10：「索引费用」按钮写出来的自动价目。人工那份永远压过它。
   costAutoFile: process.env.MING_COST_AUTO || (WORKSPACE ? WORKSPACE + '\\live\\cost-prices.auto.json' : ''),
+  workspace: WORKSPACE,
+  diaryDir: WORKSPACE ? path.join(WORKSPACE, 'diary') : '',
+  discordMemoryFile: WORKSPACE ? path.join(WORKSPACE, 'live', 'discord-memory.jsonl') : '',
 }
 
 // ---------- 本地配置 ----------
 // 路径、号码、群名这些跟某台机器绑在一起的值不进仓库。
 // 放 ~/.dsh/ming-graph.json（或用环境变量 MING_GRAPH_CONFIG 指一个文件），
-// 仓库里只留通用默认。没有这个文件也能跑：只是不读 QQ 侧、不显示昵称。
+// 仓库里只留通用默认。沒有這個檔案也能跑：只顯示 DSH 記憶與 Discord 事件。
 export function loadLocalConfig(file) {
   const f = file || process.env.MING_GRAPH_CONFIG || path.join(os.homedir(), '.dsh', 'ming-graph.json')
   try {
@@ -86,37 +93,10 @@ export function loadLocalConfig(file) {
 }
 const LOCAL = loadLocalConfig()
 
-// 2026-11-07 19:4x：她问「关系图里还有一堆 QQ 号，能不能自动认出来」。
-// 群名本机拿不到（config.json 里只有号码），得 QQ 侧调 OneBot 的 get_group_list 写出来。
-// 这里读 live/qq-groups.json（形状 { "<群号>": "<群名>", ... } 或 { groups:[{id,name}] }），
-// 跟手填的 roomLabels 合并，手填优先。
-function loadGroupNames() {
-  const out = {}
-  // 2026-11-07 22:1x：默认路径不写进仓库（这个仓是公开的）。没配 MING_WORKSPACE 就不读，返回空表。
-  const ws = process.env.MING_WORKSPACE || ''
-  if (!ws) return out
-  const f = path.join(ws, 'live', 'qq-groups.json')
-  try {
-    const j = JSON.parse(readFileSync(f, 'utf8'))
-    if (Array.isArray(j.groups)) {
-      for (const g of j.groups) if (g && g.id && g.name) out['group:' + String(g.id)] = String(g.name)
-    } else if (j && typeof j === 'object') {
-      for (const [k, v] of Object.entries(j)) {
-        if (typeof v === 'string' && /^\d{5,12}$/.test(k)) out['group:' + k] = v
-        else if (v && typeof v === 'object' && v.name) out['group:' + k] = String(v.name)
-      }
-    }
-  } catch {}
-  return out
-}
-const GROUP_NAMES = loadGroupNames()
+// Discord server/channel labels travel with each recorded event.
+// Optional roomLabels can provide a local display override.
+const GROUP_NAMES = {}
 
-/**
- * 2026-11-07 22:1x：群号不进仓库（这个仓是公开的）。
- *
- * 客户端的「群」分带原来写死三个群号，现在改成从这里下发：本机配置 + live/qq-groups.json 合起来。
- * 仓库里没有号，没配就是空表——视图会把所有群并进「其他群」，布局照旧，不崩。
- */
 function withRoomLabels(data, cfg) {
   if (!data || typeof data !== 'object') return data
   return { ...data, roomLabels: { ...GROUP_NAMES, ...((cfg && cfg.roomLabels) || {}) } }
@@ -125,11 +105,11 @@ function withRoomLabels(data, cfg) {
 const ROUTE = '/_dsh/dsh-ming-graph'
 
 // ---------- 委托账本（2026-11-15 14:3x 加） ----------
-// QQ 侧的 dsh_ask / ming_delegate 转过来的活一直只有文件、没有界面：
+// Discord 對話轉交的工作一直只有文件、没有界面：
 // 想看一条活跑到哪了，得自己 cat 三本 jsonl。这里把它读成一份快照给面板画。
 // 只读，不改账本——账本归 ACP 那套插件写。
 // 2026-11-15 15:2x：展示页要一点真东西，但不能再去读一遍记忆库（/neurons 那条要扫两侧，
-// 冷启动两秒起）。这里只「数目录 + 读最近几个文件的头」：几十毫秒，不建图、不读 QQ 观察库。
+// 冷启动两秒起）。这里只「数目录 + 读最近几个文件的头」：几十毫秒，不建图、不读 Discord 事件日誌。
 // 30 秒缓存——展示页反复进出不该反复读盘。
 let ovCache = null
 let ovCacheAt = 0
@@ -274,14 +254,22 @@ async function readAcp(wsHint) {
 // 这批函数过去住在这儿，导致「记忆的实现」落在「展示的插件」里。
 // 现在它们在 dsh-ming-memory/lib/model.mjs：memory 负责读、负责算，这个插件只负责把它画出来。
 // 同一天搬过去的还有 neuron.js（建图 + 统一节点模型），见 memory/lib/neuron.mjs。
-export const __internals = { build, readDsh, readQQ, readPeople, DEFAULTS, readAcp }
+export const __internals = { build, readDsh, readDiscord, readPeople, DEFAULTS, readAcp }
 
 // ---------- 服务 ----------
 export function apply(ctx, config) {
-  const cfg = { ...DEFAULTS, ...LOCAL, ...(config || {}) }
-  // 群名两处来源：本机 live/qq-groups.json（GROUP_NAMES）+ 配置里手填的 roomLabels。
-  // 以前在 build() 里现查两次，现在并进 cfg 一次——手填的优先，读盘那边只看 cfg.roomLabels。
+  const cfg = { ...DEFAULTS, ...loadLocalConfig(), ...(config || {}) }
+  const currentWorkspace = resolveWorkspace()
+  if (currentWorkspace) cfg.workspace = currentWorkspace
+  // Discord server/channel labels travel with each event; optional roomLabels may override the display name.
   cfg.roomLabels = { ...GROUP_NAMES, ...(cfg.roomLabels || {}) }
+  if (cfg.workspace) {
+    cfg.skillsCwd = cfg.skillsCwd || cfg.workspace
+    cfg.discordMemoryFile = cfg.discordMemoryFile || path.join(cfg.workspace, 'live', 'discord-memory.jsonl')
+    cfg.diaryDir = cfg.diaryDir || path.join(cfg.workspace, 'diary')
+    cfg.costPricesFile = cfg.costPricesFile || path.join(cfg.workspace, 'live', 'cost-prices.json')
+    cfg.costAutoFile = cfg.costAutoFile || path.join(cfg.workspace, 'live', 'cost-prices.auto.json')
+  }
   // 2026-11-08：skill 清单来自宿主自己的 skills 服务——跟模型看到的是同一份合并结果，
   // 插件包里自带的那几十个也在里面（自己扫 ~/.dsh/skills 只能看见一半）。
   // 服务没挂上就是 null，listSkills 会自动退回磁盘扫描，不影响开关本身。
@@ -306,8 +294,9 @@ export function apply(ctx, config) {
     if (building) return building
     building = (async () => {
       try {
-        const [dsh, qq, names] = await Promise.all([readDsh(cfg), readQQ(cfg), readPeople(cfg)])
-        cache = build(cfg, { dsh, qq, names })
+        const [dsh, discord] = await Promise.all([readDsh(cfg), readDiscord(cfg)])
+        const names = await readPeople(cfg, discord)
+        cache = build(cfg, { dsh, discord, names })
         cacheKey = key
         lastError = ''
       } catch (err) {
@@ -345,8 +334,12 @@ export function apply(ctx, config) {
     nBuilding = (async () => {
       try {
         const impl = await loadNeuronImpl()
-        const [dsh, qq, names] = await Promise.all([impl.readDshNotes(cfg.dshMemoryDir), impl.readQqObservations(cfg.qqObservations), readPeople(cfg)])
-        nCache = mergePeople(impl.buildNeuron({ dsh, qq, cfg, names }))
+        const [dsh, discord] = await Promise.all([
+          impl.readDshNotes(cfg.dshMemoryDir),
+          impl.readDiscordEvents(cfg.discordMemoryFile || (cfg.workspace ? path.join(cfg.workspace, 'live', 'discord-memory.jsonl') : '')),
+        ])
+        const names = await readPeople(cfg, discord)
+        nCache = mergePeople(impl.buildNeuron({ dsh, discord, cfg, names }))
         if (neuronLoadError) nCache.neuronLoadError = neuronLoadError
         // 自查用：每次算完把当前图落一份（覆盖写）。出了「图上还是旧样子」这种事，
         // 别再靠猜——读这份就知道面板拿到的是什么。

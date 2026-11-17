@@ -19,8 +19,8 @@ import os from 'node:os'
 export const MEMORY_DEFAULTS = {
   // DSH 侧归档记忆（index.json 可能滞后，notes 目录才是全的，所以扫目录）
   dshMemoryDir: path.join(os.homedir(), '.dsh', 'memory'),
-  // QQ-Agent 侧的观察库；留空 = 不读 QQ 侧
-  qqObservations: '',
+  // Discord 跨会话事件日志；由 dsh-ming-discord 维护并保留来源信息
+  discordMemoryFile: '',
   // 群友档案索引（号码 → 昵称；昵称会改，认人只认号）；留空 = 不读
   peopleIndex: '',
   // 星图中心那个人；留空 = 不特指谁
@@ -191,30 +191,68 @@ export async function readDsh(cfg) {
   return notes
 }
 
-export async function readQQ(cfg) {
-  if (!cfg.qqObservations) return []
+export async function readDiscord(cfg) {
+  const file = cfg.discordMemoryFile ||
+    (cfg.workspace ? path.join(cfg.workspace, 'live', 'discord-memory.jsonl') : '')
+  if (!file) return []
   let raw
-  try { raw = await fs.readFile(cfg.qqObservations, 'utf8') } catch { return [] }
+  try { raw = await fs.readFile(file, 'utf8') } catch { return [] }
+  const lines = raw.split(/\r?\n/).filter(Boolean)
   const out = []
-  for (const line of raw.split('\n')) {
-    if (!line.trim()) continue
-    try {
-      const o = JSON.parse(line)
-      if (o && o.t === 'obs') out.push(o)
-    } catch { /* 坏行跳过 */ }
+  // Keep the most recent events when the ledger becomes large; source ids stay
+  // attached so a detail view can still trace every event to its Discord room.
+  for (const line of lines.slice(-40000)) {
+    let event
+    try { event = JSON.parse(line) } catch { continue }
+    if (!event || !event.id || !event.text) continue
+    const isDm = event.conversationType === 'dm'
+    const room = isDm
+      ? 'private:' + String(event.channelId || '')
+      : 'discord:' + String(event.guildId || '') + ':' + String(event.channelId || '')
+    const roomLabel = isDm
+      ? 'Discord 私訊'
+      : [event.guildName || event.guildId || 'Discord', '#' + (event.channelName || event.channelId || 'unknown'),
+        event.threadId ? 'Thread ' + event.threadId : ''].filter(Boolean).join(' / ')
+    const authorId = event.role === 'assistant' ? '' : String(event.authorId || '')
+    out.push({
+      side: 'discord',
+      rid: String(event.id),
+      title: String(event.text).slice(0, 180),
+      claim: String(event.text),
+      body: String(event.text),
+      tags: [],
+      status: 'active',
+      source: 'discord-message:' + String(event.messageId || ''),
+      at: Date.parse(String(event.at || '')) || null,
+      subjectId: authorId,
+      subjectName: event.role === 'assistant' ? '' : String(event.authorName || ''),
+      type: String(event.role || 'user'),
+      kind: String(event.conversationType || ''),
+      scope: String(event.scope || (isDm ? 'private' : 'guild')),
+      chatKey: room,
+      room,
+      roomLabel,
+      guildId: String(event.guildId || ''),
+      guildName: String(event.guildName || ''),
+      channelId: String(event.channelId || ''),
+      channelName: String(event.channelName || ''),
+      threadId: String(event.threadId || ''),
+      authorId: String(event.authorId || ''),
+      authorName: String(event.authorName || ''),
+      messageId: String(event.messageId || ''),
+    })
   }
   return out
 }
 
-export async function readPeople(cfg) {
-  try {
-    const j = JSON.parse(await fs.readFile(cfg.peopleIndex, 'utf8'))
-    const map = new Map()
-    for (const [id, arr] of Object.entries(j.byId || {})) {
-      if (arr && arr[0] && arr[0].name) map.set(id, arr[0].name)
-    }
-    return map
-  } catch { return new Map() }
+export async function readPeople(_cfg, discordEvents = []) {
+  const people = new Map()
+  for (const event of discordEvents || []) {
+    const id = String(event.subjectId || '')
+    const name = String(event.subjectName || '')
+    if (id && name) people.set(id, name)
+  }
+  return people
 }
 
 // ---------- 算 ----------
@@ -236,18 +274,18 @@ export function dayOfValue(v) {
   return Number.isNaN(t) ? null : dayOf(t)
 }
 
-export function build(cfg, { dsh, qq, names }) {
+export function build(cfg, { dsh, discord, names }) {
   const now = Date.now()
 
-  // ---- QQ：人 + 房间 ----
+  // ---- Discord：人 + 房间 ----
   const people = new Map()
   const rooms = new Map()
-  for (const o of qq) {
+  for (const o of discord) {
     const sid = String(o.subjectId ?? '')
     if (!sid || sid === 'undefined' || sid === 'null') continue
     if (o.status && o.status !== 'active') continue
     const room = String(o.chatKey || (o.scope === 'global' ? 'global' : '?'))
-    const p = people.get(sid) || { id: sid, name: names.get(sid) || '', count: 0, rooms: new Map(), types: {}, lastAt: 0, claims: [] }
+    const p = people.get(sid) || { id: sid, name: o.subjectName || names.get(sid) || '', count: 0, rooms: new Map(), types: {}, lastAt: 0, claims: [] }
     p.count++
     p.rooms.set(room, (p.rooms.get(room) || 0) + 1)
     p.types[o.type || '?'] = (p.types[o.type || '?'] || 0) + 1
@@ -256,7 +294,7 @@ export function build(cfg, { dsh, qq, names }) {
     if (o.claim && p.claims.length < 4) p.claims.push(String(o.claim).slice(0, 160))
     people.set(sid, p)
 
-    const r = rooms.get(room) || { key: room, count: 0, people: new Set() }
+    const r = rooms.get(room) || { key: room, label: o.roomLabel || room, count: 0, people: new Set() }
     r.count++
     r.people.add(sid)
     rooms.set(room, r)
@@ -270,7 +308,7 @@ export function build(cfg, { dsh, qq, names }) {
       name: p.name || p.id,
       isOwner: p.id === String(cfg.ownerId),
       count: p.count,
-      rooms: [...p.rooms.entries()].map(([key, count]) => ({ key, label: ((cfg.roomLabels || {})[key] || key), count })).sort((a, b) => b.count - a.count),
+      rooms: [...p.rooms.entries()].map(([key, count]) => ({ key, label: ((cfg.roomLabels || {})[key] || rooms.get(key)?.label || key), count })).sort((a, b) => b.count - a.count),
       types: p.types,
       lastAt: p.lastAt,
       claims: p.claims,
@@ -279,25 +317,25 @@ export function build(cfg, { dsh, qq, names }) {
   const roomList = [...rooms.values()]
     .map((r) => ({
       key: r.key,
-      label: ((cfg.roomLabels || {})[r.key] || (r.key.startsWith('group:') ? '群 ' + r.key.slice(6) : r.key === 'global' ? '全局' : r.key.replace(/^private:/, ''))),
-      kind: r.key.startsWith('group:') ? 'group' : r.key === 'global' ? 'global' : 'private',
+      label: ((cfg.roomLabels || {})[r.key] || r.label || r.key),
+      kind: r.key.startsWith('discord:') ? 'channel' : r.key.startsWith('private:') ? 'private' : r.key === 'global' ? 'global' : 'other',
       count: r.count,
       people: r.people.size,
     }))
     .sort((a, b) => b.count - a.count)
 
-  // ---- 主题（QQ claim 与 DSH title/tags 分开算，别串味） ----
-  const qqDocs = qq.filter((o) => o.claim && (!o.status || o.status === 'active')).map((o) => String(o.claim))
-  const qqTopics = pickTerms(qqDocs, { minDf: 3, limit: cfg.maxTopics })
+  // ---- 主题（Discord claim 与 DSH title/tags 分开算，别串味） ----
+  const discordDocs = discord.filter((o) => o.claim && (!o.status || o.status === 'active')).map((o) => String(o.claim))
+  const discordTopics = pickTerms(discordDocs, { minDf: 3, limit: cfg.maxTopics })
   const dshDocs = dsh.filter((n) => n.status === 'active').map((n) => `${n.title} ${(n.tags || []).join(' ')}`)
   const dshTopics = pickTerms(dshDocs, { minDf: 2, maxDf: 0.5, limit: 30 })
 
   const topics = [
-    ...qqTopics.terms.map((t) => ({ ...t, source: 'qq', label: t.term })),
+    ...discordTopics.terms.map((t) => ({ ...t, source: 'discord', label: t.term })),
     ...dshTopics.terms.map((t) => ({ ...t, source: 'dsh', label: t.term })),
   ]
 
-  const qqEdges = coOccur(qqTopics.perDoc, qqTopics.terms, cfg.maxEdges).map((e) => ({ ...e, source: 'qq' }))
+  const discordEdges = coOccur(discordTopics.perDoc, discordTopics.terms, cfg.maxEdges).map((e) => ({ ...e, source: 'discord' }))
   const dshEdges = coOccur(dshTopics.perDoc, dshTopics.terms, Math.floor(cfg.maxEdges / 2)).map((e) => ({ ...e, source: 'dsh' }))
 
   // ---- DSH 的 tag 频次（结构化，比词频干净） ----
@@ -316,8 +354,8 @@ export function build(cfg, { dsh, qq, names }) {
 
   // ---- 时间线 ----
   const tl = new Map()
-  const bump = (day, k) => { if (!day) return; const r = tl.get(day) || { date: day, qq: 0, dsh: 0 }; r[k]++; tl.set(day, r) }
-  for (const o of qq) bump(dayOfValue(Number(o.at || o.createdAt || 0)), 'qq')
+  const bump = (day, k) => { if (!day) return; const r = tl.get(day) || { date: day, discord: 0, dsh: 0 }; r[k]++; tl.set(day, r) }
+  for (const o of discord) bump(dayOfValue(Number(o.at || o.createdAt || 0)), 'discord')
   for (const n of dsh) bump(dayOfValue(n.created), 'dsh')
   const timeline = [...tl.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-cfg.timelineDays)
 
@@ -328,14 +366,14 @@ export function build(cfg, { dsh, qq, names }) {
   return {
     generatedAt: now,
     sources: {
-      qq: { count: qq.length, active: qq.filter((o) => !o.status || o.status === 'active').length },
+      discord: { count: discord.length, active: discord.filter((o) => !o.status || o.status === 'active').length },
       dsh: { count: dsh.length, active: dsh.filter((n) => n.status === 'active').length },
     },
     center,
     people: peopleList,
     rooms: roomList,
     topics,
-    edges: [...qqEdges, ...dshEdges],
+    edges: [...discordEdges, ...dshEdges],
     tags,
     timeline,
     spokes,

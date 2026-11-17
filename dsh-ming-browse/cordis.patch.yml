@@ -3,7 +3,7 @@
       name: dsh-ming-browse
       config:
         enabled: true
-        workspacePath: '<PUT_YOUR_WORKSPACE>'
+        workspacePath: ''
         # 2026-10-23 浔改：自由窗口 = 每天 18:30–08:00，另加「节假日/双休日 13:50–18:15」。
         # 2026-10-25：额度多了个临时开关 live/browse-unlimited.json（她说「不限量」就全放开，
         #   默认每天早上 09:00 自己收）。dailyMax / minGapMinutes 仍是平时的底。
@@ -26,13 +26,9 @@
         holidaysFile: 'live/holidays.json'
         maxItems: 2
         maxShots: 2
-        serial: '127.0.0.1:7555'
-        # 在正在使用的 QQ 会话里叫醒，不另开会话（浔 2026-10-20 定的）。
-        targetMode: self
-        qqSessionPrefix: onebot-
+        serial: '127.0.0.1:16448'
         adbPath: 'D:\MuMuPlayer\nx_device\12.0\shell\adb.exe'
-        # 浔 2026-10-20 原话：除了 B站，其它社交平台不许点赞/评论/关注，但没说不让浏览。
-        # 所以这里是一份「社交平台名单」：在前台是这些 App 时，点赞/评论/关注这类写操作被拒；
+        # 社交平台名单：在前台是这些 App 时，点赞/评论/关注这类写操作会被拒；
         # 浏览、点开内容、别的 App（含游戏）不拦。
         socialApps:
           - com.xingin.xhs
@@ -43,7 +39,6 @@
           - com.zhihu.android
           - com.baidu.tieba
           - com.tencent.mm
-          - com.tencent.mobileqq
         socialWriteWords:
           - 点赞
           - 关注

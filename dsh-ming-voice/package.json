@@ -1,9 +1,9 @@
 {
   "name": "dsh-ming-voice",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
-  "description": "让我能出声：文字转语音，落成 mp3，交给 qq_send_voice 发出去。",
+  "description": "Discord 语音附件工具：将文字转成 MP3，并通过 Discord 适配器发送。",
   "main": "index.js",
   "exports": {
     ".": "./index.js"

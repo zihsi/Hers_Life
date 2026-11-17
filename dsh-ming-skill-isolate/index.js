@@ -22,6 +22,8 @@
  */
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises'
 import path from 'node:path'
+import os from 'node:os'
+import { readFileSync } from 'node:fs'
 
 export const name = 'ming-skill-isolate'
 export const inject = ['skills', 'tools']
@@ -30,8 +32,16 @@ export const inject = ['skills', 'tools']
 const SHADOW_RANK = 1
 const PROVIDER = 'ming-skill-isolate'
 
+function resolveWorkspace() {
+  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
+  try {
+    const data = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    if (typeof data.root === 'string' && data.root.trim()) return data.root
+  } catch {}
+  return path.join(os.homedir(), 'hers-life-workspace')
+}
 const DEFAULTS = {
-  root: '<workspace>',
+  root: resolveWorkspace(),
   stateFile: '',
 }
 

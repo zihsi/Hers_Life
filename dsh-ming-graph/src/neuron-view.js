@@ -414,7 +414,7 @@
     const canvas = document.createElement('canvas')
     stage.appendChild(canvas)
     const legend = document.createElement('div'); legend.className = 'nv-legend'
-    legend.innerHTML = '<span><i style="background:#14b8a6"></i>DSH 记忆</span><span><i style="background:#e0803a"></i>QQ 观察</span><span><i style="background:#5b8def"></i>项目</span><span><i style="background:#e05a8a"></i>人</span>'
+    legend.innerHTML = '<span><i style="background:#14b8a6"></i>DSH 记忆</span><span><i style="background:#e0803a"></i>Discord 對話</span><span><i style="background:#5b8def"></i>项目</span><span><i style="background:#e05a8a"></i>人</span>'
     stage.appendChild(legend)
     const side = document.createElement('aside'); side.className = 'nv-side'
     body.appendChild(stage); body.appendChild(side)
@@ -450,7 +450,7 @@
     // 颜色（从主题里读一次，canvas 用不了 CSS 变量）
     const cs = getComputedStyle(document.body)
     const colDsh = opts.colorDsh || '#14b8a6'
-    const colQq = opts.colorQq || '#e0803a'
+    const colDiscord = opts.colorQq || '#e0803a'
     const colProj = opts.colorProj || '#5b8def'
     const colPerson = opts.colorPerson || '#e05a8a'
     const colDim = cs.getPropertyValue('--dsw-alias-label-tertiary') || '#888'
@@ -470,10 +470,10 @@
     }
     const SPR = 64
     const spriteDsh = sprite(colDsh, SPR)
-    const spriteQq = sprite(colQq, SPR)
+    const spriteDiscord = sprite(colDiscord, SPR)
     const spriteProj = sprite(colProj, SPR)
     const spritePerson = sprite(colPerson, SPR)
-    // 2026-11-07：日记（星图时间环用）自己的灰，不然会落进 QQ 那档橙色
+    // 2026-11-07：日记（星图时间环用）自己的灰，不然会落进 Discord 事件的橙色
     const colDiary = opts.colorDiary || '#c9cdd4'
     const spriteDiary = sprite(colDiary, SPR)
 
@@ -592,7 +592,7 @@
         const hotBoost = isBig ? 0 : Math.min(1.6, (n.hot || 0) * 0.9)
         const base = isBig ? 3.2 + Math.min(3, Math.log((n.count || 1) + 1)) : 1.55 + hotBoost
         const rad = Math.max(0.9, base * q.s)
-        const sp = isPerson ? spritePerson : n.kind === 'diary' ? spriteDiary : n.side === 'dsh' ? spriteDsh : n.side === 'qq' ? spriteQq : spriteProj
+        const sp = isPerson ? spritePerson : n.kind === 'diary' ? spriteDiary : n.side === 'dsh' ? spriteDsh : n.side === 'discord' ? spriteDiscord : spriteProj
         const glow = rad * (isFocus ? 7 : isBig ? 4.2 : 3.2)
         // 越新越亮（2026-11-07，借自星汐）：老记忆只是变暗，不会消失。
         // at 是毫秒时间戳；项目和人是聚合节点（at 为 null），不参与衰减。
@@ -608,7 +608,7 @@
         ctx.globalAlpha = (isFocus ? 0.95 : isNear ? 0.85 : isBig ? 0.7 : 0.5) * fresh
         ctx.drawImage(sp, q.x - glow / 2, q.y - glow / 2, glow, glow)
         ctx.globalAlpha = (isFocus ? 1 : isNear ? 1 : 0.9) * fresh
-        ctx.fillStyle = isPerson ? colPerson : isProj ? colProj : n.kind === 'diary' ? colDiary : n.side === 'dsh' ? colDsh : colQq
+        ctx.fillStyle = isPerson ? colPerson : isProj ? colProj : n.kind === 'diary' ? colDiary : n.side === 'dsh' ? colDsh : colDiscord
         ctx.beginPath(); ctx.arc(q.x, q.y, rad, 0, Math.PI * 2); ctx.fill()
       }
       ctx.globalAlpha = 1
@@ -881,7 +881,7 @@
       list.appendChild(h)
 
       const kindRow = document.createElement('div'); kindRow.className = 'nv-kv'
-      kindRow.innerHTML = '<span>来源</span><b>' + (n.kind === 'project' ? '项目（聚合点）' : n.kind === 'person' ? '人' : n.side === 'dsh' ? 'DSH 归档记忆' : 'QQ 观察') + '</b>'
+      kindRow.innerHTML = '<span>来源</span><b>' + (n.kind === 'project' ? '项目（聚合点）' : n.kind === 'person' ? '人' : n.side === 'dsh' ? 'DSH 归档记忆' : 'Discord 對話') + '</b>'
       list.appendChild(kindRow)
       if (n.kind === 'project') {
         const r = document.createElement('div'); r.className = 'nv-kv'
@@ -993,7 +993,7 @@
         const on = !hl || hl === n.id
         ctx.save()
         ctx.globalAlpha = (on ? 1 : 0.28) * Math.min(1, t * 2.2)
-        ctx.fillStyle = n.kind === 'person' ? colPerson : n.kind === 'project' ? colProj : n.side === 'dsh' ? colDsh : colQq
+        ctx.fillStyle = n.kind === 'person' ? colPerson : n.kind === 'project' ? colProj : n.side === 'dsh' ? colDsh : colDiscord
         ctx.beginPath(); ctx.arc(it.dx, it.dy, (big ? 5.2 : 3.2) * (0.4 + 0.6 * t), 0, Math.PI * 2); ctx.fill()
         ctx.restore()
       }
@@ -1079,7 +1079,7 @@
       side.appendChild(ex)
 
       const mk = (k, v) => { const d = document.createElement('div'); d.className = 'nv-kv'; d.innerHTML = `<span>${k}</span><b>${v}</b>`; side.appendChild(d) }
-      mk('来源', n.kind === 'project' ? '项目（聚合点）' : n.side === 'dsh' ? 'DSH 归档记忆' : 'QQ 观察')
+      mk('来源', n.kind === 'project' ? '项目（聚合点）' : n.side === 'dsh' ? 'DSH 归档记忆' : 'Discord 對話')
       if (n.kind === 'memory') {
         mk('归类', n.projectLabel || n.project || '—')
         mk('时间', fmtDate(n.at))

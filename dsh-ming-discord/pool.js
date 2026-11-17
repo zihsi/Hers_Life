@@ -53,6 +53,8 @@ export class DiscordSessionPool {
         guildName: String(target.guildName ?? ''),
         channelId: String(target.channelId),
         channelName: String(target.channelName ?? ''),
+        userId: String(target.userId ?? ''),
+        userName: String(target.userName ?? ''),
         threadId: target.thread ? String(target.channelId) : '',
       },
     }

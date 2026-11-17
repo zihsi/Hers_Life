@@ -7,6 +7,7 @@
  */
 
 import { readFile, writeFile, mkdir, readdir, unlink } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -20,6 +21,15 @@ import { createWebpick } from './lib/webpick.mjs'
 
 export const name = 'ming-mousepet'
 export const inject = ['tools', 'attachments', 'webServer']
+
+function resolveSharedWorkspace() {
+  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
+  try {
+    const data = JSON.parse(readFileSync(join(homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    if (typeof data.root === 'string' && data.root.trim()) return data.root
+  } catch { /* central workspace is created by dsh-ming-discord on first run */ }
+  return ''
+}
 
 const PLUGIN_DIR = dirname(fileURLToPath(import.meta.url))
 const PREVIEW_DIR = join(PLUGIN_DIR, 'assets', 'previews')
@@ -1132,9 +1142,10 @@ export async function apply(ctx, rawConfig = {}) {
   // 2026-11-17：浏览器「交给鱼看这段」并进桌宠。
   // 原来单独起一个 47323 的服务；现在挂到本插件的 webServer 上，少一个常驻进程。
   // 落盘目录默认 <工作区>/live/webpick；没有工作区就落到 ~/.dsh/ming-mousepet/webpick。
+  const sharedWorkspace = resolveSharedWorkspace()
   const webpickDir = String(rawConfig?.webpickDir || current?.webpickDir || '')
-    || (process.env.MING_WORKSPACE
-      ? join(process.env.MING_WORKSPACE, 'live', 'webpick')
+    || (sharedWorkspace
+      ? join(sharedWorkspace, 'live', 'webpick')
       : join(homedir(), '.dsh', 'ming-mousepet', 'webpick'))
   const webpick = createWebpick({
     dir: webpickDir,

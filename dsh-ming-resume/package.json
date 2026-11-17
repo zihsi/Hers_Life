@@ -1,9 +1,9 @@
 {
   "name": "dsh-ming-resume",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
-  "description": "插话之后记得回去：检测 QQ 通道的 steer 插话，在下一步追加一条「先答她、再回到原任务」的指令。",
+  "description": "接续提示：检测 Discord 通道的 steer 插话，在下一步提醒先答最新消息、再回到原任务。",
   "main": "index.js",
   "exports": {
     ".": "./index.js",

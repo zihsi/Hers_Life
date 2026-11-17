@@ -1,6 +1,6 @@
 {
   "name": "dsh-ming-skill-isolate",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "按工作区隔离 skill：给指定工作区加一层同名遮罩，把这个目录用不上的 skill 从模型视野里关掉，不删文件、不改别人的 SKILL.md。",

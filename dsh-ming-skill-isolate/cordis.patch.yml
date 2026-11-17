@@ -2,4 +2,4 @@
     - id: ming-skill-isolate
       name: 'dsh-ming-skill-isolate'
       config:
-        root: '<PUT_YOUR_WORKSPACE>'
+        root: ''

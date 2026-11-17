@@ -1,9 +1,9 @@
 {
   "name": "dsh-ming-browse",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
-  "description": "溟的谷期：这个工作区闲够久时，自己在刷手机会话里醒一醒，只读地看看手机（点按被硬拦）",
+  "description": "自由活动：在独立 DSH 会话中执行后台浏览任务；Owner 控制通过 Discord 私讯完成，摘要回报 Discord Owner。",
   "main": "index.js",
   "files": [
     "index.js",

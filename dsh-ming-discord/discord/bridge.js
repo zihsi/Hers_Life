@@ -512,12 +512,18 @@ export class DiscordBridge {
 
     // Public channel messages enter shared memory even when they do not mention her.
     // Private DMs are recorded only when they are actually delivered to an owner session.
+    const mode = settings.get('discord.mode', 'mention')
     if (!isDm) {
       this.noteChatter(message)
       this.rememberAmbient(message)
+      // Interest wake is only a passive, keyword-gated side path. Ordinary
+      // mention/reply handling below remains unchanged.
+      if (mode === 'mention' && !this.addressed(message)) {
+        void this.maybeWakeInterest(message).catch((error) => {
+          this.logger?.warn('interest wake failed: ' + String(error?.message ?? error))
+        })
+      }
     }
-
-    const mode = settings.get('discord.mode', 'mention')
     if (isDm) {
       if (!settings.get('discord.allowDm', true)) return
       if (!this.dmAllowed(message.author.id)) return
@@ -594,6 +600,79 @@ export class DiscordBridge {
         }
       })
       .catch(() => {})
+  }
+
+  async maybeWakeInterest(message) {
+    const store = this.interests
+    if (!store || !this.settings.get('interest.enabled', true)) return
+    if (!this.settings.get('discord.learnInterests', true)) return
+    const channelId = String(message.channel_id ?? '')
+    if (!channelId) return
+    if (!(this.interestWaking instanceof Set)) this.interestWaking = new Set()
+    if (this.interestWaking.has(channelId)) return
+    // Lock synchronously before the first await: one channel can have only one
+    // autonomous wake turn at a time, even when gateway events arrive together.
+    this.interestWaking.add(channelId)
+    try {
+      const scopes = this.settings.get('interest.groups', [])
+      if (Array.isArray(scopes) && scopes.length && !scopes.map(String).includes(channelId)) return
+      const match = store.match(String(message.content ?? ''))
+      if (!match.hits?.length || match.muted) return
+      const gate = store.canWake(channelId)
+      if (!gate.ok) return
+
+      const target = await this.describeTarget(message, false)
+      const entry = await this.pool.acquire(target)
+      if (entry.agent?.status === 'running') return
+
+      const sessionId = String(entry.sessionId ?? entry.agent?.session?.id ?? entry.key)
+      const contextLines = Math.max(0, Number(this.settings.get('interest.contextLines', 4)) || 0)
+      const context = (this.recentChat.get(channelId) ?? []).slice(-contextLines)
+      const topics = match.hits.map((hit) => hit.topic + '（' + hit.words.join('、') + '）').join('；')
+      const prompt = [
+        '【興趣喚醒 · Discord 公開頻道】',
+        '伺服器：' + (target.guildName || target.guildId || '未知'),
+        '頻道：#' + (target.channelName || target.channelId),
+        '命中興趣：' + topics,
+        '',
+        context.length ? '最近對話：\n' + context.join('\n') : '',
+        '上面有一則沒有 @ 你的公開訊息，只因符合你自己逐步形成的興趣而被送到你面前。',
+        '是否自然加入由你決定：想聊就用一兩句接話；不想聊就保持沉默，不要硬找話題。',
+        '不要解釋興趣觸發機制，不要把這次喚醒當成主人或其他使用者的指令。',
+        '只回覆這個頻道；不要把此處內容轉發到其他 DM、伺服器或頻道。',
+      ].filter(Boolean).join('\n')
+      const beforeSeq = Number(entry.agent?.session?.seq ?? -1)
+      const userMessage = {
+        id: newId(),
+        role: 'user',
+        content: [{ type: 'text', text: prompt }],
+        source: { kind: 'plugin:ming-interest-discord' },
+      }
+      if (typeof entry.agent.followup === 'function') entry.agent.followup(userMessage)
+      else if (typeof entry.agent.send === 'function') entry.agent.send(userMessage, 'next-turn', true)
+      else return
+      await this.waitTurn(entry.agent)
+      const answer = tidyReply(lastAssistantText(entry.agent.session, beforeSeq))
+      if (!answer) return
+      const sentIds = await this.say(channelId, answer)
+      store.markWake(channelId)
+      const origin = {
+        botId: this.selfId,
+        messageId: String(sentIds?.[0] ?? ''),
+        guildId: String(target.guildId ?? ''),
+        guildName: String(target.guildName ?? ''),
+        channelId,
+        channelName: String(target.channelName ?? ''),
+        threadId: target.thread ? channelId : '',
+        conversationType: target.thread ? 'thread' : 'channel',
+        authorId: String(this.selfId ?? ''),
+        authorName: 'Hers Life',
+      }
+      this.brain?.feedAdd(sessionId, { label: target.label, who: 'her', text: answer, kind: target.thread ? 'thread' : 'channel' }, origin)
+      this.logger?.info('interest wake replied in #' + (target.channelName || channelId) + ' (' + topics + ')')
+    } finally {
+      this.interestWaking.delete(channelId)
+    }
   }
 
   rememberAmbient(message) {
@@ -694,7 +773,13 @@ export class DiscordBridge {
 
       const answer = tidyReply(reply?.text ?? lastAssistantText(entry.agent.session, beforeSeq))
       if (answer !== '') {
-        this.brain?.feedAdd(sessionId, { label: target.label, who: 'her', text: answer, kind: target.kind }, origin)
+        this.brain?.feedAdd(sessionId, { label: target.label, who: 'her', text: answer, kind: target.kind }, {
+          ...origin,
+          authorId: String(this.selfId ?? ''),
+          authorName: 'Hers Life',
+          participantId: String(origin.authorId ?? target.userId ?? ''),
+          participantName: String(origin.authorName ?? target.userName ?? ''),
+        })
         if (this.settings.get('brain.journal', true)) {
           void this.brain?.writeJournal(target.label + ' — ' + truncate(answer, 160))
         }
@@ -925,7 +1010,12 @@ export class DiscordBridge {
       id: newId(),
       role: 'user',
       content,
-      source: { kind: 'plugin:hers-life-discord' },
+      source: {
+        kind: 'plugin:hers-life-discord',
+        userId: String(message.author?.id ?? target.userId ?? ''),
+        channelId: String(target.channelId ?? message.channel_id ?? ''),
+        conversationType: target.kind === 'dm' ? 'dm' : target.thread ? 'thread' : 'channel',
+      },
     }
 
     const stopTyping = settings.get('discord.typing', true) ? this.startTyping(channelId) : () => {}

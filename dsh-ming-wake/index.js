@@ -15,6 +15,8 @@
 import { readFile, writeFile, appendFile, mkdir, rename, unlink } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
+import os from 'node:os'
+import { readFileSync } from 'node:fs'
 
 export const name = 'ming-wake'
 
@@ -23,7 +25,15 @@ export const name = 'ming-wake'
 // 这个常量实际是 'C:dsh工作区'（19 字符）——一个不存在的路径。
 // 2026-11-08 安菲（卡米安菲家的工程师）把它单独 eval 了一遍抓出来的；
 // 三个兄弟包（voice / browse / skill-isolate）写的都是双反斜杠，只有这里漏了。
-const DEFAULT_ROOT = '<workspace>'
+function resolveWorkspace() {
+  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
+  try {
+    const data = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    if (typeof data.root === 'string' && data.root.trim()) return data.root
+  } catch {}
+  return path.join(os.homedir(), 'hers-life-workspace')
+}
+const DEFAULT_ROOT = resolveWorkspace()
 const TICK_MS = 15_000
 
 function norm(cfg) {

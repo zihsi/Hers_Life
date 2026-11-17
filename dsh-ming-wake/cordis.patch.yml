@@ -2,4 +2,4 @@
     - id: ming-wake
       name: 'dsh-ming-wake'
       config:
-        root: '<workspace>'
+        root: ''

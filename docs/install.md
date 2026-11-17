@@ -8,9 +8,9 @@
 | 项 | 本机实测值 | 说明 |
 |---|---|---|
 | Windows | 10.0.26100.8457 | 只有这一个版本验过 |
-| Node | v24.21.0 | `check.mjs` 用 ESM + `spawnSync`，Node 18+ 大概率可用，但**没逐个版本验** |
+| Node | v24.21.0（Discord 适配器要求 Node 22+） | 使用 ESM、原生 WebSocket 与现代 Node API |
 | DSH | 0.2.2-rc.1 | 插件靠 Cordis 的 `inject` / `tools` / `agents`；低版本不一定有 |
-| AstrBot | 4.29.4 | 只有 QQ 那半边需要；不装也能跑记忆与 UI |
+| Discord Bot | Bot Token + Message Content Intent | 由 `dsh-ming-discord` 统一连接；无需额外消息桥 |
 
 ## 2. 安装方式
 
@@ -20,9 +20,10 @@
 // ~/.dsh/profiles/web/package.json 里
 {
   "dependencies": {
-    "dsh-ming-memory": "link:C:/dsh/dsh-ming-memory",
-    "dsh-ming-core-memory": "link:C:/dsh/dsh-ming-core-memory",
-    "dsh-ming-browse": "link:C:/dsh/dsh-ming-browse"
+    "dsh-ming-discord": "link:C:/dsh/Hers_Life/dsh-ming-discord",
+    "dsh-ming-memory": "link:C:/dsh/Hers_Life/dsh-ming-memory",
+    "dsh-ming-core-memory": "link:C:/dsh/Hers_Life/dsh-ming-core-memory",
+    "dsh-ming-browse": "link:C:/dsh/Hers_Life/dsh-ming-browse"
   }
 }
 ```
@@ -38,15 +39,15 @@ Windows 路径用正斜杠。`link:` 指向的目录必须是**运行目录**（
 | 数据工作区（`MING_WORKSPACE`） | 人设、日记、`live/`、索引 | `C:\dsh\hers_workplace` |
 | 宿主配置目录 | profile 的 `cordis.patch.yml`、插件 config | `C:\Users\<你>\.dsh\profiles\web` |
 
-`MING_ROOT` 与 `MING_WORKSPACE` **不是一回事**：混淆的结果是构建去读数据目录、或者插件去数据目录找源码。
+`MING_ROOT` 与数据工作区**不是一回事**：前者是代码目录，后者由 Discord 设置中心统一指定。`MING_WORKSPACE` 只保留为高级环境变量覆盖。
 
 ## 4. 递进组合（别一次全装）
 
-1. **最小可用**：`dsh-ming-core-memory` + `dsh-ming-memory`。给一个带 `persona/`、`diary/` 的工作区就能开场。
+1. **最小可用**：`dsh-ming-discord` + `dsh-ming-core-memory` + `dsh-ming-memory`。Discord 连接、Owner、工作区与人设路径都在统一设置页完成。
 2. **加 UI**：`dsh-ming-graph`（关系图）→ 需要先构建生成物：`node dsh-ming-graph/build.mjs`。
 3. **加自己玩**：`dsh-ming-browse`（要 `workspacePath` 指向数据工作区）。
 4. **加声音/桌宠**：`dsh-ming-voice`（要 ffplay）、`dsh-ming-mousepet`（要 Windows 桌面）。
-5. **加 QQ**：AstrBot + E 的消息桥。这一步最重，前四步都能独立跑。
+5. **连接 Discord**：在 Hers Life 设置页贴入 Bot Token、填写 Owner Discord ID，并启用 Bot。
 
 ## 5. 素材
 
@@ -62,15 +63,15 @@ Windows 路径用正斜杠。`link:` 指向的目录必须是**运行目录**（
 
 | 组件 | 用途 | 缺了会怎样 |
 |---|---|---|
-| 嵌入服务（`EMB_ENDPOINT`，默认 `127.0.0.1:18091`） | 语义检索 | `rag` 三层报 `service: unavailable`，关键词层照常 |
+| 嵌入服务（`EMB_ENDPOINT`，默认 `127.0.0.1:18091`） | 语义检索 | `rag` 两层（doc / web）报 `service: unavailable`，关键词层照常 |
 | `ffplay` | 语音试听 | 只有试听不可用，合成不受影响；用 `MING_FFPLAY` 指定路径 |
 | B 站凭证（`~/.dsh/bili-duty/bili_credential.json`） | B 站工具 | 只读接口仍可用，需要登录的返回明确错误 |
-| AstrBot | QQ | 不装就没有 QQ 那半边，网页这边完全不受影响 |
+| Discord Bot Token | Discord 聊天入口 | 未配置时适配器保持 `needs-token`，本地记忆与其它 DSH 插件仍可单独使用 |
 
 ## 7. 启动后怎么算成功
 
 - DSH 里能看到 `【溟 · 开场记忆】` 那段字 → memory 插件挂上了。
-- 面板上有记忆关系图图标、点开有内容 → graph 挂上了。
+- 面板上有记忆关系图图标、点开有内容 → graph 挂上了。设置页显示 Discord `connected` → Bot Gateway 已连接。
 - 右侧栏看到「自己玩」状态 → browse 挂上了。
 - 启动日志里没有 `Traceback` / `cannot get property ... without inject`。
 

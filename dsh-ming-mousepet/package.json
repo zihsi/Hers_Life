@@ -1,6 +1,6 @@
 {
   "name": "dsh-ming-mousepet",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "桌面上陪着她：看得见（截图/连拍）、会说一句话（气泡，不抢焦点）、也能动手（UIA/窗口消息优先，物理输入是显式回退）。",
   "main": "index.js",

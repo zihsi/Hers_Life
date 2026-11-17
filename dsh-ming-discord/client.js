@@ -10,10 +10,10 @@ window.__ModuleLoader__.load({
       enabled: false, workspace: '', ownerIds: [],
       personaFiles: ['persona/人设.md', 'persona/名字.md', 'persona/约定.md'],
       diaryDir: 'diary', diaryCount: 3, diaryChars: 8000, maxChars: 12000,
-      discord: { enabled: false, mode: 'mention', allowDm: true, dmPolicy: 'owner', guildIds: [], channelIds: [], typing: true, streamEdits: true, replyToMessage: true, reactions: true, shareImages: true, chunkLimit: 1900, maxAttachmentMb: 24, progressInDm: true, showTools: false },
+      discord: { enabled: false, mode: 'mention', allowDm: true, dmPolicy: 'owner', guildIds: [], channelIds: [], typing: true, streamEdits: true, replyToMessage: true, reactions: true, shareImages: true, chunkLimit: 1900, maxAttachmentMb: 24, progressInDm: true, showTools: false, learnInterests: true },
       memory: { enabled: true, shareAcrossChannels: true, shareAcrossGuilds: true, sharePrivateToOwner: true, allowPrivateContextInGuild: true, maxRecall: 6, maxAgeDays: 365 },
       voice: { enabled: true, ffmpeg: 'ffmpeg', heartbeat: true },
-      interest: { enabled: true, minChars: 6, contextLines: 4 },
+      interest: { enabled: true, minChars: 6, contextLines: 4, minGapMinutes: 20, maxPerHour: 3, quietHours: '01:00-08:00', channelGapMinutes: 45 },
     }
 
     function patchObject(obj, path, value) {
@@ -38,6 +38,9 @@ window.__ModuleLoader__.load({
       const [status, setStatus] = React.useState({ state: '讀取中' })
       const [events, setEvents] = React.useState([])
       const [sessions, setSessions] = React.useState([])
+      const [interestTopicsText, setInterestTopicsText] = React.useState('')
+      const [interestMuteText, setInterestMuteText] = React.useState('')
+      const [interestState, setInterestState] = React.useState(null)
       const [busy, setBusy] = React.useState(false)
       const [note, setNote] = React.useState('')
       const [error, setError] = React.useState('')
@@ -60,6 +63,21 @@ window.__ModuleLoader__.load({
           setEvents(d.events || [])
           setSessions(d.sessions || [])
         } catch (e) { setError(String(e.message || e)) }
+        try {
+          const [configResponse, stateResponse] = await Promise.all([
+            fetch(API + '/interest/config', { cache: 'no-store' }),
+            fetch(API + '/interest/state', { cache: 'no-store' }),
+          ])
+          const configData = await configResponse.json()
+          const stateData = await stateResponse.json()
+          if (configResponse.ok && configData.ok) {
+            const rows = Array.isArray(configData.config?.topics) ? configData.config.topics : []
+            setInterestTopicsText(rows.map((topic) => String(topic.name || '') + ': ' + (topic.keywords || []).join(', ')).join('\n'))
+            setInterestMuteText((configData.config?.mute || []).join(', '))
+          }
+          if (stateResponse.ok && stateData.ok) setInterestState(stateData)
+        } catch {}
+
         try {
           const r = await fetch(IDENTITY_API, { cache: 'no-store' })
           const d = await r.json()
@@ -125,6 +143,42 @@ window.__ModuleLoader__.load({
           const d = await r.json()
           if (!r.ok || !d.ok) throw new Error(d.error || '人格設定儲存失敗')
           setNote('身份與稱呼已儲存；記憶開場設定可能需要重啟 DSH 才會完全刷新。')
+        } catch (e) { setError(String(e.message || e)) }
+        setBusy(false)
+      }
+      const saveInterestConfig = async () => {
+        setBusy(true); setError(''); setNote('')
+        try {
+          const topics = interestTopicsText.split(/\r?\n/).map((line) => {
+            const split = line.indexOf(':')
+            if (split < 0) return null
+            const name = line.slice(0, split).trim()
+            const keywords = line.slice(split + 1).split(/[,，]/).map((word) => word.trim().toLowerCase()).filter(Boolean)
+            return name && keywords.length ? { name, keywords } : null
+          }).filter(Boolean)
+          const mute = interestMuteText.split(/[,，\r?\n]/).map((word) => word.trim().toLowerCase()).filter(Boolean)
+          const response = await fetch(API + '/interest/config', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ config: { topics, mute } }),
+          })
+          const data = await response.json()
+          if (!response.ok || !data.ok) throw new Error(data.error || '興趣設定儲存失敗')
+          setNote('興趣主題已保存；公開頻道的下一則符合條件訊息會使用新設定。')
+        } catch (e) { setError(String(e.message || e)) }
+        setBusy(false)
+      }
+      const toggleInterestPause = async () => {
+        setBusy(true); setError(''); setNote('')
+        try {
+          const off = !interestState?.state?.off
+          const response = await fetch(API + '/interest/toggle', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ off }),
+          })
+          const data = await response.json()
+          if (!response.ok || !data.ok) throw new Error(data.error || '興趣暫停狀態更新失敗')
+          setInterestState((old) => Object.assign({}, old, { state: Object.assign({}, old?.state, { off: data.off }) }))
+          setNote(data.off ? '興趣喚醒已暫停。' : '興趣喚醒已恢復。')
         } catch (e) { setError(String(e.message || e)) }
         setBusy(false)
       }
@@ -225,20 +279,36 @@ window.__ModuleLoader__.load({
           h(React.Fragment, null,
             check('啟用跨會話記憶召回', 'memory.enabled', '關閉後只保留各 session 自己的歷史。'),
             check('同一伺服器不同頻道互相記得', 'memory.shareAcrossChannels', '例如 #頻道一談過的主題可在 #頻道二被想起。'),
-            check('不同伺服器之間也可互相記得', 'memory.shareAcrossGuilds', '公開伺服器訊息可跨 Guild 召回。'),
-            check('Owner 私訊可在 Owner 的其他私訊會話中共享', 'memory.sharePrivateToOwner', '不會分享給其他使用者的私訊。'),
-            check('允許把 Owner 私訊內容帶進公開伺服器會話', 'memory.allowPrivateContextInGuild', '高度敏感：開啟後私人內容可能影響公開回答；預設關閉。', true),
+            check('不同伺服器之間也可互相記得', 'memory.shareAcrossGuilds', '公開伺服器訊息可跨伺服器召回。'),
+            check('Owner 私訊可在 Owner 的其他私訊會話中共享', 'memory.sharePrivateToOwner', '不會讀取其他使用者的私訊。'),
+            check('允許 Owner 本人發言時使用私訊作為背景', 'memory.allowPrivateContextInGuild', '只在 Owner 自己於公開頻道發言時召回；不向其他成員透露私訊原文、措辭、時間或來源。', true),
             h('div', { className: 'hl-grid' },
               input('每輪最多召回幾條事件', 'memory.maxRecall', '', 'number'),
               input('記憶最長保留天數', 'memory.maxAgeDays', '', 'number')))),
-        card('興趣與語音', '群聊公開內容可以被動記錄，只有觸發條件符合才會喚醒回應；語音使用 Discord 語音連線。',
+        card('興趣與語音', '公開頻道訊息先被動記錄；只有命中興趣主題並通過冷卻／靜默限制，才可能主動接話。AI 可以選擇不加入。',
           h(React.Fragment, null,
-            check('啟用興趣學習', 'interest.enabled', '只累積興趣線索，不代表每句都要回覆。'),
+            check('啟用興趣學習與主動喚醒', 'interest.enabled', '關閉後不再學習或主動插話；正常 @ 回覆不受影響。'),
             check('啟用 Discord 語音', 'voice.enabled', '語音需要 FFmpeg 與目前可用的 DAVE 原生模組。'),
             h('div', { className: 'hl-grid' },
               input('FFmpeg 執行檔路徑', 'voice.ffmpeg', '可填 ffmpeg 或絕對路徑。'),
-              input('興趣最低字數', 'interest.minChars', '', 'number'),
-              input('興趣上下文行數', 'interest.contextLines', '', 'number')))),
+              input('最低訊息字數', 'interest.minChars', '', 'number'),
+              input('上下文行數', 'interest.contextLines', '', 'number'),
+              input('全域冷卻（分鐘）', 'interest.minGapMinutes', '', 'number'),
+              input('每小時最多喚醒次數', 'interest.maxPerHour', '', 'number'),
+              input('頻道冷卻（分鐘）', 'interest.channelGapMinutes', '', 'number'),
+              input('靜默時段（本機時間）', 'interest.quietHours', '例如 01:00-08:00；留空表示不限制。')),
+            h('label', { className: 'hl-field' },
+              h('span', { className: 'hl-label' }, '關注主題（每行：主題名稱: 關鍵詞1, 關鍵詞2）'),
+              h('textarea', { className: 'hl-input hl-area', rows: 5, value: interestTopicsText, onChange: (e) => setInterestTopicsText(e.target.value), placeholder: 'AI 模型: DeepSeek, Gemini, GPT\n遊戲: 終末地, 鳴潮' }),
+              h('small', { className: 'hl-hint' }, '重複出現三次以上的詞會自動進入已學習清單；你也可以在這裡手動整理主題。')),
+            h('label', { className: 'hl-field' },
+              h('span', { className: 'hl-label' }, '忽略詞（逗號或換行分隔）'),
+              h('textarea', { className: 'hl-input hl-area', rows: 2, value: interestMuteText, onChange: (e) => setInterestMuteText(e.target.value) })),
+            h('div', { className: 'hl-actions' },
+              button('保存興趣主題', saveInterestConfig, false, busy),
+              button(interestState?.state?.off ? '恢復興趣喚醒' : '暫停興趣喚醒', toggleInterestPause, false, busy),
+              h('span', { className: 'hl-muted' }, '最近一小時喚醒：' + (interestState?.state?.wakesLastHour ?? 0) + ' / ' + (interestState?.state?.maxPerHour ?? cfg.interest.maxPerHour ?? 3)))))),
+
         card('即時診斷與近期事件', '事件列表可協助確認 Bot 是否收到伺服器、頻道、Thread 的 Gateway 事件。',
           h(React.Fragment, null,
             h('div', { className: 'hl-actions' }, button('重新讀取', load, false, busy), h('span', { className: 'hl-muted' }, '已建立會話索引：' + sessions.length)),

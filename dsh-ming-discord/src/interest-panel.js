@@ -9,7 +9,7 @@
  * 原来只有一行小标题，下面三块没名字的卡贴在一起。现在：页头说清这页是什么，
  * 下面三块各有名字（频率 / 为什么不叫 / 盯着的话题）。
  */
-const INTEREST_API = '/_dsh/dsh-ming-interest'
+const INTEREST_API = '/_dsh/dsh-ming-discord/interest'
 
 function fmtAgo(ms) {
   if (!ms || ms < 0) return '—'
@@ -40,8 +40,9 @@ function InterestPanel() {
   useEffect(() => { load() }, [load])
 
   const toggle = useCallback(() => {
+    const nextOff = !off
     setSwitching(true)
-    fetch(INTEREST_API + '/toggle', { method: 'POST' })
+    fetch(INTEREST_API + '/toggle', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ off: nextOff }) })
       .then((r) => r.json())
       .then(() => load())
       .catch((e) => setErr(String((e && e.message) || e)))
@@ -49,7 +50,9 @@ function InterestPanel() {
   }, [load])
 
   const st = (data && data.state) || {}
-  const topics = (data && data.topics) || []
+  const topics = (data && data.config && data.config.topics) || []
+  const learned = (data && data.learned) || []
+  const mute = (data && data.config && data.config.mute) || []
   const quiet = st.quiet || st.skip
   const off = !!st.off
   const tone = off ? 'danger' : quiet ? 'warn' : 'ok'
@@ -111,7 +114,7 @@ function InterestPanel() {
       h('div', { className: 'ming-sec' },
         h('div', { className: 'ming-sec-h' },
           h('span', { className: 'ming-sec-t' }, '盯着的话题'),
-          h('span', { className: 'ming-sec-n' }, topics.length + ' 个 · 改 live/interests.json，下一轮生效'),
+          h('span', { className: 'ming-sec-n' }, topics.length + ' 個 · 在 Discord 設定頁編輯'),
         ),
         h('div', { className: 'ming-sec-b flush' },
           h('div', { className: 'ming-list' },
@@ -122,12 +125,22 @@ function InterestPanel() {
               ),
               h('div', { style: { display: 'flex', gap: 4, flexWrap: 'wrap' } },
                 (t.keywords || []).map((k, j) => h('span', { key: j, className: 'ming-pill' }, k)),
-                (t.mute || []).map((k, j) => h('span', { key: 'm' + j, className: 'ming-pill', 'data-tone': 'danger', title: '出现就整条不算' }, '✕ ' + k)),
+                mute.map((k, j) => h('span', { key: 'm' + j, className: 'ming-pill', 'data-tone': 'danger', title: '出現就忽略這則訊息' }, '✕ ' + k)),
               ),
             )),
           ),
         ),
       ),
+      learned.length ? h('div', { className: 'ming-sec' },
+        h('div', { className: 'ming-sec-h' },
+          h('span', { className: 'ming-sec-t' }, '自動學到的詞'),
+          h('span', { className: 'ming-sec-n' }, learned.length + ' 個'),
+        ),
+        h('div', { className: 'ming-sec-b' },
+          learned.slice(0, 30).map((item, i) => h('span', { key: i, className: 'ming-pill', style: { margin: 3 } },
+            item.name + ' · ' + item.count + ' 次' + (item.promoted ? ' · 已啟用' : ''))),
+        ),
+      ) : null,
     ),
   )
 }

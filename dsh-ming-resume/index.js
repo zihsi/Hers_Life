@@ -21,12 +21,22 @@ import { readFile, appendFile } from 'node:fs/promises'
 import { execFile } from 'node:child_process'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import os from 'node:os'
 
 export const name = 'ming-resume'
+function resolveWorkspace() {
+  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
+  try {
+    const data = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    if (typeof data.root === 'string' && data.root.trim()) return data.root
+  } catch {}
+  return path.join(os.homedir(), 'hers-life-workspace')
+}
 
 const STEER_SOURCE = 'plugin:hers-life-discord'
 const DEFAULTS = {
-  root: process.env.MING_WORKSPACE || '',
+  root: resolveWorkspace(),
   adbPath: 'D:\\MuMuPlayer\\nx_device\\12.0\\shell\\adb.exe',
   serial: '127.0.0.1:7555',
   /** 插话时把正在播的视频暂停，答完再接着播（2026-10-20 浔定的）。 */

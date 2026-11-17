@@ -501,7 +501,7 @@ const outputText = { schema: { type: 'string' }, render: (_args, value) => [{ ty
 
 /**
  * 事件合并（2026-11-03，从 SurfCore 的「多选消息 → 合并成一个事件」搬来）。
- * 它那边合的是 QQ 消息，这边合的是我自己的归档记忆：同一起事故/同一个决定
+ * Discord 對話事件由跨會話記憶索引維護，這裡合的是我自己的歸檔記憶：同一起事故/同一个决定
  * 散成四五条，索引被同一件事挤满。合并只是把它们收进一个事件条目下，
  * 结论一个字不改，原条目正文一个字不删（superseded，include_retired 还能搜到）。
  */
@@ -571,13 +571,13 @@ const toolDefs = [
   },
   {
     name: 'rag_recall',
-    description: '按意思在本地语义库里找回原话和旧文（不是结论）。三层：doc=我写过的字（日记/见闻/learned/reading/live）、web=DSH 网页会话、qq=QQ 群与私聊（含旧壳 25 万条）。memory_search 查的是「我下过的结论」（关键词），这个查的是「原话」（向量）——想知道她说过什么、那段我怎么写的，用这个。',
+    description: '按意思在本地语义库里找回原话和旧文（不是结论）。两层：doc=我写过的字（日记/见闻/learned/reading/live）、web=DSH 网页会话。Discord 對話事件由跨會話記憶服務保留來源並以關鍵詞召回。memory_search 查的是「我下过的结论」（关键词），这个查的是「原话」（向量）。',
     parameters: {
       type: 'object',
       additionalProperties: false,
       properties: {
         query: { type: 'string', description: '要查什么，可以是一句描述，不用原话' },
-        layer: { type: 'string', enum: ['all', 'doc', 'web', 'qq'], description: '查哪一层，默认 all' },
+        layer: { type: 'string', enum: ['all', 'doc', 'web'], description: '查哪一层，默认 all' },
         k: { type: 'integer', description: '返回几段，默认 5，最多 15' },
         since: { type: 'string', description: '只要这个日期之后的（YYYY-MM-DD），可空' },
         until: { type: 'string', description: '只要这个日期之前的（YYYY-MM-DD），可空' },
@@ -588,7 +588,7 @@ const toolDefs = [
     async execute(args) {
       const query = typeof args.query === 'string' ? args.query.trim() : '';
       if (!query) return 'rag_recall 失败：query 不能为空。';
-      const layer = ['all', 'doc', 'web', 'qq'].includes(args.layer) ? args.layer : 'all';
+      const layer = ['all', 'doc', 'web'].includes(args.layer) ? args.layer : 'all';
       const k = typeof args.k === 'number' && args.k > 0 ? Math.min(Math.floor(args.k), 15) : 5;
       const since = typeof args.since === 'string' ? args.since.trim() : '';
       const until = typeof args.until === 'string' ? args.until.trim() : '';
@@ -711,7 +711,7 @@ const toolDefs = [
       type: 'object',
       additionalProperties: false,
       properties: {
-        title: { type: 'string', description: '事件名（新条目的标题），带对象和日期，如「QQ-Agent 双实例串号（2026-11-02）」' },
+        title: { type: 'string', description: '事件名（新条目的标题），带对象和日期，如「Discord 雙實例串號（2026-11-02）」' },
         ids: { type: 'array', items: { type: 'string' }, description: '要合并的记忆 id，至少两条；支持唯一前缀' },
         note: { type: 'string', description: '可选：合并后的结论 / 现行口径。不填就只留「经过」' },
         tags: { type: 'array', items: { type: 'string' }, description: '可选标签数组' },

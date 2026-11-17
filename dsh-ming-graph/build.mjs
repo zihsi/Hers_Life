@@ -6,7 +6,7 @@
  * | 内容 | 唯一的源 |
  * |---|---|
  * | 主题 | `C:/dsh/dsh-ming-ui/src/theme.js` |
- * | 兴趣 | `C:/dsh/dsh-ming-interest/src/panel.js` |
+ * | 兴趣 | `C:/dsh/Hers_Life/dsh-ming-discord/src/interest-panel.js` |
  * | 声音 | `C:/dsh/dsh-ming-voice/src/panel.js` |
  * | 自己玩 | `C:/dsh/dsh-ming-browse/src/panel.js` |
  * | 壳自己的 extras（接续等） | `src/panels.js` |
@@ -74,7 +74,7 @@ function cut(text, from, to, label) {
 // 边界用「函数声明」而不是行号：源里插一行注释不会把切点弄错。
 // 三个面板的源都写到文件末尾（最后一个是各自的 Icon），所以 to 给 null。
 const PANELS = [
-  { name: '兴趣', file: path.join(ROOT, 'dsh-ming-interest/src/panel.js'), from: 'const INTEREST_API' },
+  { name: '兴趣', file: path.join(ROOT, 'dsh-ming-discord/src/interest-panel.js'), from: 'const INTEREST_API' },
   { name: '声音', file: path.join(ROOT, 'dsh-ming-voice/src/panel.js'), from: 'const VOICE_API' },
   { name: '自己玩', file: path.join(ROOT, 'dsh-ming-browse/src/panel.js'), from: 'const BROWSE_API' },
 ]

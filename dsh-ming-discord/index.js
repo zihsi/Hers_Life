@@ -67,6 +67,25 @@ async function syncMemorySettings(settings) {
   await rename(temp, file)
 }
 
+async function syncGraphSettings(settings) {
+  const file = path.join(settings.home, 'ming-graph.json')
+  let current = {}
+  try { current = JSON.parse(await readFile(file, 'utf8')) } catch {}
+  const ownerIds = settings.ownerIds()
+  const next = {
+    ...current,
+    workspace: settings.resolve().workspace,
+    diaryDir: path.join(settings.resolve().workspace, String(settings.get('diaryDir', 'diary') || 'diary')),
+    dshMemoryDir: path.join(settings.home, 'memory'),
+    ownerId: ownerIds[0] || '',
+    ownerName: String(settings.get('userName', '主人') || '主人'),
+  }
+  await mkdir(settings.home, { recursive: true })
+  const temp = file + '.tmp-' + process.pid
+  await writeFile(temp, JSON.stringify(next, null, 2) + '\n', 'utf8')
+  await rename(temp, file)
+}
+
 async function copyMissing(source, destination) {
   const src = path.resolve(source)
   const dst = path.resolve(destination)
@@ -169,6 +188,7 @@ export function apply(ctx, pluginConfig = {}) {
   const loadAndStart = async () => {
     await settings.load()
     await syncMemorySettings(settings)
+    await syncGraphSettings(settings)
     await ensureWorkspace(settings.resolve().workspace)
     await startAdapter()
   }
@@ -196,6 +216,7 @@ export function apply(ctx, pluginConfig = {}) {
             await settings.patch(body.settings ?? {}, body.token)
             if (body.clearToken === true) await settings.saveToken('')
             await syncMemorySettings(settings)
+            await syncGraphSettings(settings)
             const nextWorkspace = settings.resolve().workspace
             let migration = null
             if (nextWorkspace !== previousWorkspace) migration = await copyMissing(previousWorkspace, nextWorkspace)
@@ -217,9 +238,32 @@ export function apply(ctx, pluginConfig = {}) {
             const result = await copyMissing(old, destination)
             await settings.patch({ workspace: destination })
             await syncMemorySettings(settings)
+            await syncGraphSettings(settings)
             await ensureWorkspace(destination)
             await startAdapter()
             send(res, 200, { ok: true, from: old, to: destination, ...result })
+            return
+          }
+          if (req.method === 'GET' && route === 'interest/config') {
+            send(res, 200, { ok: true, config: interests?.config ?? { topics: [], mute: [] } })
+            return
+          }
+          if (req.method === 'POST' && route === 'interest/config') {
+            if (!interests) throw new Error('興趣服務尚未初始化')
+            const body = await readBody(req)
+            const snapshot = await interests.saveConfig(body.config ?? body)
+            send(res, 200, { ok: true, config: snapshot.config })
+            return
+          }
+          if (req.method === 'GET' && route === 'interest/state') {
+            send(res, 200, { ok: true, ...(interests?.snapshot?.() ?? {}) })
+            return
+          }
+          if (req.method === 'POST' && route === 'interest/toggle') {
+            if (!interests) throw new Error('興趣服務尚未初始化')
+            const body = await readBody(req)
+            const enabled = await interests.setOff(body.off !== false)
+            send(res, 200, { ok: true, off: !enabled })
             return
           }
           if (req.method === 'GET' && route === 'events') {
@@ -241,10 +285,58 @@ export function apply(ctx, pluginConfig = {}) {
   })
 
   ctx.on('dispose', () => { void stopAdapter() })
+  const sendToOwner = async (message) => {
+    if (!rest || !bridge) throw new Error('Discord 尚未連線')
+    const owners = settings.ownerIds()
+    if (!owners.length) throw new Error('請先在設定頁填入 Owner Discord ID')
+    const results = []
+    for (const ownerId of owners) {
+      const dm = await rest.createDm(ownerId)
+      const ids = await bridge.say(String(dm.id), String(message ?? ''))
+      results.push({ userId: ownerId, messageIds: ids })
+    }
+    return results
+  }
+  const sendFile = async (channelId, filePath, caption = '') => {
+    if (!bridge) throw new Error('Discord 尚未連線')
+    const root = path.resolve(settings.resolve().workspace)
+    const target = path.resolve(String(filePath ?? ''))
+    if (target !== root && !target.startsWith(root + path.sep)) throw new Error('只允許傳送工作區內的檔案')
+    const info = await stat(target)
+    if (!info.isFile() || info.size > Math.max(1, Number(settings.get('discord.maxAttachmentMb', 24)) || 24) * 1024 * 1024) {
+      throw new Error('檔案不存在、不是一般檔案或超過附件大小上限')
+    }
+    const buffer = await readFile(target)
+    const ext = path.extname(target).toLowerCase()
+    const mediaType = ext === '.mp3' ? 'audio/mpeg' : ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'application/octet-stream'
+    return bridge.sayFiles(String(channelId), [{ buffer, mediaType, name: path.basename(target) }], caption)
+  }
   ctx.hersLifeDiscord = {
     say: (channelId, text, options) => bridge?.say(channelId, text, options) ?? Promise.reject(new Error('Discord 尚未連線')),
     sayFiles: (channelId, files, text) => bridge?.sayFiles(channelId, files, text) ?? Promise.reject(new Error('Discord 尚未連線')),
+    sendToOwner,
+    sendFile,
+    isOwner: (userId) => settings.isOwner(userId),
+    sessionIdFor: (target) => pool?.sessionIdFor(target) ?? '',
+    ownerIds: () => settings.ownerIds(),
+    get workspace() { return settings.resolve().workspace },
     get status() { return status },
     get bridge() { return bridge },
   }
+  ctx.tools?.register?.({
+    name: 'discord_send_to_owner',
+    description: '透過 Discord 私訊向設定頁中的 Owner 發送文字。',
+    parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'], additionalProperties: false },
+    async execute(args) { return JSON.stringify(await sendToOwner(String(args?.text ?? ''))) },
+  })
+  ctx.tools?.register?.({
+    name: 'discord_send_file',
+    description: '把工作區內的音訊、圖片或檔案發送到指定 Discord 頻道或私訊頻道。',
+    parameters: {
+      type: 'object', properties: {
+        channelId: { type: 'string' }, path: { type: 'string' }, caption: { type: 'string' },
+      }, required: ['channelId', 'path'], additionalProperties: false,
+    },
+    async execute(args) { return JSON.stringify(await sendFile(args.channelId, args.path, args.caption ?? '')) },
+  })
 }

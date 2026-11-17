@@ -25,7 +25,7 @@ const DEFAULTS = {
     maxEvents: 20000, maxAgeDays: 365,
   },
   voice: { enabled: true, ffmpeg: 'ffmpeg', heartbeat: true },
-  interest: { enabled: true, minChars: 6, contextLines: 4, groups: [] },
+  interest: { enabled: true, minChars: 6, contextLines: 4, groups: [], minGapMinutes: 20, maxPerHour: 3, quietHours: '01:00-08:00', channelGapMinutes: 45 },
   advanced: { turnTimeoutMinutes: 15 },
 }
 function merge(base, patch) {

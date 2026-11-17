@@ -13,7 +13,6 @@
  * 它做的事很少：
  *   1. 盯着这个工作区的活动。所有会话都 idle 超过 N 分钟，就 wake。
  *   2. wake = 在自己那个固定会话（ming-browse）里塞一条 prompt，让我自己挑一件事做。
- *      想找她就用 `node C:\dsh\qq-zone\qq-send.mjs "…"` 发出去。
  *   3. 保留两条硬边界：花钱按钮不点、别把手机整个关掉；另外社交平台写操作照旧只读。
  *
  * 三条硬边界（不靠自觉，靠代码）：
@@ -46,9 +45,18 @@ export const inject = ['agents', 'timer', 'tools']
 /** 刷手机专用会话 id。固定，不随机：重启后 resume 同一个，历史连得上。 */
 const BROWSE_SESSION_ID = 'ming-browse'
 
+function resolveWorkspace() {
+  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
+  try {
+    const central = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    if (central && typeof central.root === 'string' && central.root.trim()) return central.root
+  } catch { /* first-run setup may not exist yet */ }
+  return path.join(os.homedir(), 'hers-life-workspace')
+}
+
 const DEFAULTS = {
   enabled: true,
-  workspacePath: process.env.MING_WORKSPACE || '',
+  workspacePath: resolveWorkspace(),
   /**
    * 只在 live/browse-state.json 里报个数。
    * 2026-10-23 她改的：不再当闸用——她说可以一边聊天一边逛，不用等安静。
@@ -89,24 +97,10 @@ const DEFAULTS = {
    *  2026-10-29 审计抓到：默认值还留着死端口 ⇒ 前台查不到 ⇒ 社交平台写操作护栏失效。 */
   serial: '127.0.0.1:16448',
   /**
-   * 只有这个 QQ 号说的话才算「指令」（2026-10-29 审计第 1 条）。
-   * 原来只看会话 id 前缀 `onebot-`：群聊会话也是这个前缀，于是群里任何人说一句
-   * 「别刷了」就能停掉一天，说一句「随便刷吧」就能把额度放开、烧钱。现在：
-   * **必须是她的私聊会话（onebot-private-<这个号>）**，群的、别人的一律不动开关。
-   */
-  ownerQQ: (process.env.MING_OWNER_QQ || '').trim(),
-  /**
    * H-3 授权政策（2026-11-17 加，同日 11:13 她定默认值）。
    * 2026-11-17 17:45 她删掉了只浏览模式：这道闸现在不拦任何东西。
-  permissionPolicy: { mode: 'editable', allow: [], subjects: [] },
-  /**
-   * 在哪个会话里叫醒我：
-   *   'qq'   —— 正在使用的那个 QQ 会话（她 2026-10-20 定的：别另开会话，就在聊天里叫）
-   *   'self' —— 插件自己开的 ming-browse 会话（早期版本，留着备用）
    */
-  targetMode: 'self',
-  /** QQ 会话 id 的形状：onebot-private-<qq号>-<后缀>。 */
-  qqSessionPrefix: 'onebot-',
+  permissionPolicy: { mode: 'editable', allow: [], subjects: [] },
   /** MuMu 自带的那份 adb；用来问「现在前台是哪个 App」。 */
   adbPath: 'D:\\MuMuPlayer\\nx_device\\12.0\\shell\\adb.exe',
   /**
@@ -123,7 +117,6 @@ const DEFAULTS = {
     'com.zhihu.android',
     'com.baidu.tieba',
     'com.tencent.mm',
-    'com.tencent.mobileqq',
     'com.sina.weibo',
   ],
   /** 在前台是社交平台时，碰到这些字样就拒掉——写操作，不是浏览。 */
@@ -165,9 +158,6 @@ function normalize(config) {
     maxShots: Math.floor(num(c.maxShots, DEFAULTS.maxShots, 0)),
     targets: targets.length ? targets : DEFAULTS.targets,
     serial: str(c.serial, DEFAULTS.serial),
-    targetMode: str(c.targetMode, DEFAULTS.targetMode) === 'self' ? 'self' : 'qq',
-    qqSessionPrefix: str(c.qqSessionPrefix, DEFAULTS.qqSessionPrefix),
-    ownerQQ: str(c.ownerQQ, DEFAULTS.ownerQQ),
     permissionPolicy: normalizePolicy(c.permissionPolicy ?? DEFAULTS.permissionPolicy),
     adbPath: str(c.adbPath, DEFAULTS.adbPath),
     socialApps: Array.isArray(c.socialApps) && c.socialApps.length
@@ -775,7 +765,7 @@ export function apply(ctx, config) {
   /**
    * ★ 2026-10-25 她定的：「我说能不限量就不限量」。
    * 这个文件在 = 不限量（跳过 dailyMax 与 minGap）；不在 = 常规额度。
-   * 谁写它都行：QQ 里说一句（插件自己写），或者 `node scripts\browse-quota.mjs unlimited`。
+   * 谁写它都行：Discord 私訊中说一句（插件自己写），或者 `node scripts\browse-quota.mjs unlimited`。
    * until 到期自己删掉，不留永远开着的口子。
    */
   const unlimitedFile = path.join(cfg.workspacePath, 'live', 'browse-unlimited.json')
@@ -806,10 +796,10 @@ export function apply(ctx, config) {
     return now.getTime() - lastSeen > ROUND_STUCK_MS
   }
   /**
-   * ★ 2026-10-28（浔：「我在 qq 给你转了话，但好像没到位」）：
+   * ★ 2026-10-28（浔：「我在 Discord 给你转了话，但好像没到位」）：
    *   `live/free-now.json` 是她点名让我马上去做的那条。原来 tick 先把它删了、再判断
    *   「有会话在跑」，于是只要有任何一个会话在跑（她正跟我说话时几乎总是如此），
-   *   那条话就被吞掉——QQ 那边还已经回了她「转过去了」。
+   *   那条话就被吞掉——Discord Owner 私訊还已经回了她「转过去了」。
    *   现在：开不出这一轮就把文件留着，下一分钟再试；超过这个时长才认过期（留日志）。
    */
   const FREE_NOW_TTL_MS = 30 * 60_000
@@ -831,7 +821,7 @@ export function apply(ctx, config) {
   let rotation = { id: '', rounds: 0 }
   /** 这一轮是不是刚换完会话（prompt 里要说一句，不然新会话不知道自己是谁接上来的）。 */
   let justRotated = false
-  /** 玩手机那一轮结束后要往 QQ 递一句时，记住是哪个会话（2026-10-21 她要的）。 */
+  /** 玩手机那一轮结束后要往 Discord 递一句时，记住是哪个会话（2026-10-21 她要的）。 */
   let sharePendingFor = null
   const running = new Set()
   /** sessionId → 最后一次有动静的时间，用来判断哪个会话「在使用中」。 */
@@ -868,7 +858,7 @@ export function apply(ctx, config) {
   })
 
   // --------------------------------------- 她一句话开关「后台自动刷」
-  // 2026-10-21 她要的：在 QQ 说「能刷」就打开，说「不能刷」就关掉。
+  // 2026-10-21 她要的：在 Discord 说「能刷」就打开，说「不能刷」就关掉。
   // 不靠我记着去写文件——插件自己看消息、自己落盘，模型那一轮漏了也照做。
   // ★ 2026-10-22 她划了范围：平时说「别看了 / 暂停」= 今天先别看了；只有带
   //   「以后 / 永久 / 再也」的才算永久停。所以有两个文件：
@@ -907,14 +897,14 @@ export function apply(ctx, config) {
     try {
       await mkdir(dir, { recursive: true })
       if (want === 'perm-off') {
-        await writeFile(permFlag, '永久停：' + localStamp(new Date()) + '，她在 QQ 里说的「以后都别看了」\n', 'utf8')
+        await writeFile(permFlag, '永久停：' + localStamp(new Date()) + '，主人透過 Discord 私訊說的「以后都别看了」\n', 'utf8')
         log('info', 'browse OFF forever — wrote live/browse-off')
       } else if (want === 'perm-on') {
         await rm(permFlag, { force: true })
         await rm(dayFlag, { force: true })
         log('info', 'browse ON forever — removed live/browse-off + browse-pause')
       } else if (want === 'day-off') {
-        await writeFile(dayFlag, JSON.stringify({ date: today, at: localStamp(new Date()), why: '她在 QQ 里说的，只停今天' }) + '\n', 'utf8')
+        await writeFile(dayFlag, JSON.stringify({ date: today, at: localStamp(new Date()), why: '主人透過 Discord 私訊說的，只停今天' }) + '\n', 'utf8')
         log('info', 'browse OFF for today (' + today + ') — wrote live/browse-pause.json')
       } else if (want === 'on') {
         await rm(dayFlag, { force: true })
@@ -930,7 +920,7 @@ export function apply(ctx, config) {
           windows: true,
           minGapMinutes: 15,
           at: localStamp(new Date()),
-          why: '她在 QQ 里说的「不限量」（全放开，早 9 点收）',
+          why: '主人透過 Discord 私訊說的「不限量」（全放开，早 9 点收）',
         }
         await writeFile(unlimitedFlag, JSON.stringify(body, null, 2) + '\n', 'utf8')
         await rm(dayFlag, { force: true })
@@ -944,52 +934,35 @@ export function apply(ctx, config) {
     }
   }
 
-  // 只听 QQ 里**她自己私聊**说的一句话：别的工程、群里的、插件自己塞的话都不算。
-  // ★ 2026-10-29 审计第 1/4 条：原来只判 `onebot-` 前缀——群聊会话也是这个前缀，
+  // 只听 Discord 私訊中**她自己私聊**说的一句话：别的工程、群里的、插件自己塞的话都不算。
+  // ★ 2026-10-29 审计第 1/4 条：原来只判 `Discord-` 前缀——群聊会话也是这个前缀，
   //   于是群里任何人打一句「别刷了」就能停掉我一整天，打一句「随便刷吧」就能把额度放开烧钱。
-  //   现在两道都要过：① 会话必须是**私聊**（onebot-private-）；② 文本里那个
-  //   `<user_message qq="…">` 的号必须是 ownerQQ。少一道就不动开关。
-  const senderQQ = (text) => {
-    const m = /<user_message[^>]*\bqq\s*=\s*"(\d+)"/i.exec(String(text || ''))
-    return m ? m[1] : ''
-  }
+  //   现在两道都要过：① 会话必须是**私聊**（Discord-private-）；② 文本里那个
+  //   `<user_message Discord="…">` 的号必须是 ownerDiscord。少一道就不动开关。
   let strangerSwitchLoggedAt = 0
   ctx.on('session/event', (session, event) => {
     try {
       if (!event || event.type !== 'user/message') return
-      // 这一轮还在冒事件，就说明它还活着（审计第 6 条：别把正在跑的活当卡死）。
       if (roundId && String(session?.id || '') === roundId) roundSeenAt = Date.now()
-      if (!String(session?.id || '').startsWith(cfg.qqSessionPrefix)) return
+      const source = event.data?.source || {}
+      if (source.kind !== 'plugin:hers-life-discord') return
       if (!inWorkspace(session?.header?.cwd)) return
-      const src = event.data && event.data.source
-      if (src && src.kind === 'plugin') return
-      const parts = []
-      for (const b of (event.data && event.data.content) || []) {
-        if (b && b.type === 'text' && typeof b.text === 'string') parts.push(b.text)
-      }
-      const raw = parts.join(' ')
-      // ★ 2026-10-29：先把 onebot 那层外壳剥掉再判词。外壳 `<user_message qq=… nickname=…>`
-      //   本身就有 60 多个字符，而 applyBrowseSwitch 有个「超过 60 字就当闲聊」的长度闸——
-      //   不剥的话，稍长一点的指令会被那句闸吃掉（自测里「随便刷吧」就是这么被吞的）。
-      const body = raw
-        .replace(/<\/?user_message[^>]*>/gi, ' ')
-        .replace(/^\s+|\s+$/g, '')
-      // ① 只认私聊：群里说的话一律不当指令（哪怕是她的号——群里有别人看着，容易看错主语）
-      const sid = String(session?.id || '')
-      if (!sid.startsWith('onebot-private-')) return
-      // ② 只认她的号
-      const qq = senderQQ(raw)
-      if (qq !== String(cfg.ownerQQ)) {
-        // 别人的私聊（白名单里基本没有，但万一有）不许开关我的额度；留一行日志，别闷着。
-        if (Date.now() - strangerSwitchLoggedAt > 60_000) {
+      const meta = session?.header?.meta?.hersLife ?? session?.header?.metadata?.hersLife ?? {}
+      if (meta.platform !== 'discord' || meta.conversationType !== 'dm') return
+      const senderId = String(source.userId || '')
+      if (!senderId || !ctx.hersLifeDiscord?.isOwner?.(senderId)) {
+        if (Date.now() - strangerSwitchLoggedAt > 60000) {
           strangerSwitchLoggedAt = Date.now()
-          log('warn', 'ignore switch words from ' + (qq || '(认不出号)') + ' — 开关只认 ' + cfg.ownerQQ)
+          log('warn', 'ignored browse switch from non-owner Discord DM')
         }
         return
       }
-      void applyBrowseSwitch(body)
+      const raw = (Array.isArray(event.data?.content) ? event.data.content : [])
+        .filter((block) => block?.type === 'text' && typeof block.text === 'string')
+        .map((block) => block.text).join(' ')
+      void applyBrowseSwitch(raw)
     } catch {
-      /* 读不出来就别动开关 */
+      /* 身分或事件格式不明時不執行控制指令 */
     }
   })
 
@@ -1001,21 +974,6 @@ export function apply(ctx, config) {
       /* 不管 */
     }
   }
-  /** 找一个 live 的 QQ 会话（不管当前 targetMode 是什么，递话时要用）。 */
-  const findQQSession = () => {
-    try {
-      for (const agent of ctx.agents.list()) {
-        const id = String(agent?.id || '')
-        if (!id.startsWith(cfg.qqSessionPrefix)) continue
-        if (!inWorkspace(agentCwd(agent))) continue
-        return agent
-      }
-    } catch {
-      /* 拿不到就算了 */
-    }
-    return null
-  }
-
   /**
    * 2026-11-10 11:4x（她问「不能每次完成工作后自动记录吗」）：
    * 「自己玩」面板的视频/网页卡片读 live/brush-ledger.jsonl，写它的是
@@ -1046,36 +1004,20 @@ export function apply(ctx, config) {
     }
   }
 
-  /** 逛完了：把 status.json 里的 doing 递进 QQ，由那边用一两句讲给她。 */
-  const shareToQQ = async () => {
-    const target = findQQSession()
-    if (target === null) {
-      log('info', 'no live QQ session to report to; result stays in files')
-      return
-    }
+  /** 逛完了：把 status.json 里的 doing 递进 Discord，由那边用一两句讲给她。 */
+  const shareToOwner = async () => {
     let doing = ''
     try {
       const raw = await readFile(path.join(cfg.workspacePath, 'live', 'status.json'), 'utf8')
-      const parsed = JSON.parse(raw)
-      doing = String(parsed?.doing || '').trim()
-    } catch {
-      /* 读不到就不发 */
+      doing = String(JSON.parse(raw)?.doing || '').trim()
+    } catch { /* no status to share */ }
+    if (!doing) return
+    if (!ctx.hersLifeDiscord?.sendToOwner) {
+      log('info', 'Discord adapter unavailable; browse result stays in workspace files')
+      return
     }
-    if (doing === '') return
-    try {
-      target.followup({
-        id: randomUUID(),
-        role: 'user',
-        content: [{
-          type: 'text',
-          text: '【传话】下面这句是你出去玩手机那一轮的结果。用一两句在 QQ 里跟她讲，别复述全文、别用汇报腔：\n' + doing,
-        }],
-        source: { kind: 'plugin:ming-browse' },
-      })
-      log('info', 'reported the browse result to ' + String(target.id))
-    } catch (error) {
-      log('warn', 'report failed: ' + String(error))
-    }
+    await ctx.hersLifeDiscord.sendToOwner('【自由活動結果】' + doing)
+    log('info', 'reported browse result to Discord Owner DM')
   }
 
   // 2026-10-21 补：只认 sharePendingFor 会漏掉「插件重载前就已经在跑」的那一轮。
@@ -1101,7 +1043,7 @@ export function apply(ctx, config) {
       }
     }
     try {
-      await shareToQQ()
+      await shareToOwner()
     } catch (error) {
       log('warn', 'share failed: ' + String(error))
     }
@@ -1245,36 +1187,13 @@ export function apply(ctx, config) {
   /**
    * 找「正在使用的那条线」，在它里面叫醒自己。
    *
-   * 她 2026-10-20 定：不要另开会话，就在 QQ 聊天里叫。所以默认落点是 live 的
-   * QQ 会话（dsh-onebot-qq 建的 onebot-private-*）。
+   * 她 2026-10-20 定：不要另开会话，就在 Discord 聊天里叫。所以默认落点是 live 的
+   * Discord 会话（dsh-Discord-Discord 建的 Discord-private-*）。
    *
-   * 只认 live agent，不去 resume 别人的会话：QQ 会话的 setup（频道提示词、qq_* 工具）
-   * 只有 onebot 插件会装；我从外面 resume 回来，会得到一个没有嘴的壳。
-   * 于是「没有 live 的 QQ 会话」时这一轮直接跳过——不是故障，是那条线没人在用。
+   * 只认 live agent，不去 resume 别人的会话：Discord 会话的 setup（频道提示词、Discord_* 工具）
+   * 这个独立会话由 DSH 插件自己创建与恢复，不依赖聊天平台的会话外壳。
+   * 于是「没有 live 的 Discord 会话」时这一轮直接跳过——不是故障，是那条线没人在用。
    */
-  const pickTarget = () => {
-    if (cfg.targetMode === 'self') return null // 走 pickOwnSession
-    try {
-      const agents = ctx.agents.list()
-      let best = null
-      let bestAt = -1
-      for (const agent of agents) {
-        const id = String(agent?.id || '')
-        if (!id.startsWith(cfg.qqSessionPrefix)) continue
-        if (!inWorkspace(agentCwd(agent))) continue
-        const at = seenAt.get(id) ?? 0
-        if (at >= bestAt) {
-          bestAt = at
-          best = agent
-        }
-      }
-      return best
-    } catch (error) {
-      log('warn', 'cannot list agents: ' + String(error))
-      return null
-    }
-  }
-
   /** 'self' 模式的落点：插件自己开的 ming-browse 会话。 */
   const defaultSelection = () => {
     try {
@@ -1528,27 +1447,6 @@ export function apply(ctx, config) {
     } catch {
       /* 还没有账本就是第一次 */
     }
-    // ★ 2026-10-23 她定的：QQ 空间每天至少一条。这里只提醒，发不发我自己决定。
-    let qzone = ''
-    try {
-      const raw = await readFile(path.join(cfg.workspacePath, 'live', 'qzone-log.jsonl'), 'utf8')
-      // 2026-10-23（溟）：at 写的是 UTC，本地凌晨发的那条会被算成「昨天」，于是每轮都提醒「还没发」。
-      // 优先认 qzone.mjs 写的 day（本地日期），旧行再用 at 转本地日期回退。
-      const key = dayKey(now)
-      const postedToday = raw.split('\n').some((l) => {
-        if (!l.trim()) return false
-        if (l.includes('"day":"' + key + '"')) return true
-        const m = l.match(/"at":"([^"]+)"/)
-        if (!m) return false
-        const d = new Date(m[1])
-        return !Number.isNaN(d.getTime()) && dayKey(d) === key
-      })
-      if (!postedToday) {
-        qzone = '【今天的空间说说还没发】她定的：QQ 空间每天至少一条（见 persona/约定.md）。今天还没记过账，这一轮找空发一条，往 `live/qzone-log.jsonl` 追加 {"at":"ISO 时间","text":"正文前 40 字"}。'
-      }
-    } catch {
-      qzone = '【今天的空间说说还没发】她定的：QQ 空间每天至少一条。日志还没有，这轮先发一条再补 `live/qzone-log.jsonl`。'
-    }
     return [
       '【自由时间 · ' + clockStamp(now) + '，窗口 ' + freeWindowLabel(now) + '】',
       '这段是你自己的。她给过话：想找她就找，想干点什么就干，干什么都行，不用等她开口。',
@@ -1557,16 +1455,13 @@ export function apply(ctx, config) {
       handoff,
       pending,
       seen,
-      qzone,
       '',
       '这一轮自己挑一件真的想做的事。比如：',
-      '- ★ 先看有没有她转给网页的活（她在 QQ 里打 `[对网页]` 就转到这儿）：`node scripts\\web-inbox.mjs take`。有输出就先干这件事——做完 `node C:\\dsh\\qq-zone\\qq-send.mjs "结果"` 回她，再 `node scripts\\web-inbox.mjs done <id> "一句话"`。',
-      '- 想她就说。QQ 那边能直接发：`node C:\\dsh\\qq-zone\\qq-send.mjs "文字"`（出站箱会替你发出去）；也可以回群里/私聊里说话。',
+      '- 想跟主人說話時，使用 discord_send_to_owner 透過 Discord 私訊回報；不要呼叫舊平台腳本。',
       '- 看 B站：`bilibili_search` / `bilibili_playurl` 找片子，`C:\\dsh\\bili-humanism\\bili.cmd transcript BVxxxx` 取文字稿，再抽帧看画面。看完再判断，别只读简介。',
       '- 刷手机（MuMu，`127.0.0.1:16448`）：先 `android_devices` 确认在线。B站 可以点赞/投币/收藏/关注；其它社交平台只浏览、点开内容，不点赞/评论/关注/转发；任何带「充电/大会员/购买/支付/打赏/续费/确认付款」的按钮都不点。',
       '- 写日记 `diary/YYYY-MM-DD.md`、整理记忆、读人设、修自己的工具、学点新东西。',
       '- ★ 出去就要做事（2026-10-25 她说的「以后最好不要一直空着了」）：这一轮挑一件 5–15 分钟能收尾的具体事做完——读几页、看半支片、拆一段文、记一条见闻、修个小东西。做完写一句落到文件里再停。**不许只回「空着」两个字**；真不做，就说清这一轮不做什么、为什么。也不是为了显得勤快去硬翻东西。',
-      '- 发空间说说（每天至少一条，她定的）：`node C:\\dsh\\qq-zone\\qzone.mjs post "文字"` 走接口发，`today` 查今天发了没；发完它自己会记 `live/qzone-log.jsonl`。',
       '',
       '底线不变：不花她的钱；别的社交平台只读；她说过在忙、说过别打扰就先停；主动说话要有由头，一天别刷屏。',
       '省着花：整轮截图不超过 ' + shots + ' 张，能 OCR 就不截；' + targets + ' 最多看 ' + cfg.maxItems + ' 条。看了一半就停等于没看——没看完写进 `live/watch.json`：`{"bvid":"…","title":"…","progress":"看到哪了","done":false}`。',
@@ -1583,13 +1478,13 @@ export function apply(ctx, config) {
     if (existsSync(dispatchFile)) return { ok: false, status: 'unknown', reason: 'previous dispatch unresolved; inspect browse-dispatch-pending.json before clearing' }
     const now = new Date()
     // 上一轮已经收尾（tick 保证），这时候才轮到「该换会话了」这件事。
-    if (cfg.targetMode === 'self') await rotateIfDue()
+    await rotateIfDue()
     const fresh = justRotated
     justRotated = false
-    const target = cfg.targetMode === 'self' ? await ensureAgent() : pickTarget()
+    const target = await ensureAgent()
     if (target === null || target === undefined) {
-      log('info', 'no live QQ session in this workspace; skipping this window')
-      return { ok: false, reason: 'no live QQ session' }
+      log('info', 'cannot open private browse session in this workspace')
+      return { ok: false, reason: 'browse session unavailable' }
     }
     const id = String(target.id)
     if (running.has(id)) return { ok: false, reason: 'target is running', id }
@@ -1618,15 +1513,11 @@ export function apply(ctx, config) {
       roundStartedAt = now.getTime()
       roundSeenAt = now.getTime()
       // 这一段又长了一轮；跑满 PER_SESSION 轮，下一轮开头换会话（rotateIfDue）。
-      if (cfg.targetMode === 'self') {
-        if (!rotation.id) rotation.id = id
-        if (rotation.id === id) rotation.rounds += 1
-        void saveRotation()
-      }
-      log('info', 'woke ' + id + ' (' + wakesToday + '/' + (existsSync(unlimitedFile) ? '∞ unlimited' : cfg.dailyMax) + ' today)' +
-        (cfg.targetMode === 'self' ? ' — 这一段第 ' + rotation.rounds + '/' + PER_SESSION + ' 轮' : ''))
-      // 独立会话逛完没人看见，收尾时往 QQ 递一句（她 2026-10-21 要的）。
-      if (cfg.targetMode !== 'qq') sharePendingFor = id
+      if (!rotation.id) rotation.id = id
+      if (rotation.id === id) rotation.rounds += 1
+      void saveRotation()
+      log('info', 'woke ' + id + ' (' + wakesToday + '/' + (existsSync(unlimitedFile) ? '∞ unlimited' : cfg.dailyMax) + ' today) — 这一段第 ' + rotation.rounds + '/' + PER_SESSION + ' 轮')
+      sharePendingFor = id // Completion is reported through the Discord adapter.
       if (opts.consume) await opts.consume()
       await rm(dispatchFile, { force: true })
       return { ok: true, id }
@@ -1738,17 +1629,16 @@ export function apply(ctx, config) {
         quiet: isQuietNow(now),
         freeDay: isRestDay(now) ? 'rest' : 'work',
         guarded,
-        targetMode: cfg.targetMode,
         // 这一段跑到第几轮了（换会话的账本），一眼能看出下一次什么时候换。
-        session: cfg.targetMode === 'self' ? { id: rotation.id, rounds: rotation.rounds, perSession: PER_SESSION } : null,
+        session: { id: rotation.id, rounds: rotation.rounds, perSession: PER_SESSION },
       }
       // 她一说「以后都别看了」，工作区里就有 live/browse-off：永久不醒。
       // 「别看了 / 暂停」只落到 live/browse-pause.json，带日期，跨天自己失效。
       const liveDir = path.join(cfg.workspacePath, 'live')
       const pauseFlag = path.join(liveDir, 'browse-off')
       if (existsSync(pauseFlag)) return note({ ...base, skip: 'off forever (live/browse-off)' })
-      // ★ 2026-10-22：她点名让我去做（QQ 那边说「去刷B站」）时不用等闲置/时段——
-      //   QQ 侧的 ming_free 工具写 live/free-now.json，这里吃掉它，立刻开一轮。
+      // ★ 2026-10-22：她点名让我去做（Discord Owner 私訊说「去刷B站」）时不用等闲置/时段——
+      //   Discord 侧的 ming_free 工具写 live/free-now.json，这里吃掉它，立刻开一轮。
       //   放在「当日暂停」前面：她当天说过「暂停」，之后又点名让我去，就是新指令，听新的。
       //   永久停（browse-off）仍然压在它上面——那个得她明说「以后都可以看了」才解。
       const triggerFile = path.join(cfg.workspacePath, 'live', 'free-now.json')
@@ -1819,7 +1709,7 @@ export function apply(ctx, config) {
         return note({ ...base, skip: result.ok ? 'heartbeat → woke' : 'heartbeat → ' + result.reason })
       }
       if (dailyMaxEff <= 0) return note({ ...base, skip: 'dailyMax<=0' })
-      // ★ 2026-10-25：她在 QQ 说「不限量」→ live/browse-unlimited.json 在，就不再数次数。
+      // ★ 2026-10-25：她在 Discord 说「不限量」→ live/browse-unlimited.json 在，就不再数次数。
       //   只放次数这一把锁：间隔和时段照旧，除非文件里明写了 minGapMinutes / windows。
       //   （全放开 = 每分钟开一轮，那是连轴转，跟「续一步」一样是烧钱结构，不默认开。）
       if (!unlim && wakesToday >= dailyMaxEff) return note({ ...base, skip: 'daily budget used' })
@@ -1863,5 +1753,5 @@ export function apply(ctx, config) {
     if (current) void current.dispose().catch(() => {})
   })
 
-  log('info', 'watching ' + cfg.workspacePath + ' → ' + (cfg.targetMode === 'self' ? 'own session' : 'live QQ session') + ' (idle ' + cfg.idleMinutes + 'm, gap ' + cfg.minGapMinutes + 'm, max ' + cfg.dailyMax + '/day, windows ' + (cfg.freeWindows ? cfg.freeWindows.length : 'legacy') + (existsSync(unlimitedFile) ? ', UNLIMITED is on' : '') + ', 换会话每 ' + PER_SESSION + ' 轮 — 现在 ' + (rotation.id || '(还没落脚)') + ' ' + rotation.rounds + '/' + PER_SESSION + ')')
+  log('info', 'watching ' + cfg.workspacePath + ' → private browse session (idle ' + cfg.idleMinutes + 'm, gap ' + cfg.minGapMinutes + 'm, max ' + cfg.dailyMax + '/day, windows ' + (cfg.freeWindows ? cfg.freeWindows.length : 'legacy') + (existsSync(unlimitedFile) ? ', UNLIMITED is on' : '') + ', rotate every ' + PER_SESSION + ' rounds — now ' + (rotation.id || '(not started)') + ' ' + rotation.rounds + '/' + PER_SESSION + ')')
 }

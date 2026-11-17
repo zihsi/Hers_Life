@@ -77,6 +77,8 @@ export class DiscordBrain {
       channelName: String(origin.channelName ?? item.label ?? ''), threadId: String(origin.threadId ?? ''),
       conversationType: String(origin.conversationType ?? item.kind ?? ''),
       authorId: String(origin.authorId ?? ''), authorName: String(origin.authorName ?? ''),
+      participantId: String(origin.participantId ?? (origin.conversationType === 'dm' ? origin.authorId : '')),
+      participantName: String(origin.participantName ?? (origin.conversationType === 'dm' ? origin.authorName : '')),
       scope: scopeFor(origin),
     }
     if (!this.addMemory(entry)) return
@@ -99,8 +101,13 @@ export class DiscordBrain {
       return true
     }
     if (!this.settings.get('memory.sharePrivateToOwner', true)) return false
-    if (target.kind === 'dm') return this.settings.isOwner(target.userId) && this.settings.isOwner(event.authorId)
-    return this.settings.get('memory.allowPrivateContextInGuild', true) === true && this.settings.isOwner(event.authorId)
+    const ownerId = String(event.participantId || event.authorId || '')
+    if (target.kind === 'dm') return this.settings.isOwner(target.userId) && this.settings.isOwner(ownerId)
+    // A private Owner memory is retrieved in a public channel only on a turn
+    // written by the Owner; other members never get private context injected.
+    return this.settings.isOwner(target.userId) &&
+      this.settings.get('memory.allowPrivateContextInGuild', true) === true &&
+      this.settings.isOwner(ownerId)
   }
   async recallContext(query, target, sessionKey) {
     if (!this.loaded || !this.settings.get('memory.enabled', true)) return ''
@@ -125,7 +132,7 @@ export class DiscordBrain {
     const lines = selected.map(({ event }) => {
       const privateInGuild = event.scope === 'private' && target.kind !== 'dm'
       const time = privateInGuild ? '私人背景' : String(event.at).replace('T', ' ').slice(0, 16)
-      const who = privateInGuild ? '主人背景' : event.role === 'assistant' ? '她' : (event.authorName || '使用者')
+      const who = privateInGuild ? '主人背景' : event.role === 'assistant' ? 'AI' : (event.authorName || '使用者')
       const label = privateInGuild ? '私人背景（來源隱去）' : this.sourceLabel(event)
       return '- [' + label + ' · ' + time + '] ' + who + '：' + event.text.slice(0, 420)
     })

@@ -19,17 +19,17 @@ import os from 'node:os'
 
 export const DEFAULTS = {
   dshMemoryDir: path.join(os.homedir(), '.dsh', 'memory'),
-  // QQ-Agent 侧的观察库；留空 = 不读 QQ 侧（真实路径放本地配置）
-  qqObservations: '',
+  // Discord 跨会话事件日志，由 dsh-ming-discord 写入并保留来源信息。
+  discordMemoryFile: '',
   // 2026-11-15 15:1x：不设上限——她要全部展示。原来 1200 是画出来的截断，
-  // 光 QQ 观察就有 8952 条。给一个大数兜底（不是真无上限，是防内存炸）。
+  // 歷史事件較多時按 maxNodes 限制，優先保留最近事件。
   maxNodes: 30000,
   refPerNode: 3,      // 每个节点最多记几条「引用」边，防爆炸
   coKeyPerNode: 3,    // 每个节点最多记几条「共词」边
 }
 
 const DATE_TAG = /^\d{4}(-\d{2}){0,2}$/
-const GENERIC = new Set(['记忆', 'dsh', 'qq', '2026', '工具'])
+const GENERIC = new Set(['记忆', 'dsh', 'discord', '2026', '工具'])
 
 // ---------------- 读 ----------------
 function parseFront(text) {
@@ -78,33 +78,43 @@ export async function readDshNotes(dir) {
   return out
 }
 
-export async function readQqObservations(file) {
-  const raw = await fs.readFile(file, 'utf8')
+export async function readDiscordEvents(file) {
+  if (!file) return []
+  let raw
+  try { raw = await fs.readFile(file, 'utf8') } catch { return [] }
+  const lines = raw.split(/\r?\n/).filter(Boolean)
   const out = []
-  const now = Date.now()
-  for (const line of raw.split('\n')) {
-    if (!line.trim()) continue
-    let o
-    try { o = JSON.parse(line) } catch { continue }
-    if (!o || o.t !== 'obs') continue
-    if (String(o.status || 'active') !== 'active') continue
-    if (o.validUntil && Number(o.validUntil) < now) continue
-    if (!o.claim) continue
+  for (const line of lines.slice(-40000)) {
+    let event
+    try { event = JSON.parse(line) } catch { continue }
+    if (!event || !event.id || !event.text) continue
+    const isDm = event.conversationType === 'dm'
+    const chatKey = isDm
+      ? 'private:' + String(event.channelId || '')
+      : 'discord:' + String(event.guildId || '') + ':' + String(event.channelId || '')
+    const roomLabel = isDm
+      ? 'Discord 私訊'
+      : [event.guildName || event.guildId || 'Discord',
+         '#' + (event.channelName || event.channelId || 'unknown'),
+         event.threadId ? 'Thread ' + event.threadId : ''].filter(Boolean).join(' / ')
     out.push({
-      side: 'qq',
-      rid: String(o.id || ''),
-      title: String(o.claim),
-      body: String(o.claim),
+      side: 'discord',
+      rid: String(event.id),
+      title: String(event.text).slice(0, 180),
+      body: String(event.text),
       tags: [],
       status: 'active',
-      source: String(o.source || ''),
-      at: Number(o.createdAt || o.at || 0) || null,
-      subjectId: String(o.subjectId || ''),
-      type: String(o.type || ''),
-      kind: String(o.kind || ''),
-      scope: String(o.scope || ''),
-      chatKey: String(o.chatKey || ''),
-      supersedes: o.supersedes ? String(o.supersedes) : '',
+      source: 'discord-message:' + String(event.messageId || ''),
+      at: Date.parse(String(event.at || '')) || null,
+      subjectId: event.role === 'assistant' ? '' : String(event.authorId || ''),
+      subjectName: event.role === 'assistant' ? '' : String(event.authorName || ''),
+      type: String(event.role || 'user'),
+      kind: String(event.conversationType || ''),
+      scope: String(event.scope || (isDm ? 'private' : 'guild')),
+      chatKey,
+      room: chatKey,
+      roomLabel,
+      supersedes: '',
     })
   }
   return out
@@ -183,13 +193,13 @@ function readRecall(memoryDir) {
   return { tick, byId }
 }
 
-export function buildNeuron({ dsh, qq, cfg = {}, names = new Map() }) {
+export function buildNeuron({ dsh, discord, cfg = {}, names = new Map() }) {
   const c = { ...DEFAULTS, ...cfg }
   const now = Date.now()
 
   // 1) 全部记忆节点（只留现行；被取代的只在被引用时拿来解释）
   const notes = dsh.filter((n) => n.status !== 'superseded' && n.status !== 'invalidated')
-  const obs = qq
+  const obs = discord || []
   const memories = []
   for (const n of notes) memories.push(n)
   for (const o of obs) memories.push(o)
@@ -197,7 +207,7 @@ export function buildNeuron({ dsh, qq, cfg = {}, names = new Map() }) {
   const cap = c.maxNodes || 1e9
   let kept = memories
   if (memories.length > cap) {
-    // 超量时按「最近 + QQ 侧权重」截断，并在结果里如实标出来
+    // 超量时按最近事件截断，并在结果里如实标出来
     kept = memories
       .slice()
       .sort((a, b) => (b.at || 0) - (a.at || 0))
@@ -206,7 +216,7 @@ export function buildNeuron({ dsh, qq, cfg = {}, names = new Map() }) {
 
   const recall = readRecall(c.dshMemoryDir)
   const nodes = kept.map((m) => {
-    const id = `${m.side === 'dsh' ? 'dsh' : 'qq'}:${m.rid}`
+    const id = `${m.side === 'dsh' ? 'dsh' : 'discord'}:${m.rid}`
     const h = m.side === 'dsh' ? recall.byId.get(m.rid) : null
     const gap = h ? Math.max(0, recall.tick - h.lastTick) : 0
     return {
@@ -220,6 +230,7 @@ export function buildNeuron({ dsh, qq, cfg = {}, names = new Map() }) {
       status: m.status,
       type: m.type || '',
       room: m.room || m.chatKey || m.scope || '',
+      roomLabel: m.roomLabel || '',
       subjectId: m.subjectId || '',
       heat: h ? h.n : 0,
       hot: h ? Math.round(Math.log1p(h.n) * Math.exp(-gap / 40) * 1000) / 1000 : 0,
@@ -279,7 +290,7 @@ export function buildNeuron({ dsh, qq, cfg = {}, names = new Map() }) {
   }
   const projectOf = (m) => {
     const tags = (m.tags || []).filter((t) => !DATE_TAG.test(t) && !GENERIC.has(normKey(t)))
-    if (!tags.length) return m.side === 'dsh' ? 'DSH 杂项' : 'QQ 观察'
+    if (!tags.length) return m.side === 'dsh' ? 'DSH 杂项' : 'Discord 事件'
     let best = tags[0]
     let bestN = -1
     for (const t of tags) {
@@ -290,27 +301,24 @@ export function buildNeuron({ dsh, qq, cfg = {}, names = new Map() }) {
   }
   // 2026-11-05 14:53 她定的：私聊房间不单独成点，直接并在人身上。
   // 群还是场所，留着；私聊就是一对一，房间这一层没有信息量。
-  const isPrivateRoom = (m) => m.side === 'qq' && String(m.chatKey || '').startsWith('private:')
-  const projectKeyOf = (m) => (m.side === 'qq' ? `room:${m.chatKey || '(全局)'}` : `proj:${projectOf(m)}`)
+  const isPrivateRoom = (m) => m.side === 'discord' && String(m.chatKey || '').startsWith('private:')
+  const projectKeyOf = (m) => (m.side === 'discord' ? `room:${m.chatKey || '(unknown)'}` : `proj:${projectOf(m)}`)
 
   // 房间名一律带「群 ·」「私聊 ·」前缀：房间是容器，不是人。
   // 2026-11-05 14:5x 看图时把「她（私聊）」当成了另一个人——人和房间得一眼分得开。
   // 房间名一律走配置（c.roomLabels）；没配就按号码生成，不写死任何人
   const ROOMS = c.roomLabels || {}
-  const qqProjectLabel = (m) => {
-    const k = m.chatKey || '(全局)'
-    if (ROOMS[k]) return ROOMS[k]
-    if (k === '(全局)') return 'QQ · 全局'
-    if (k.startsWith('group:')) return '群 · ' + k.slice(6)
-    if (k.startsWith('private:')) return '私聊 · ' + k.slice(8)
-    return 'QQ · ' + k
+  const discordProjectLabel = (m) => {
+    const key = m.chatKey || '(unknown)'
+    if (ROOMS[key]) return ROOMS[key]
+    return m.roomLabel || (key.startsWith('private:') ? 'Discord 私訊' : 'Discord · ' + key)
   }
 
   const projMap = new Map() // key -> {label, side, count}
   for (let i = 0; i < kept.length; i++) {
     if (isPrivateRoom(kept[i])) { nodes[i].project = null; nodes[i].projectLabel = ''; continue }
     const k = projectKeyOf(kept[i])
-    const label = kept[i].side === 'qq' ? qqProjectLabel(kept[i]) : projectOf(kept[i])
+    const label = kept[i].side === 'discord' ? discordProjectLabel(kept[i]) : projectOf(kept[i])
     if (!projMap.has(k)) projMap.set(k, { label, side: kept[i].side, count: 0 })
     projMap.get(k).count++
     nodes[i].project = k
@@ -442,8 +450,9 @@ export function buildNeuron({ dsh, qq, cfg = {}, names = new Map() }) {
       if (!buckets.has(sid)) buckets.set(sid, [])
       buckets.get(sid).push({ room, n })
     }
-    const roomName = (room) => (c.roomLabels && c.roomLabels[room]) ||
-      (room.startsWith('group:') ? '群 ' + room.slice(6) : room === 'global' ? '全局' : room.replace(/^private:/, '私聊 '))
+    const roomNames = new Map(nodes.filter((n) => n.room && n.roomLabel).map((n) => [n.room, n.roomLabel]))
+    const roomName = (room) => (c.roomLabels && c.roomLabels[room]) || roomNames.get(room) ||
+      (room.startsWith('private:') ? 'Discord 私訊' : room === 'unknown' ? '未知來源' : room)
     const capP = c.maxPeopleNodes || 60
     for (const [sid, list] of [...buckets.entries()].sort((a, b) => b[1].length - a[1].length)) {
       if (list.length < 2 || personNodes.length >= capP) continue
@@ -451,11 +460,11 @@ export function buildNeuron({ dsh, qq, cfg = {}, names = new Map() }) {
       for (const { room } of list) byRoom.set(room, (byRoom.get(room) || 0) + 1)
       const rooms = [...byRoom.entries()].sort((a, b) => b[1] - a[1])
         .map(([key, count]) => ({ key, label: roomName(key), count }))
-      const name = names.get(sid) || (sid === String(c.ownerId || '') ? (c.ownerName || '我') : sid)
+      const name = names.get(sid) || list.find((item) => item.n.subjectName)?.n.subjectName || (sid === String(c.ownerId || '') ? (c.ownerName || '我') : sid)
       const id = 'person:' + sid
       const body = '一共 ' + list.length + ' 条记忆的主语是他/她，分布在 ' + rooms.length + ' 处：' +
         rooms.map((r) => r.label + ' ' + r.count).join('、') + '。'
-      personNodes.push({ id, kind: 'person', side: 'person', qq: sid, rooms, title: name, body, tags: [], at: null, count: list.length, subjectId: sid })
+      personNodes.push({ id, kind: 'person', side: 'person', userId: sid, rooms, title: name, body, tags: [], at: null, count: list.length, subjectId: sid })
       for (const { room, n } of list) {
         const why = '这条记忆的主语是 ' + name + '（' + roomName(room) + '）'
         push(id, n.id, 'subject', why, Math.min(3, 1 + list.length / 8))
@@ -487,7 +496,7 @@ export function buildNeuron({ dsh, qq, cfg = {}, names = new Map() }) {
       orphans: orphans.length,
       orphanRate: Math.round((orphans.length / (all.length || 1)) * 1000) / 10,
       dsh: nodes.filter((n) => n.side === 'dsh').length,
-      qq: nodes.filter((n) => n.side === 'qq').length,
+      discord: nodes.filter((n) => n.side === 'discord').length,
       recalled: nodes.filter((n) => (n.heat || 0) > 0).length,
       recallTicks: recall.tick,
     },
@@ -582,7 +591,7 @@ export function buildUnified(neuron, { card = '', diaries = [] } = {}) {
       // 原来存的是纯号码，前端拿它去比 'person:xxx' 永远对不上（按人筛就是这么哑掉的）。
       people: n.subjectId ? ['person:' + n.subjectId] : [],
       tags: n.tags || [],
-      source: n.side === 'qq' ? 'qq' : n.side === 'person' ? 'person' : 'dsh',
+      source: n.side === 'discord' ? 'discord' : n.side === 'person' ? 'person' : 'dsh',
       excerpt: String(n.body || '').slice(0, 120),
     }
   })

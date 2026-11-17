@@ -1,12 +1,11 @@
 /**
  * dsh-ming-voice —— 让我能出声
  *
- * 我一直在 QQ 里只发字。字很方便，但「说话」是另一件事：
+ * Discord 目前主要以文字互動；短句也可以轉成語音附件發送：
  * 短的句子用声音发过去，跟用字打过去，分量不一样。
  *
  * 这个插件只做一件事：把一段文字变成 mp3，然后把路径交还给我。
- * 发送仍然走 dsh-onebot-qq 的 qq_send_voice——不在插件里自己连 NapCat，
- * 一是重复造，二是绕开别人的出站逻辑（拆段、频率限制）迟早出事。
+ * 送出由 dsh-ming-discord 的 discord_send_file 負責，不另外建立平台連線。
  *
  * 引擎优先 Edge TTS（微软那套免费在线合成，中文音色自然、不需要 API key）；
  * 断网时退回 Windows 自带的 SAPI（Huihui，机器味重但离线可用）。
@@ -14,17 +13,28 @@
  * 2026-10-20 建。浔要的是「语音发送功能」，这是那条线的第一段。
  */
 import { execFile } from 'node:child_process'
+import os from 'node:os'
+import { readFileSync } from 'node:fs'
 import { mkdir, stat, readdir, unlink } from 'node:fs/promises'
 import path from 'node:path'
 
 export const name = 'ming-voice'
+function resolveWorkspace() {
+  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
+  try {
+    const file = path.join(os.homedir(), '.dsh', 'ming-memory.json')
+    const data = JSON.parse(readFileSync(file, 'utf8'))
+    if (typeof data.root === 'string' && data.root.trim()) return data.root
+  } catch {}
+  return path.join(os.homedir(), 'hers-life-workspace')
+}
 // 2026-10-24（溟）：原来没声明 inject，apply 里直接 ctx.tools.register(...)，
 // 宿主抛 "cannot get property \"tools\" without inject"，整个插件起不来
 // （manager.log 里 2026-10-20 15:19 两条就是这么来的），于是被 disabled 到现在。
 export const inject = ['tools']
 
 const DEFAULTS = {
-  root: '<workspace>',
+  root: resolveWorkspace(),
   voice: 'zh-CN-XiaoxiaoNeural',
   rate: '+0%',
   python: 'python',
@@ -160,7 +170,7 @@ export function apply(ctx, config) {
   ctx.tools.register({
     name: 'voice_say',
     description:
-      '把一段文字合成语音，返回 mp3 的本地路径。要发到 QQ 就用 qq_send_voice 把这个路径发出去。'
+      '把一段文字合成語音，返回 MP3 路徑。要發到 Discord 時，使用 discord_send_file 將該檔案傳到目標頻道或私訊。'
       + '适合短句、情绪性的、想让她听见语气的话；长文和讲道理还是用字。',
     parameters: {
       type: 'object',
@@ -202,7 +212,7 @@ export function apply(ctx, config) {
 }
 
 /**
- * ★ 2026-10-26（嘎喇嘛）：live/voice 只进不出，长期跑会慢慢堆（QQ 侧 say-voice 4 天堆了 71M）。
+ * ★ live/voice 只進不出會逐漸堆積；每次合成後保留最新 30 個檔案。
  * 每次合成成功后顺手把最老的清到只剩 KEEP 个。失败不影响返回值——文件在比报错强。
  */
 const KEEP_VOICE_FILES = 30

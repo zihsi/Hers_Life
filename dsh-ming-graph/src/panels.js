@@ -94,7 +94,7 @@ function AcpPanel() {
           h('path', { d: 'M16 14l4 4-4 4' }))),
       h('div', { className: 'ming-ph-tx' },
         h('div', { className: 'ming-ph-t' }, '委托'),
-        h('div', { className: 'ming-ph-d' }, 'QQ 那边转过来的活，跑在 DSH 这边，全程没有界面')),
+        h('div', { className: 'ming-ph-d' }, 'Discord 對話轉交的工作，跑在 DSH 这边，全程没有界面')),
       h('button', { className: 'mg-btn', onClick: load, disabled: busy }, busy ? '读…' : '刷新'),
     ),
 

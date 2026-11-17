@@ -1,37 +1,34 @@
 # AI · DSH 插件集
 
-**版本 1.1.1**（2026-11-16）· [CHANGELOG](CHANGELOG.md)
+**Discord-only 重构分支**（2026-11-17）· [CHANGELOG](CHANGELOG.md)
 
 > 待发布的按项变更、使用方法和验证结果见 [CHANGELOG](CHANGELOG.md) 中的变更记录目录。
 
 > 要让别的 agent 跟着记账：格式、目录名、哪份文件被谁读，见 **[RECORDS.md](RECORDS.md)**。
 
-一台 Windows 机器上，一个 AI 的**记忆、眼睛、手和声音**。十二个插件，跑在 [DeepSeek Harness](https://github.com/deepseek-ai)（DSH）上。
+一台 Windows 机器上，一个 AI 的**记忆、眼睛、手和声音**。Discord 原生入口与配套插件，跑在 [DeepSeek Harness](https://github.com/deepseek-ai)（DSH）上。
 
 它们不是一个框架，是同一个东西的十二个面：会记得、会看图、会动手、会说话、会自己出去逛。
 
-## 版本说明：1.1.0 Remake 起不再支持 QQ-Agent
+## 平台支持：Discord + DeepSeek Harness（仅此组合）
 
-**1.1.0 Remake 起，这套插件不再支持 QQ-Agent，改为支持 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 4.29。**
+此分支只支持 **Discord Bot + DSH**。QQ、OneBot、QQ-Agent、AstrBot 以及旧平台桥接均已退役，不保留兼容层。
 
-QQ 那一侧换壳之后，QQ-Agent 的插件、看门狗、启动路径全部退役，这个仓也不再维护与它相关的任何东西。
-后端还是 QQ-Agent 的，请留在 1.0.x；要上 1.1.0 及以上，先把后端换成 AstrBot。
-
-唯一需要补的是一个桥：`astrbot_plugins/astrbot_plugin_inbox_record`。它把 AstrBot 收到的消息
-按旧格式追加进同一个 jsonl，兴趣唤醒（`dsh-ming-interest`）那边零改动就能继续工作。
+Discord 原生适配器负责 Gateway、频道／私讯／Thread 会话、附件、语音、兴趣唤醒与统一设置页。Bot Token 存在 `~/.dsh/hers-life-secrets.json`；设置页只显示是否已配置，不回传密钥。
 
 ## 这里面有什么
 
 | 包 | 干什么 |
 |---|---|
+| `dsh-ming-discord` | **唯一聊天入口**：Discord 私訊／伺服器／頻道／Thread 各自獨立 session；所有會話共享可追溯事件記憶；整合興趣喚醒、附件、語音與設定中心 |
 | `dsh-ming-core-memory` | [只读记忆查看](dsh-ming-core-memory/INSPECTOR.md)；核心记忆 + 归档记忆。核心常驻注入，归档按意思检索；写入政策只收机器/环境/项目事实，不写关于人的判断 |
 | `dsh-ming-memory` | 开场记忆：把人设文件与最近几篇日记拼进系统提示词，只读不回写 |
 | `dsh-ming-graph` | 记忆神经元与星图。每条真记忆一个点，每条边都带「凭什么连」的理由 |
 | `dsh-ming-mousepet` | 桌宠：**AI 光标**、截图、连拍、常驻看屏（常态识别，画面动了才留帧）、气泡说话（不抢焦点）、UIA/窗口消息动手。原来的轻量版 `dsh-ming-cursor` 2026-11-10 起并进这里，不再单列 |
 | `dsh-ming-voice` | 文字转语音，落成 mp3 |
 | `dsh-ming-bilibili-account` | B 站：扫码登录、搜视频、字幕、评论、私信、历史、收藏 |
-| `dsh-ming-browse` | 「自己玩」：工作区闲够久时自己醒一轮。**不是全局只读**：只有部分 Android 点按和关机/重启走硬拦（`index.js` 的 `tools/pre-execute`），其余工具放行；B 站互动等写操作由配置和个人约定分别授权。面板上有个「打开我的浏览器」，开的是带登录态的真窗口（投稿、投稿件最后要选文件，只能在那个窗口里点）。开关词只认配置里 `ownerQQ` 的私聊会话（也可用环境变量 `MING_OWNER_QQ`） |
-| `dsh-ming-interest` | 兴趣唤醒：被 @ 门控丢掉的消息里，只有命中在意的题材才叫醒 |
+| `dsh-ming-browse` | 「自己玩」：工作区闲够久时自己醒一轮。**不是全局只读**：只有部分 Android 点按和关机/重启走硬拦（`index.js` 的 `tools/pre-execute`），其余工具放行；B 站互动等写操作由配置和个人约定分别授权。面板上有个「打开我的浏览器」，开的是带登录态的真窗口（投稿、投稿件最后要选文件，只能在那个窗口里点）。控制指令只接受 Discord Owner 私訊；完成摘要由 Discord DM 回報 |
+
 | `dsh-ming-wake` | 定时提醒：到点取得/恢复会话并实际投递事项；结果不确定时不盲目重发 |
 | `dsh-ming-resume` | 普通插话可接续；明确停止、暂停或换任务时遵守最新要求 |
 | `dsh-ming-skill-isolate` | 按工作区遮 skill：这个目录用不上的从模型视野里关掉，不删文件 |
@@ -40,21 +37,11 @@ QQ 那一侧换壳之后，QQ-Agent 的插件、看门狗、启动路径全部�
 
 可选扩展：[共同活动卡](dsh-ming-activities/README.md)——手动保存进度和下一步，需要单独安装，不自动触发 AI。
 
-## 消息源：AstrBot（QQ-Agent 已停用）
+## Discord 会话与共享记忆
 
-2026-11-11 起，QQ 那一侧从 **QQ-Agent 换到 [AstrBot](https://github.com/AstrBotDevs/AstrBot) 4.29**。
+每个 DM、伺服器频道与 Thread 都有自己的 DSH session 和独立历史。跨会话记忆不是把所有历史拼在一起，而是把重要事件写入 `live/discord-memory.jsonl`，附上 Discord message ID、作者、服务器、频道、Thread 与时间；其他会话按相关性召回，并保留来源标签。
 
-- **不再支持 QQ-Agent**；它的壳已退役，相关插件、看门狗、启动路径都不再维护。
-- 这套 DSH 插件本身不依赖具体的 QQ 后端——它们读的是**文件与工具**，不是某个 bot 的 API。
-- 唯一有硬依赖的是**兴趣唤醒**（`dsh-ming-interest`）：它读 `~/.dsh/media/onebot/qq-inbox.jsonl`，
-  而这个文件以前由 QQ-Agent 的 onebot 插件写。换壳之后它 13:06 就停了，兴趣唤醒等于瞎了。
-- 补法：`astrbot_plugins/astrbot_plugin_inbox_record`——挂进 AstrBot，把每条入站消息按旧格式追加回
-  同一个 jsonl。兴趣唤醒**一行代码都不用改**，继续读那个文件。
-  **只在一台实例上装**（2026-11-11 定的：只写一份）。同一个群里跑两个 bot 时，
-  两边都装会把同一条消息写两遍，兴趣唤醒会当成两次事件。
-
-群聊蒸馏同理：蒸馏脚本读的是消息文件与 `day/` 目录，不关心是谁写进来的；换壳之后只要
-inbox 还在长，蒸馏就照常跑。
+公开频道事件可按设置跨频道／跨服务器共享。Owner 私訊可在 Owner 的私訊会话之间共享；私人背景进入公开频道时，只在 Owner 本人发言的回合召回，并要求 AI 不复述或泄露私人原文。权限与范围可在 Discord 设置中心调整。
 
 ## 装法
 
@@ -72,7 +59,7 @@ inbox 还在长，蒸馏就照常跑。
 `client.js` 是构建物。改 `src/` 之后要重建：
 
 ```bash
-cd dsh-ming-graph && node build.mjs        # 从各插件的 src/panel.js 直接切，三道门都过才出产物
+cd dsh-ming-graph && node build.mjs        # 从 Discord／语音／浏览器／桌宠面板源重新生成 client.js
 cd dsh-ming-memory && node build.mjs
 ```
 
@@ -81,10 +68,10 @@ cd dsh-ming-memory && node build.mjs
 不想手动 clone + `link:` 的话，把这一个 URL 加进 DSH 的 **插件市场 → 索引源**（在设置里，只有用户本人能加）：
 
 ```
-https://raw.githubusercontent.com/Chess12333/Hers_Life/main/market/index.json
+https://raw.githubusercontent.com/zihsi/Hers_Life/discord-dsh-only/market/index.json
 ```
 
-索引是 format 1，由 `scripts/make-market-index.mjs` 生成。12 个包全部走 git 源（`type: git` + 仓库 URL + **钉住的 commit** + `path:`），所以装到的永远是某个确定的提交，不是 main 的浮动头。
+索引是 format 1。12 个包全部走 git 源（`type: git` + 仓库 URL + **钉住的 commit** + `path:`），所以装到的永远是某个确定的提交，不是 main 的浮动头。
 
 **每次发版要重跑一次**，否则市场里还停在旧 commit：
 
@@ -96,19 +83,16 @@ node scripts/make-market-index.mjs --ref=v1.2.1 --validator="<DSH_HOME>/data/ver
 
 ## 隐私
 
-这个仓是从本机导出的，导出脚本会先剔一遍再自检（本机用户名、QQ 号、群号、B 站 uid、密钥、真人昵称、超过 1MB 的文件），命中任何一条就不许提交。
+这个仓是从本机导出的，导出脚本会先剔一遍再自检（本機使用者路徑、Discord Token、B 站 uid、真人暱稱、超過 1MB 的檔案），命中任何一条就不许提交。
 
 所以下面这些**不是配置，是占位**，你得自己填：
 
 | 变量 / 位置 | 说明 |
 |---|---|
-| `MING_WORKSPACE` | 工作区目录（放人设、日记、见闻的那个夹子） |
-| `MING_OWNER_QQ` | 谁的私聊算「本人指令」（`dsh-ming-browse` 的开关只认这个号） |
+| `MING_WORKSPACE` | 工作区目录的可选环境变量覆盖；通常在 Discord 设置页选择工作区 |
 | `USERPROFILE` | 本机路径默认从它拼，不用改 |
 | `MING_FFPLAY` | 试听用的 ffplay，默认走 `PATH` |
-| `MING_GRAPH_CONFIG` | 星图的本地配置（群号、群名），默认 `~/.dsh/ming-graph.json` |
-
-`dsh-ming-interest/cordis.patch.yml` 里的群号是空的，填你自己的。
+| Discord Owner ID | 在 Discord 设置中心填写；用于私讯白名单、后台任务回报与 Owner 权限判断 |
 
 ## 人格
 

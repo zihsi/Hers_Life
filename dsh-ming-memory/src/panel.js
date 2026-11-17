@@ -162,7 +162,7 @@ function MemoryIcon() {
 }
 
 // ---------------------------------------------------------------------------
-// 设置页（2026-11-10 浔要的）：默认称呼 / 全名 / 自称一句 / 对方的称呼 / QQ 名 / 要不要带身份。
+// 设置页（2026-11-10 浔要的）：預設稱呼／全名／自稱描述／對方稱呼／是否注入身份。
 //
 // 挂在她的一生顶栏最右边（光标之后）。第一次装好、还没配过的时候，这一页顶上先摆一页向导：
 // 三格填完点「就这样开始」，写进 ~/.dsh/ming-memory.json 的 identityOnboarded=true，下次不再出现。
@@ -175,7 +175,6 @@ const ID_FIELDS = [
   { key: 'selfName', label: '我自己叫什么', hint: '平时被叫的那个（昵称）', ph: '大肥鱼' },
   { key: 'selfFullName', label: '全名', hint: '正式场合、生气的时候用', ph: '大肥鱼' },
   { key: 'userName', label: '我该怎么叫你', hint: '它说话时会用这个称呼', ph: '主人' },
-  { key: 'qqName', label: 'QQ 那边的名字', hint: '留空就跟上面第一个一样', ph: '（留空）' },
 ]
 
 function IdentityPanel() {
@@ -196,7 +195,6 @@ function IdentityPanel() {
           selfFullName: d.identity.selfFullName || '',
           selfDesc: d.identity.selfDesc || '',
           userName: d.identity.userName || '',
-          qqName: d.identity.qqName || '',
           identity: d.identity.identity !== false,
         })
         setOnboarded(!!d.onboarded)
