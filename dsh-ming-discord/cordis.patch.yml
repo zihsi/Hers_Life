@@ -1,0 +1,36 @@
+- insert:
+    - id: ming-discord
+      name: dsh-ming-discord
+      config:
+        enabled: false
+        workspace: ''
+        ownerIds: []
+        discord:
+          enabled: false
+          mode: mention
+          allowDm: true
+          dmPolicy: owner
+          guildIds: []
+          channelIds: []
+          typing: true
+          streamEdits: true
+          replyToMessage: true
+          reactions: true
+          shareImages: true
+          chunkLimit: 1900
+          maxAttachmentMb: 24
+        memory:
+          enabled: true
+          shareAcrossChannels: true
+          shareAcrossGuilds: true
+          sharePrivateToOwner: true
+          allowPrivateContextInGuild: true
+          maxRecall: 6
+        voice:
+          enabled: true
+          ffmpeg: ffmpeg
+          heartbeat: true
+        interest:
+          enabled: true
+          minChars: 6
+          contextLines: 4

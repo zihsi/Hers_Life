@@ -802,10 +802,21 @@ const ID_FIELDS = [
   { key: 'selfName', label: '我自己叫什么', hint: '平时被叫的那个（昵称）', ph: '大肥鱼' },
   { key: 'selfFullName', label: '全名', hint: '正式场合、生气的时候用', ph: '大肥鱼' },
   { key: 'userName', label: '我该怎么叫你', hint: '它说话时会用这个称呼', ph: '主人' },
-  { key: 'qqName', label: 'QQ 那边的名字', hint: '留空就跟第一个一样', ph: '（留空）' },
 ]
 
 function IdentityPanel() {
+  const [HersLifeSettingsPanel, setHersLifeSettingsPanel] = useState(
+    () => typeof window !== 'undefined' ? window.__HERS_LIFE_SETTINGS_PANEL || null : null,
+  )
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const ready = () => {
+      if (typeof window.__HERS_LIFE_SETTINGS_PANEL === 'function') setHersLifeSettingsPanel(() => window.__HERS_LIFE_SETTINGS_PANEL)
+    }
+    window.addEventListener('hers-life-settings-ready', ready)
+    ready()
+    return () => window.removeEventListener('hers-life-settings-ready', ready)
+  }, [])
   const [form, setForm] = useState(null)
   const [onboarded, setOnboarded] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -823,7 +834,6 @@ function IdentityPanel() {
           selfFullName: d.identity.selfFullName || '',
           selfDesc: d.identity.selfDesc || '',
           userName: d.identity.userName || '',
-          qqName: d.identity.qqName || '',
           identity: d.identity.identity !== false,
         })
         setOnboarded(!!d.onboarded)
@@ -849,6 +859,8 @@ function IdentityPanel() {
       .catch((e) => setError('没存上：' + (e && e.message ? e.message : e)))
       .then(() => setBusy(false), () => setBusy(false))
   }, [form])
+
+  if (HersLifeSettingsPanel) return h(HersLifeSettingsPanel)
 
   const inputStyle = {
     width: '100%', maxWidth: '360px', padding: '8px 11px', borderRadius: '9px', fontSize: '13.5px',
