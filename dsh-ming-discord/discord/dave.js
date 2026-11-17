@@ -1,17 +1,16 @@
 /**
  * DAVE — Discord's end-to-end encryption for voice.
  *
- * Since 2025 Discord refuses to complete a voice handshake unless the client
- * supports DAVE: identifying with `max_dave_protocol_version: 0` (or omitting
- * the field) is answered with close code 4017 and the socket never reaches
- * READY. The protocol itself (MLS group state, key schedules, media AEAD) is
+ * Since March 2, 2026, Discord requires DAVE for non-Stage voice calls:
+ * identifying with `max_dave_protocol_version: 0` (or omitting the field) is
+ * rejected with close code 4017. Stage channels are the documented exception. The protocol itself (MLS group state, key schedules, media AEAD) is
  * far too large to hand-write, so this wraps the already-compiled
  * `@snazzah/davey` native addon that ships next to this file.
  *
  * The addon is an N-API module, so the same binary works under both the plain
  * Node build and Electron's embedded Node. It is loaded lazily and every
- * failure degrades to "voice without E2EE" instead of throwing: a missing
- * binary must not take the whole Discord transport down.
+ * failure is reported to the voice caller. A missing binary must not take down
+ * text Discord, but it makes non-Stage voice-channel joining unavailable.
  *
  * Wire format (voice gateway v8):
  *   JSON op 21 dave_prepare_transition      -> op 23 dave_transition_ready
@@ -66,8 +65,8 @@ let cachedError = null
  * Load the native addon once.
  *
  * Returns `null` when it is unavailable (not shipped, wrong arch, blocked by
- * policy) and remembers why, so the caller can log the reason once instead of
- * retrying on every voice join.
+ * policy) and remembers why. Non-Stage Discord voice channels require DAVE, so
+ * callers must fail clearly rather than attempting an unencrypted fallback.
  */
 export function loadDavey(logger = null) {
   if (cached !== null || cachedError !== null) return cached
@@ -81,7 +80,7 @@ export function loadDavey(logger = null) {
     return cached
   } catch (error) {
     cachedError = error
-    logger?.warn('dave: unavailable, voice will run without end-to-end encryption — ' + String(error?.message ?? error))
+    logger?.warn('dave: unavailable; non-Stage voice channels cannot connect without DAVE — ' + String(error?.message ?? error))
     return null
   }
 }
