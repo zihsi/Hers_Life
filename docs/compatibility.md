@@ -1,52 +1,56 @@
-# 兼容性表（L-6）
+# 相容性與驗收狀態（Discord-only）
 
-> 只写**实际跑过**的，不写「应该支持」。每一行都要能被别人照着复现；
-> 没条件验的写「未验」，不填空格的 PASS。
->
-> 最后更新：2026-11-17 12:0x（Windows 本机实测）
+> 本文件只記錄 `discord-dsh-only` 分支。**CI 通過、模擬 Host 通過，不代表已在真實 Windows DSH + Discord Gateway + 語音頻道完成端到端驗收。**
+> 更新：2026-11-18。
 
-## 本机基线
+## 支援目標與最低條件
 
-| 组件 | 版本 / 提交 | 验证层级 | 结果 | 日期 |
-|---|---|---|---|---|
-| Windows | 10.0.26100.8457 | windows-live | 本表所有手动项都在这个版本上跑 | 2026-11-17 |
-| Windows PowerShell | 5.1.26100.8457 | parse | `check.mjs --suite windows-live` 的 sidecar 解析项 | 2026-11-17 |
-| Node | v24.21.0 | offline / build | `node scripts/check.mjs --suite offline` 全绿 | 2026-11-17 |
-| DSH | 0.2.2-rc.1 | host-contract | 插件加载 + 开场注入在本机跑；`host` 档需 `MING_RUN_MANUAL=1` 手工跑 | 2026-11-17 |
-| AstrBot | 4.29.4 | E 端到端 | 6199 端口收消息、日志「适配器已连接」 | 2026-11-17 |
-| Chrome | 157.0.4341.57 | I 扩展联调 | **未验**：需要扩展 + sidecar + Node 同批升级 | — |
+| 項目 | 目前要求／狀態 | 驗證範圍 |
+|---|---|---|
+| 聊天平台 | Discord Bot + DeepSeek Harness；QQ、OneBot、AstrBot 已不支援 | 程式與文件的現行目標 |
+| Node.js | `>=22` | 各插件 manifest；GitHub CI 使用 Node 22 |
+| DSH | 插件 manifest 以 `>=0.2.0` 為最低聲明 | 需要 DSH 的 Cordis inject、tools、agents 等 Host 能力；真實 DSH 仍須以實機啟動確認 |
+| Discord Gateway Intent | 必須在 Developer Portal 啟用 Message Content + Server Members | 程式要求兩項；未啟用可能以 close code `4014` 拒絕 Identify |
+| Windows 桌寵 | Windows + PowerShell 5.1 + WinForms | 不屬於 Ubuntu CI；每台目標機需人工驗證 |
+| Discord 語音 | FFmpeg + 可載入的 `dsh-ming-discord/discord/dave/davey.node` | 本次已加缺少 DAVE 時 fail-fast；真實 DAVE 握手／音訊尚未由 CI 驗證 |
+| Bilibili | 使用者需自行登入帳號 | 自動化測試使用假宿主／假網路；真人掃碼與重啟驗證仍須人工完成 |
 
-## 检查分档与前置条件
+## 自動化 CI
 
-| 档 | 跑什么 | 前置条件 | 会不会碰真实数据 |
+GitHub Actions：[`Hers Life Discord CI`](https://github.com/zihsi/Hers_Life/actions/workflows/discord-dsh-ci.yml)。
+
+| 項目 | 執行環境 | 可以證明 | 不能證明 |
 |---|---|---|---|
-| `offline` | 纯逻辑、合成工作区、假网络 | 只要 Node | 不会（`fixture: 'workspace'` 会现场造一个临时工作区） |
-| `build` | 生成物 vs 源码 | 只要 Node | 不会（重建到仓库内，不碰 live） |
-| `host` | 需要宿主真实注入的断言（【时间感】块） | 真 DSH 会话 | 读，不写 |
-| `windows-live` | PS 5.1 解析、桌宠、扩展、账号 | 真 Windows + 真设备 | 可能读本机状态，**必须人工跑** |
-| `fixture` | runner 自己的自测（故意失败） | 只要 Node | 不会 |
+| Node 單元／可靠性測試 | Ubuntu + Node 22 | 純邏輯、合成資料、部分 DSH Host 契約與回歸 | 真 Discord Gateway、權限 Portal、真群組互動 |
+| Bilibili 套件載入 | Ubuntu + Node 22 | ESM 載入與套件檔案清單 | 真實 Cookie、真人登入與平台社交操作 |
+| Browse 權限／輪替檢查 | Ubuntu + Node 22 | 模擬工具呼叫及確定性規則 | 真正瀏覽器、真帳號及外部網站行為 |
+| 離線驗收矩陣 | Ubuntu + Node 22 | `scripts/check.mjs --suite offline` 內列出的離線項目 | Windows、真宿主或真實資料 |
+| UI 生成物檢查 | Ubuntu + Node 22 | Graph 生成戳與來源一致；Memory client 可重建且不產生差異 | DSH 前端實際載入與顯示效果 |
+| 語法檢查 | Ubuntu + Node 22 | CI 列出的整合模組可被 Node 解析 | 執行時依賴是否能在目標機載入 |
 
-## 已知未验项（如实记录）
+## 仍需實機驗收
 
-1. **I 浏览器取文**：设置页 `options.html` 已补进仓库（2026-11-17，R03）；仍未在 Chrome 里真装过一次、没做右键到桌宠回答的实机链路。旧 47322 收文口已默认关闭（R07），要接老扩展得显式开 legacyWebPick。
-2. **G 统一 B 站登录**：真实入口的三个反例（恢复要校验 / tombstone 优先 / 退出的迟到结果不写回）已用假宿主 + 假网络离线跑过（`qa-entry.mjs`，8 项）；仍需一次真人扫码 + 退出 + 重启确认「旧文件不复活」。
-3. **中文 / 空格路径**：`check.mjs` 用参数数组启动子进程（不经 shell），理论上安全，但**没有在中文空格路径的仓库副本上实跑过**。要在本机换目录验一次才算。
-4. **完整干净安装**：没有在另一台机器上从零装过。
-5. **向量质量**：J-4 的 30 道**合成**题已建（`test-support/rag-eval.mjs`），只证明检索逻辑；真实资料上的 5–10 题仍待验。
-6. **J 索引整组切换**：读端已认 `live/rag-index/current.json`（R09，从不可变代目录一次取齐四个文件，代不完整或比 live 旧就退回 live）；生成链仍在本机、不在公开仓库，所以「生成 + 发布 + 读取」的完整链路只能证明三分之二。
+以下項目不能用目前的 Ubuntu CI 代替：
 
-## CI
+1. **Windows DSH 啟動：** 在你的實際 DSH profile 啟用 Discord、Memory、Graph 等插件，確認全部載入且設定頁可開啟。
+2. **Discord Gateway：** 用真 Bot 測試 DM、@提及、回覆 Bot、Thread、權限限制、斜線指令與附件。確認 Developer Portal 的兩項特權 Intent 都已開啟。
+3. **語音：** 確認目前 Node/Electron 能載入隨包附上的 `davey.node`，再測加入、播放、收音、離開及重新連線。**僅看到 Bot 加入語音頻道，不代表 DAVE 音訊加解密正常。**
+4. **桌寵／Windows 操作：** 實測截圖、氣泡、UIA、暫停鍵及物理輸入回退；不要只在無管理員權限的簡單視窗測一次就視為所有程式都支援。
+5. **Bilibili：** 真人掃碼、查帳號、使用需要登入的功能、登出、重啟後確認登入狀態。
+6. **乾淨安裝：** 在另一個 Windows 使用者或乾淨目錄，按 README 從零安裝；中文與空格路徑仍要特別確認。
+7. **記憶隔離：** 用兩個不同 Discord 測試帳號／Owner 與非 Owner，驗證私訊背景不會被其他成員召回或看到。
 
-暂不接 GitHub Actions。原因：本仓库的检查有一半要 Windows 本机条件（PS 5.1、桌宠、扩展、账号），
-CI 里跑不出真结果，只会显示一片绿色——那比没有 CI 更坏。
-要接的话只接 `--suite offline` 与 `--suite build`，固定 Node 24、不登录任何账号、不向真实群发消息。
+## 本機紀錄（歷史基線，不等於此分支完整驗收）
 
-## 相关命令
+舊紀錄曾記載 Windows 10.0.26100.8457、Node v24.21.0、DSH 0.2.2-rc.1 與 PowerShell 5.1 的本機環境。該紀錄混有 AstrBot／QQ 舊架構，不能推論目前 Discord-only 分支已在同一台機器完成所有測試；請以本文件上方的 CI 與未驗清單為準。
+
+## 本地檢查命令
 
 ```bash
 node scripts/check.mjs --list
 node scripts/check.mjs --suite offline
-node scripts/check.mjs --suite build
-MING_RUN_MANUAL=1 node scripts/check.mjs --suite host
-node scripts/check.mjs --suite windows-live    # 人工看着跑
+node dsh-ming-graph/build.mjs --check
+node dsh-ming-memory/build.mjs
 ```
+
+`fixture` 套件刻意包含失敗項目，只用來驗證檢查器能否正確回報失敗；不要把它當成產品測試，也不要納入 `--suite all` 的成功門檻。
