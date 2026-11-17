@@ -39,6 +39,9 @@ function InterestPanel() {
 
   useEffect(() => { load() }, [load])
 
+  const st = (data && data.state) || {}
+  const off = !!st.off
+
   const toggle = useCallback(() => {
     const nextOff = !off
     setSwitching(true)
@@ -47,14 +50,12 @@ function InterestPanel() {
       .then(() => load())
       .catch((e) => setErr(String((e && e.message) || e)))
       .finally(() => setSwitching(false))
-  }, [load])
+  }, [load, off])
 
-  const st = (data && data.state) || {}
   const topics = (data && data.config && data.config.topics) || []
   const learned = (data && data.learned) || []
   const mute = (data && data.config && data.config.mute) || []
   const quiet = st.quiet || st.skip
-  const off = !!st.off
   const tone = off ? 'danger' : quiet ? 'warn' : 'ok'
   const label = off ? '唤醒关着' : quiet ? '现在不叫' : '在线'
   // 「跳过原因」拆成几条：她要知道是哪一条卡着，不是一句日志
