@@ -1,20 +1,20 @@
 /**
  * dsh-ming-resume —— 插话之后记得回去
  *
- * 问题：QQ 通道开 newMessagePolicy=steer 之后，她在我干活时插一句，那句会被塞进
+ * 问题：Discord 通道开 newMessagePolicy=steer 之后，她在我干活时插一句，那句会被塞进
  * 当前回合的下一步。能插话了，但副作用是：我答完她，很容易把原来在做的事丢在那儿
  * ——因为没有任何东西提醒我「刚才被打断了」。
  *
  * 宿主的真相：没有「暂停/恢复任务」这种对象。一个回合就是一串步骤，插话只是往
  * 下一步多塞一条消息。所以「继续」不是机制问题，是记性问题：我要知道自己在干什么。
  *
- * 做法：agent/pre-step 里看一眼这一步进来的消息，如果里面有 QQ 通道的插话
- * （source.kind === 'plugin:dsh-onebot'，这是 bridge.steerMessage 的唯一写法），
+ * 做法：agent/pre-step 里看一眼这一步进来的消息，如果里面有 Discord 通道的插话
+ * （source.kind === 'plugin:hers-life-discord'，这是 bridge.steerMessage 的唯一写法），
  * 就追加一条接续提示：普通插话后回到原任务；停止、暂停或改任务时服从新指令。
  *
  * 边界：
  *   · 找不到 status.json 就只说「回到你被打断前的事」，不编具体内容。
- *   · 只认 plugin:dsh-onebot 这个 source，别把普通 QQ 消息也当成插话。
+ *   · 只认 plugin:hers-life-discord 这个 source，别把普通 Discord 訊息也当成插话。
  *   · 任何异常都不影响这一步。
  */
 import { readFile, appendFile } from 'node:fs/promises'
@@ -24,7 +24,7 @@ import { randomUUID } from 'node:crypto'
 
 export const name = 'ming-resume'
 
-const STEER_SOURCE = 'plugin:dsh-onebot'
+const STEER_SOURCE = 'plugin:hers-life-discord'
 const DEFAULTS = {
   root: process.env.MING_WORKSPACE || '',
   adbPath: 'D:\\MuMuPlayer\\nx_device\\12.0\\shell\\adb.exe',
