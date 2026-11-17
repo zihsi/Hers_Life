@@ -232,7 +232,10 @@ test('Discord plugin activation registers DSH-valid tools and provides the servi
     namedLoggers.push(name)
     return { name, debug() {}, info() {}, warn() {}, error() {} }
   }
-  const logger = Object.assign(name => makeLogger(name), makeLogger('context'))
+  const logger = name => makeLogger(name)
+  for (const method of ['debug', 'info', 'warn', 'error']) {
+    Object.defineProperty(logger, method, { value() {}, configurable: true })
+  }
   const listeners = new Map()
   const ctx = {
     logger,
