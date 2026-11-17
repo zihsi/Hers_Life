@@ -5,9 +5,9 @@
  *
  * | 内容 | 唯一的源 |
  * |---|---|
- * | 主题 | `C:/dsh/dsh-ming-ui/src/theme.js` |
- * | 兴趣 | `C:/dsh/Hers_Life/dsh-ming-discord/src/interest-panel.js` |
- * | 声音 | `C:/dsh/dsh-ming-voice/src/panel.js` |
+ * | 主题 | `dsh-ming-ui/src/theme.js` |
+ * | 兴趣 | `dsh-ming-discord/src/interest-panel.js` |
+ * | 声音 | `dsh-ming-voice/src/panel.js` |
  * | 自己玩 | `C:/dsh/dsh-ming-browse/src/panel.js` |
  * | 壳自己的 extras（接续等） | `src/panels.js` |
  * | 神经元 / 星图 / 主面板 | `src/neuron-view.js`、`src/star-view.js`、`src/panel.js` |
@@ -227,7 +227,7 @@ fs.writeFileSync(META, JSON.stringify({
   hash: digest,
   at: new Date().toISOString(),
   bytes: out.length,
-  units: parts.map((p) => ({ label: p.label, path: p.path.replace(/\\/g, '/'), chars: p.text.length })),
+  units: parts.map((p) => ({ label: p.label, path: path.relative(ROOT, p.path).replace(/\\/g, '/'), chars: p.text.length })),
 }, null, 2) + '\n', 'utf8')
 
 console.log('✓ client.js 写好：' + out.length + ' 字节，' + parts.length + ' 个单元，build ' + digest)
