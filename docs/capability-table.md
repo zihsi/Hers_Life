@@ -1,37 +1,45 @@
-# 能力表（交接书 H.3 · 2026-11-17 11:1x 填）
+# 現行能力與邊界（Discord-only）
 
-> 2026-11-17 11:13 她拍板：`permissionPolicy` 默认值用 **browse_only**。
-> 下面最后一列就是这个默认值下的结果；显式写 `legacy` 才会回到以前的手。
->
-> 2026-11-17 11:5x 她补边界：**browse_only 只管没有 DSH 远端调用权的主体**；她、溟、阑珊都放行。
-> 落地方式：`permissionPolicy.subjects` 名单里写会话标识（QQ 号或会话名）。会话 id 形如
-> `onebot-private-<owner-qq>-mvgpinr5`，所以名单写 `<owner-qq>` 即可——判定按 `- _ : .` 切段后
-> 整段相等，不做子串猜。名单里的人可写/可执行；**花钱类在任何名单里都拒**。
-> 名单为空 = 和加这条之前完全一样。
+> 本表只描述 `discord-dsh-only` 分支目前的程式碼，不承接舊 QQ／OneBot／AstrBot 架構的能力宣稱。
+> 更新：2026-11-18。對應程式位置列在最後一欄；自動測試與實機未驗範圍另見 [compatibility.md](compatibility.md)。
 
-这是「软件到底拦住了什么」的核查表。**「软件是否真正限制」一列只写从代码读出来的**
-（文件名 + 行号），读不出来的写「待核」，不写「应该会拦」。
-「现有授权依据」一列写位置，**不抄她的私人约定原文**（交接书 479 行：私人约定原文不进公开仓库）。
+## 平台與對話
 
-| 动作 | 走的工具/脚本 | 现有授权依据 | 软件是否真正限制（代码证据） | 只浏览模式下 |
-|---|---|---|---|---|
-| 看网页 / 搜索 / 读视频 | `web_search`、`web_fetch`、`bilibili_*` | 个人配置 | 只读接口本身无副作用；分类为 `read`（lib/permissions.mjs RULES） | 放行 |
-| 手机滑动 / 点按 / 输入 | `android_interact`(tap)、`android_tap*` | 个人授权（2026-10-22 放开） | **只拦 tap**：`index.js:1210-1217`；`android_interact` 的其它 action 直接 `next()`（:1214） | 拒（`android_action`） |
-| 开关机 / 刷机 | `android_shutdown`、`android_boot`、`android_build_run` | 无（明确不做） | 硬拒：`index.js:1218-1220` | 拒（`desktop`） |
-| 点赞 / 投币 / 关注 / 评论 | `bilibili_comment_post` 等 | 平台与动作分别确认 | `confirm:true` 只是该工具的参数条件，**不是所有通道的统一闸**；点按路径还能绕过（同上一条） | 拒（`publish`） |
-| 主动发私聊 / 群聊 | `qq_send`、`send_message` | 指定接收目标 | 发送前的气泡数闸在 `hers_workplace/scripts/say.mjs`；目标选择见 `index.js:1238 pickTarget`（H-2 待做） | 拒（`send`） |
-| 发空间 / 其它社交发布 | `qzone_post`、外部脚本 | 个人约定 | 脚本存在即执行，无二次确认；路径写死在提示词里这件事 H-2 要改 | 拒（`publish`） |
-| 付费 / 购买 / 打赏 | 浏览器、移动端 | 边界：不花她的钱 | **没有统一拦截**：文字按钮检查覆盖不了图标与其他通道（dsh-ming-browse `checkTap` 只认词表） | 拒（`pay`） |
-| shell / 桌面控制 | `ops_bash`、`pet_input`、`cv_act` | 无（自主轮次不该有） | **当前完全没有拦截**：pre-execute 只列了 android_* 三类，其余 `next()` | 拒（`shell`/`desktop`） |
+| 功能 | 目前實作 | 邊界／注意事項 | 程式位置 |
+|---|---|---|---|
+| 平台 | Discord Bot + DeepSeek Harness；沒有 QQ、OneBot、QQ-Agent 或 AstrBot 相容層 | Discord 是唯一聊天入口 | `dsh-ming-discord/` |
+| 會話 | DM、Guild 文字頻道、Thread 依 Discord channel ID 建立獨立 DSH session | 不把不同頻道的完整 session 歷史合併 | `dsh-ming-discord/pool.js` |
+| 回覆觸發 | 預設只回 @Bot 或回覆 Bot 的訊息；可設定全頻道回覆或不回覆 Guild 訊息 | 私訊另受 DM 開關與 Owner／白名單政策限制 | `discord/bridge.js`, `settings.js` |
+| Slash／訊息選單 | `/ask`、`/say`、`/memory`、`/status`、`/voice`，以及 `peek`、`remember` 選單 | Discord 指令須完成 Guild／Application Command 註冊；首次使用可能要等同步 | `discord/commands.js`, `discord/bridge.js` |
+| 附件 | 最多讀取前 10 個附件；符合影像類型的圖片可轉成模型影像區塊；其他附件下載至工作區 | 非影像附件不會自動轉成文字；貼圖只描述名稱／ID，不等同取得貼圖原圖；大小受設定上限控制 | `discord/bridge.js`, `images.js` |
+| 回覆輸出 | 回覆可串接原訊息、長文字分段、將模型產生的附件上傳 Discord | Discord 單則訊息與附件數限制仍適用 | `discord/bridge.js`, `util.js` |
 
-## 读出来的三件事
+## 記憶與興趣
 
-1. **现在的「只读」是假的**：pre-execute 只认三个工具名（`index.js:1210-1220`），shell、桌面、发送全部走 `next()`。
-2. **拦住的是「点按里的花钱按钮」，不是「所有写动作」**：`checkTap` 按词表匹配，图标/别的语言漏得掉。
-3. **没有任何地方按 agent 限工具集**：自主轮次能拿到她正常轮次能拿到的任何工具。
+| 功能 | 目前實作 | 邊界／注意事項 | 程式位置 |
+|---|---|---|---|
+| 跨會話事件記憶 | Discord 事件寫入 `live/discord-memory.jsonl`，保留 message、author、guild、channel、thread、session 等來源欄位 | 這是可追溯事件索引，不是把每個頻道所有訊息無限制塞入每次提示 | `dsh-ming-discord/memory.js`, `dsh-ming-discord/events.js` |
+| 跨頻道／伺服器召回 | 可設定同伺服器跨頻道、跨伺服器召回 | 關閉相應設定後，不應把該範圍的事件提供給其他會話 | `dsh-ming-discord/memory.js`, 設定頁 |
+| 私訊背景 | Owner 私訊可依設定在 Owner 的其他私訊會話共享；也可選擇在 Owner 本人於公開頻道發言時作為隱去來源的背景 | 不會把 Owner 私訊背景提供給其他成員；需要最嚴格隔離時，關閉「允許 Owner 私訊作為公開頻道背景」 | `dsh-ming-discord/memory.js` |
+| 人格／日記開場 | `dsh-ming-memory` 從工作區人格檔與最近日記組成開場注入 | 該插件本身是讀取／注入，不應描述成它會自行改寫人格檔 | `dsh-ming-memory/` |
+| 興趣學習／喚醒 | 從公開頻道訊息被動累積詞頻；達到門檻後可成為主題；再經靜默時段、冷卻、每小時上限與模型判斷後才可能接話 | 學到詞不代表必然發言；Owner 可在設定頁管理主題、忽略詞及暫停開關 | `dsh-ming-discord/interests.js`, `discord/bridge.js` |
 
-## 还没读出来的（待核，不填猜测）
+## 語音、瀏覽與桌面
 
-- 宿主 `tools/pre-execute` 是否支持按 agent 白名单（而不是靠插件自己 intercept）。
-- `exec.agent.id` 在所有工具调用路径上都存在且可信（目前只在 browse 里用过）。
-- 桌面控制（mousepet）在自主轮次里会不会被别的插件放行。
+| 功能 | 目前實作 | 邊界／注意事項 | 程式位置 |
+|---|---|---|---|
+| Discord 語音連線 | `/voice` 可要求加入／離開語音頻道；底層實作 Opus、UDP、語音 Gateway 與 DAVE | 非 Stage 語音連線必須可載入 DAVE 原生模組；缺失時會在連線前報錯，不嘗試無 E2EE 降級。Stage 例外尚未實作專用降級路徑 | `dsh-ming-discord/discord/voice.js`, `discord/dave.js` |
+| 文字轉語音 | `dsh-ming-voice` 的 `voice_say` 產生 MP3；可再用 `discord_send_file` 將檔案送到 Discord | 這和 Discord 即時語音連線是兩條不同路徑；需可用的 Edge TTS 或 Windows SAPI | `dsh-ming-voice/index.js`, `dsh-ming-discord/index.js` |
+| 自主瀏覽 | `dsh-ming-browse` 可在設定條件下執行背景瀏覽／活動；Owner 控制入口走 Discord 私訊 | **不是全域唯讀沙盒**。部分高風險 Android／關機類工具有硬性攔截；其他寫入能力仍依工具、設定與行為規則，不能把它宣稱為全面防寫入 | `dsh-ming-browse/index.js`, `lib/permissions.mjs` |
+| 桌面陪伴 | `dsh-ming-mousepet` 提供螢幕觀察、氣泡、UIA／視窗訊息操作；物理輸入是明確回退模式 | Windows PowerShell 5.1／WinForms；UIA 取決於目標應用是否暴露可操作元素；物理輸入會影響真實桌面，不能視為無副作用 | `dsh-ming-mousepet/` |
+| Bilibili 帳號 | 獨立插件提供登入、帳號狀態與已註冊的 B 站工具 | 登入態目前以進程記憶體為準；重啟後須依插件流程確認登入狀態，不可假設憑證已持久化 | `dsh-ming-bilibili-account/` |
+| 其他 DSH 輔助 | 提醒、插話接續、Skill 隔離、共同活動等均為獨立可選插件 | 各自仍須在 DSH profile 中安裝並啟用；共同活動插件是手動記錄，不會自動代替使用者推進 | `dsh-ming-wake/`, `dsh-ming-resume/`, `dsh-ming-skill-isolate/`, `dsh-ming-activities/` |
+
+## 安全與安裝前提
+
+1. **Discord 特權 Intent：** 必須在 Developer Portal 開啟 Message Content Intent 與 Server Members Intent；程式兩項都會要求。缺少設定可能以 Gateway close code `4014` 斷線。
+2. **語音：** 需要可用的 FFmpeg 與可載入的 `dsh-ming-discord/discord/dave/davey.node`。原生模組不相容時，文字聊天仍可運作，但非 Stage 語音不可用。
+3. **工作區：** 人格、日記、Discord 事件記憶及瀏覽資料會依共用工作區路徑讀寫。更換工作區後，應重新啟動所有配套插件／DSH。
+4. **權限界線：** Owner ID 是授權身分，不等於所有工具操作都有全域確認閘。尤其 `dsh-ming-browse` 不是全面唯讀；執行前仍要理解對應工具與設定。
+5. **未實測範圍：** 自動化測試不等於真 Discord Gateway、真伺服器訊息、語音 DAVE 握手或 Windows 桌面端到端驗收。實測狀態見 [compatibility.md](compatibility.md)。
+
