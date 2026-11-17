@@ -87,7 +87,7 @@ export function rawTerms(text) {
 
 export function pickTerms(docs, { minDf = 3, maxDf = 0.45, limit = 70 } = {}) {
   const df = new Map()
-  const form = new Map() // 小写 → 首次出现的样子（QQ / qq 归一）
+  const form = new Map() // 小寫 → 首次出現的樣子（大小寫歸一）
   const perDoc = []
   for (const text of docs) {
     const set = new Set([...rawTerms(text)].filter(keepTerm))
