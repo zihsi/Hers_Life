@@ -1,66 +1,66 @@
 {
-  "hash": "fb6d7f70594d1a23",
-  "at": "2026-11-17T16:04:59.162Z",
-  "bytes": 233009,
+  "hash": "c6eb373de89de27c",
+  "at": "2026-11-17T20:17:01.851Z",
+  "bytes": 233020,
   "units": [
     {
       "label": "主题",
-      "path": "C:/dsh/Hers_Life/dsh-ming-ui/src/theme.js",
+      "path": "dsh-ming-ui/src/theme.js",
       "chars": 8014
     },
     {
       "label": "神经元",
-      "path": "C:/dsh/Hers_Life/dsh-ming-graph/src/neuron-view.js",
-      "chars": 55341
+      "path": "dsh-ming-graph/src/neuron-view.js",
+      "chars": 55346
     },
     {
       "label": "星图",
-      "path": "C:/dsh/Hers_Life/dsh-ming-graph/src/star-view.js",
+      "path": "dsh-ming-graph/src/star-view.js",
       "chars": 19495
     },
     {
       "label": "兴趣",
-      "path": "C:/dsh/Hers_Life/dsh-ming-discord/src/interest-panel.js",
-      "chars": 5995
+      "path": "dsh-ming-discord/src/interest-panel.js",
+      "chars": 6001
     },
     {
       "label": "声音",
-      "path": "C:/dsh/Hers_Life/dsh-ming-voice/src/panel.js",
+      "path": "dsh-ming-voice/src/panel.js",
       "chars": 4438
     },
     {
       "label": "自己玩",
-      "path": "C:/dsh/Hers_Life/dsh-ming-browse/src/panel.js",
+      "path": "dsh-ming-browse/src/panel.js",
       "chars": 26068
     },
     {
       "label": "壳 extras",
-      "path": "C:/dsh/Hers_Life/dsh-ming-graph/src/panels.js",
+      "path": "dsh-ming-graph/src/panels.js",
       "chars": 9849
     },
     {
       "label": "主面板·公共",
-      "path": "C:/dsh/Hers_Life/dsh-ming-graph/src/panels/common.js",
+      "path": "dsh-ming-graph/src/panels/common.js",
       "chars": 21891
     },
     {
       "label": "主面板·记忆",
-      "path": "C:/dsh/Hers_Life/dsh-ming-graph/src/panels/memory.js",
+      "path": "dsh-ming-graph/src/panels/memory.js",
       "chars": 10406
     },
     {
       "label": "主面板·费用技能",
-      "path": "C:/dsh/Hers_Life/dsh-ming-graph/src/panels/cost.js",
+      "path": "dsh-ming-graph/src/panels/cost.js",
       "chars": 9492
     },
     {
       "label": "主面板·桌宠",
-      "path": "C:/dsh/Hers_Life/dsh-ming-graph/src/panels/pet.js",
+      "path": "dsh-ming-graph/src/panels/pet.js",
       "chars": 19226
     },
     {
       "label": "主面板",
-      "path": "C:/dsh/Hers_Life/dsh-ming-graph/src/panel.js",
+      "path": "dsh-ming-graph/src/panel.js",
       "chars": 42172
     }
   ]
