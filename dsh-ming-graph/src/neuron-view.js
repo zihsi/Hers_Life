@@ -450,7 +450,7 @@
     // 颜色（从主题里读一次，canvas 用不了 CSS 变量）
     const cs = getComputedStyle(document.body)
     const colDsh = opts.colorDsh || '#14b8a6'
-    const colDiscord = opts.colorQq || '#e0803a'
+    const colDiscord = opts.colorDiscord || '#e0803a'
     const colProj = opts.colorProj || '#5b8def'
     const colPerson = opts.colorPerson || '#e05a8a'
     const colDim = cs.getPropertyValue('--dsw-alias-label-tertiary') || '#888'
