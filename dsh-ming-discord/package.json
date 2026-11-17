@@ -5,14 +5,33 @@
   "type": "module",
   "description": "Hers Life 的 Discord 原生適配器：獨立會話、跨會話來源可追溯記憶、統一設定頁。",
   "main": "index.js",
-  "exports": { ".": "./index.js", "./client": "./client.js" },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js"
+  },
   "files": [
-    "index.js", "client.js", "settings.js", "pool.js", "memory.js",
-    "util.js", "session.js", "images.js", "store.js", "discord"
+    "index.js",
+    "client.js",
+    "settings.js",
+    "pool.js",
+    "memory.js",
+    "util.js",
+    "session.js",
+    "images.js",
+    "store.js",
+    "discord",
+    "interests.js"
   ],
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
-    "client": { "platform": "web", "immediately": true }
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

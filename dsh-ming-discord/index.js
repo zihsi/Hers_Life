@@ -4,6 +4,7 @@ import { cp, mkdir, readFile, rename, stat, writeFile, readdir } from 'node:fs/p
 import { SettingsStore } from './settings.js'
 import { DiscordSessionPool } from './pool.js'
 import { DiscordBrain } from './memory.js'
+import { DiscordInterestStore } from './interests.js'
 import { DiscordRest } from './discord/rest.js'
 import { DiscordGateway } from './discord/gateway.js'
 import { DiscordBridge } from './discord/bridge.js'
@@ -116,6 +117,7 @@ export function apply(ctx, pluginConfig = {}) {
   let bridge = null
   let voice = null
   let brain = null
+  let interests = null
   let events = null
   let pool = null
   let detach = null
@@ -126,7 +128,7 @@ export function apply(ctx, pluginConfig = {}) {
     detach = null
     try { await voice?.destroy?.() } catch {}
     try { gateway?.destroy?.() } catch {}
-    rest = gateway = bridge = voice = brain = events = pool = null
+    rest = gateway = bridge = voice = brain = interests = events = pool = null
   }
 
   const startAdapter = async () => {
@@ -142,11 +144,13 @@ export function apply(ctx, pluginConfig = {}) {
       events = new DiscordEvents({ dataRoot: settings.resolve().dataRoot, logger })
       brain = new DiscordBrain({ workspace: settings.resolve().workspace, settings, logger })
       await brain.load()
+      interests = new DiscordInterestStore({ workspace: settings.resolve().workspace, settings, logger })
+      await interests.load()
       pool = new DiscordSessionPool({ ctx, settings, logger })
       await pool.load()
       gateway = new DiscordGateway({ token: settings.token, logger })
       voice = settings.get('voice.enabled', true) ? new VoiceManager({ gateway, rest, settings, logger }) : null
-      bridge = new DiscordBridge({ ctx, settings, logger, rest, gateway, brain, pool, voice, events, dataRoot: settings.resolve().dataRoot })
+      bridge = new DiscordBridge({ ctx, settings, logger, rest, gateway, brain, pool, voice, interests, events, dataRoot: settings.resolve().dataRoot })
       detach = bridge.attach()
       gateway.on('ready', (data) => {
         voice?.setSelfId?.(data.user?.id ?? gateway.selfId)
@@ -183,7 +187,7 @@ export function apply(ctx, pluginConfig = {}) {
           const route = url.pathname.slice(API.length).replace(/^\//, '')
           if (req.method === 'GET' && (route === 'settings' || route === 'state')) {
             send(res, 200, { ok: true, settings: settings.publicConfig(), status, hasToken: settings.hasToken(),
-              events: events?.list?.(30) ?? [], sessions: pool?.list?.() ?? [] })
+              events: events?.list?.(30) ?? [], sessions: pool?.list?.() ?? [], interests: interests?.list?.(100) ?? [] })
             return
           }
           if (req.method === 'POST' && route === 'settings') {
