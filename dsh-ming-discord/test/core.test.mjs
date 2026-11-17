@@ -9,7 +9,7 @@ import { SettingsStore, isDiaryFilename, isDiaryPath } from '../settings.js'
 import { DiscordSessionPool } from '../pool.js'
 import { DiscordBrain } from '../memory.js'
 import { apply as applyDiscord } from '../index.js'
-import { apply as applyMemory, inject as memoryInject } from '../../dsh-ming-memory/index.js'
+import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
 
 test('DM, guild channel and thread get distinct durable session ids', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-pool-'))
@@ -275,6 +275,7 @@ test('Discord plugin activation registers DSH-valid tools and provides the servi
 
   await writeFile(path.join(workspace, 'persona', '人设.md'), '# 測試人設\\nSERVICE-WORKSPACE-MARKER\\n', 'utf8')
   assert.deepEqual(memoryInject, ['hersLifeDiscord'])
+  assert.equal(typeof memoryInternals.stamp, 'function', 'memory timestamp formatter must be defined at module load')
   applyMemory(ctx, {})
   const onCreated = listeners.get('agent/created')
   assert.equal(typeof onCreated, 'function', 'memory should activate after the Discord service is provided')

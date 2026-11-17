@@ -94,6 +94,14 @@ function sessionIdOf(agent) {
   } catch { return '' }
 }
 
+function stamp(value) {
+  const date = new Date(Number(value))
+  if (!Number.isFinite(date.getTime())) return '时间未知'
+  const pad = (part) => String(part).padStart(2, '0')
+  return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
+    + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes())
+}
+
 function noteCompact(session, event) {
   const sid = (session && session.header && session.header.id) || (session && session.id) || ''
   if (!sid) return

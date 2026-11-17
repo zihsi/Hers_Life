@@ -1,6 +1,6 @@
 {
   "name": "dsh-ming-memory",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "description": "开场记忆：把人格文件与最近几篇日记拼进系统提示词；Discord 对话由共享事件记忆层统一管理。",
