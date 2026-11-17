@@ -1,4 +1,4 @@
-> **这个仓已并入 [Hers_Life](https://github.com/Chess12333/Hers_Life)，后续更新只在那边。**
+> **这个仓已并入 [Hers_Life](https://github.com/zihsi/Hers_Life)，后续更新只在那边。**
 > 这里保留历史版本，不再单独发版；装完整版请用 Hers_Life。
 
 # dsh-ming-mousepet
