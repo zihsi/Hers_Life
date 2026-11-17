@@ -15,6 +15,19 @@
       },
       "versions": [
         {
+          "version": "0.1.5",
+          "publishTimestamp": 1794944801,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/zihsi/Hers_Life",
+            "commit": "68e27b2372ec69cf8335299e5c77d5febbe671cf",
+            "path": "dsh-ming-discord"
+          },
+          "engines": {
+            "dsh": ">=0.2.0"
+          }
+        },
+        {
           "version": "0.1.4",
           "publishTimestamp": 1794938578,
           "source": {
@@ -92,6 +105,19 @@
         "directory": "dsh-ming-bilibili-account"
       },
       "versions": [
+        {
+          "version": "0.1.2",
+          "publishTimestamp": 1794944801,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/zihsi/Hers_Life",
+            "commit": "68e27b2372ec69cf8335299e5c77d5febbe671cf",
+            "path": "dsh-ming-bilibili-account"
+          },
+          "engines": {
+            "dsh": ">=0.2.0"
+          }
+        },
         {
           "version": "0.1.1",
           "publishTimestamp": 1794909782,
@@ -196,6 +222,19 @@
         "directory": "dsh-ming-memory"
       },
       "versions": [
+        {
+          "version": "0.2.2",
+          "publishTimestamp": 1794944801,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/zihsi/Hers_Life",
+            "commit": "68e27b2372ec69cf8335299e5c77d5febbe671cf",
+            "path": "dsh-ming-memory"
+          },
+          "engines": {
+            "dsh": ">=0.2.0"
+          }
+        },
         {
           "version": "0.2.1",
           "publishTimestamp": 1794933111,
