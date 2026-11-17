@@ -1,14 +1,37 @@
 {
   "name": "dsh-ming-activities",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "手动记录共同活动进度；不捕获聊天、不调用模型、不自动续跑。",
   "main": "index.js",
-  "exports": { ".": "./index.js", "./client": "./client.js", "./package.json": "./package.json" },
-  "files": ["index.js", "store.js", "client.js", "cordis.patch.yml", "README.md"],
-  "engines": { "node": ">=22" },
-  "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "react": "^18.2.0" },
-  "peerDependenciesMeta": { "react": { "optional": true } },
-  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "store.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "react": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
 }
