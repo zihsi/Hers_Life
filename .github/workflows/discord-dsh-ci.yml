@@ -38,6 +38,12 @@ jobs:
       - name: Verify Bilibili package payload and ESM plugin activation
         run: node dsh-ming-bilibili-account/qa-load.mjs
 
+      - name: Run unified offline regression matrix
+        run: node scripts/check.mjs --suite offline
+
+      - name: Verify generated UI bundles match their sources
+        run: node scripts/check.mjs --suite build
+
       - name: Run deterministic browser and permission audits
         run: |
           node dsh-ming-browse/qa-audit.mjs
