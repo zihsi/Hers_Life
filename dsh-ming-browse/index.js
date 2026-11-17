@@ -216,6 +216,7 @@ function nextNineAM(from = new Date()) {
 
 export function apply(ctx, config) {
   const cfg = normalize(config)
+  if (ctx.hersLifeDiscord?.workspace) cfg.workspacePath = path.resolve(ctx.hersLifeDiscord.workspace)
 
   // ---- 面板用的只读口（2026-11-07）----
   // 只报「这一轮在逛什么」：live/browse-now.md 原文 + 会话轮次账本。只读。

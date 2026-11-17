@@ -515,7 +515,9 @@ export class DiscordBridge {
     const mode = settings.get('discord.mode', 'mention')
     if (!isDm) {
       this.noteChatter(message)
-      this.rememberAmbient(message)
+      void this.rememberAmbient(message).catch((error) => {
+        this.logger?.warn('ambient memory capture failed: ' + String(error?.message ?? error))
+      })
       // Interest wake is only a passive, keyword-gated side path. Ordinary
       // mention/reply handling below remains unchanged.
       if (mode === 'mention' && !this.addressed(message)) {
@@ -675,12 +677,12 @@ export class DiscordBridge {
     }
   }
 
-  rememberAmbient(message) {
+  async rememberAmbient(message) {
     if (!this.brain || !this.pool) return
     const channelId = String(message.channel_id ?? '')
     const guildId = String(message.guild_id ?? '')
     if (!channelId || !guildId) return
-    const channel = this.channels.get(channelId) ?? {}
+    const channel = this.channels.get(channelId) ?? await this.rest.channel(channelId).catch(() => ({}))
     const guild = this.guilds.get(guildId) ?? {}
     const thread = Number(channel.type) === 11 || Number(channel.type) === 12
     const target = {

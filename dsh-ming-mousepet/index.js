@@ -20,9 +20,13 @@ import { createCard } from './lib/card.js'
 import { createWebpick } from './lib/webpick.mjs'
 
 export const name = 'ming-mousepet'
-export const inject = ['tools', 'attachments', 'webServer']
+export const inject = ['tools', 'attachments', 'webServer', 'hersLifeDiscord']
 
 function resolveSharedWorkspace() {
+  try {
+    const data = JSON.parse(readFileSync(join(homedir(), '.dsh', 'hers-life.json'), 'utf8'))
+    if (typeof data.workspace === 'string' && data.workspace.trim()) return data.workspace
+  } catch { /* legacy config fallback */ }
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
     const data = JSON.parse(readFileSync(join(homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
@@ -1445,7 +1449,7 @@ export async function apply(ctx, rawConfig = {}) {
     provider: String(rawConfig?.companion?.provider || 'wb-proxy'),
     model: String(rawConfig?.companion?.model || ''),
     bubbleMs: Number(rawConfig?.companion?.bubbleMs) || 4200,
-    workspace: String(rawConfig?.companion?.workspace || '') || process.cwd(),
+    workspace: String(rawConfig?.companion?.workspace || '') || ctx.hersLifeDiscord?.workspace || resolveSharedWorkspace() || process.cwd(),
   }
   let stopTalker = null
   let sessionRef = null

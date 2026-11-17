@@ -19,6 +19,7 @@ import os from 'node:os'
 import { readFileSync } from 'node:fs'
 
 export const name = 'ming-wake'
+export const inject = ['hersLifeDiscord']
 
 // 正斜杠：Windows 的路径 API 认，而且不用数转义。
 // 原来这里写成单反斜杠 '\d'、'\h'、'\w' 都不是有效转义，JS 会把反斜杠吞掉，
@@ -43,6 +44,7 @@ function norm(cfg) {
 
 export function apply(ctx, config) {
   const cfg = norm(config)
+  if (ctx.hersLifeDiscord?.workspace) cfg.root = path.resolve(ctx.hersLifeDiscord.workspace)
   const armPath = path.join(cfg.root, 'live', 'wake-arm.json')
   const logPath = path.join(cfg.root, 'live', 'wake-log.jsonl')
 

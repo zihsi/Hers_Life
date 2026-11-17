@@ -25,6 +25,7 @@ import { readFileSync } from 'node:fs'
 import os from 'node:os'
 
 export const name = 'ming-resume'
+export const inject = ['hersLifeDiscord']
 function resolveWorkspace() {
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
@@ -145,6 +146,7 @@ async function resumeMedia(cfg) {
 
 export function apply(ctx, config) {
   const cfg = normalize(config)
+  if (ctx.hersLifeDiscord?.workspace) cfg.root = path.resolve(ctx.hersLifeDiscord.workspace)
   // 同一步里同一批插话只提醒一次：记最近提醒过的插话 id 集合
   const reminded = new Set()
   // 这次暂停是不是「我们」按的。只有我们停的才由我们接着播——

@@ -31,7 +31,7 @@ function resolveWorkspace() {
 // 2026-10-24（溟）：原来没声明 inject，apply 里直接 ctx.tools.register(...)，
 // 宿主抛 "cannot get property \"tools\" without inject"，整个插件起不来
 // （manager.log 里 2026-10-20 15:19 两条就是这么来的），于是被 disabled 到现在。
-export const inject = ['tools']
+export const inject = ['tools', 'hersLifeDiscord']
 
 const DEFAULTS = {
   root: resolveWorkspace(),
@@ -104,6 +104,7 @@ async function sapiTts(cfg, text, out) {
 
 export function apply(ctx, config) {
   const cfg = normalize(config)
+  if (ctx.hersLifeDiscord?.workspace) cfg.root = path.resolve(ctx.hersLifeDiscord.workspace)
 
   // ---- 面板用的只读口（2026-11-07）----
   // 报当前引擎/音色/语速，列最近合成出来的 mp3。只读，不合成、不花钱。

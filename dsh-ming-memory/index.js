@@ -22,6 +22,7 @@ import { execFile } from 'node:child_process'
 import path from 'node:path'
 
 export const name = 'ming-memory'
+export const inject = ['hersLifeDiscord']
 
 const DEFAULTS = {
   // 工作区根目录；留空 = 不注入。真实值写在 ~/.dsh/ming-memory.json 或 config.root
@@ -1030,7 +1031,7 @@ function readCwd(agent) {
 }
 
 export function apply(ctx, config) {
-  const cfg = normalize(config)
+  const cfg = normalize({ ...(config || {}), root: config?.root || ctx.hersLifeDiscord?.workspace || loadLocalConfig().root })
   registerArchiveRoutes(ctx)
   loadShared(cfg).catch(() => {})
 

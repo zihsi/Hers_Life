@@ -23,9 +23,9 @@ function resolveWorkspace() {
     const settings = JSON.parse(readFileSync(join(homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
     if (typeof settings.root === 'string' && settings.root.trim()) return settings.root
   } catch {}
-  return ''
+  return join(homedir(), 'hers-life-workspace')
 }
-const LIVE = resolveWorkspace() ? join(resolveWorkspace(), 'live') : ''
+function liveDirectory() { const workspace = resolveWorkspace(); return workspace ? join(workspace, 'live') : '' }
 const ENDPOINT = process.env.EMB_ENDPOINT || 'http://127.0.0.1:18091/v1/embeddings'
 const MODEL = process.env.EMB_MODEL || 'bge-base-zh-v1.5-q8_0'
 const DIM = 768
@@ -42,32 +42,31 @@ const cache = new Map() // layer -> { sig, vecs, ids, rows }
 //   live/rag-index/current.json      → {generation, at, layers:{...}}
 //   live/rag-index/generations/<gen>/<layer>/{vectors.f32,ids.json,corpus.jsonl,manifest.json}
 // 指针指到的那一代是**不可变目录**，从它读就不会撞上生成器正在写的半份 live 文件。
-const GEN_ROOT = LIVE ? join(LIVE, 'rag-index') : ''
-const CURRENT = GEN_ROOT ? join(GEN_ROOT, 'current.json') : ''
-
 function statOk(p) {
   try { statSync(p); return true } catch { return false }
 }
 
 /** 指针说的那一代（不保证完整；调用方自己验）。 */
-function generationDir() {
-  if (!CURRENT) return ''
+function generationDir(live = liveDirectory()) {
+  const root = live ? join(live, 'rag-index') : ''
+  const current = root ? join(root, 'current.json') : ''
+  if (!current) return ''
   let cur
-  try { cur = JSON.parse(readFileSync(CURRENT, 'utf8')) } catch { return '' }
+  try { cur = JSON.parse(readFileSync(current, 'utf8')) } catch { return '' }
   const gen = cur && cur.generation
   // 只认裸名字：别让指针里的 ../ 把读端带出 generations/
   if (!gen || typeof gen !== 'string' || /[\\/]|\.\./.test(gen)) return ''
-  return join(GEN_ROOT, 'generations', gen)
+  return join(root, 'generations', gen)
 }
 
 /** live/ 里那一份（老路径）。 */
-function liveFiles(name) {
+function liveFiles(name, live = liveDirectory()) {
   const spec = LAYERS[name]
   return {
-    emb: join(LIVE, spec.emb),
-    ids: join(LIVE, spec.ids),
-    corpus: spec.corpus ? join(LIVE, spec.corpus) : null,
-    manifest: join(LIVE, spec.manifest),
+    emb: join(live, spec.emb),
+    ids: join(live, spec.ids),
+    corpus: spec.corpus ? join(live, spec.corpus) : null,
+    manifest: join(live, spec.manifest),
   }
 }
 
@@ -78,9 +77,9 @@ function liveFiles(name) {
  *   incomplete-generation —— 指针这一代缺文件 → 退回 live，并记一条 issue
  *   live                  —— 没有指针 / 老工作区 → 照旧读 live（零配置可迁）
  */
-function layerFiles(name) {
-  const gen = generationDir()
-  if (!gen) return { mode: 'live', ...liveFiles(name) }
+function layerFiles(name, live = liveDirectory()) {
+  const gen = generationDir(live)
+  if (!gen) return { mode: 'live', ...liveFiles(name, live) }
   const dir = join(gen, name)
   const genFiles = {
     emb: join(dir, 'vectors.f32'),
@@ -89,11 +88,11 @@ function layerFiles(name) {
     manifest: join(dir, 'manifest.json'),
   }
   const need = [genFiles.emb, genFiles.ids, genFiles.manifest, ...(genFiles.corpus ? [genFiles.corpus] : [])]
-  if (!need.every(statOk)) return { mode: 'incomplete-generation', generation: gen, ...liveFiles(name) }
+  if (!need.every(statOk)) return { mode: 'incomplete-generation', generation: gen, ...liveFiles(name, live) }
   // 快照之后 live 又重建过 = 这一代已经过期；查旧代比混代好，但不如查新的。
   let stale = false
   try {
-    stale = statSync(liveFiles(name).manifest).mtimeMs > statSync(genFiles.manifest).mtimeMs
+    stale = statSync(liveFiles(name, live).manifest).mtimeMs > statSync(genFiles.manifest).mtimeMs
   } catch { stale = false }
   if (stale) return { mode: 'stale-generation', generation: gen, ...liveFiles(name) }
   return { mode: 'generation', generation: gen, ...genFiles }
@@ -107,8 +106,8 @@ function layerFiles(name) {
  * 有清单则至少核三件：schema/layer 对不对、维度跟查询端一不一样、条数对不对。
  * **维度相同不代表模型相同**，所以模型名不同也拒（不同向量空间的点积不能混排）。
  */
-function readManifest(name, manifestPath) {
-  const p = manifestPath || join(LIVE, LAYERS[name].manifest)
+function readManifest(name, manifestPath, live = liveDirectory()) {
+  const p = manifestPath || join(live, LAYERS[name].manifest)
   let raw
   try {
     raw = readFileSync(p, 'utf8')
@@ -176,11 +175,11 @@ function sigOf(files) {
     .join('|')
 }
 
-function loadLayer(name) {
-  if (!LIVE) throw new Error('未配置 MING_WORKSPACE')
+function loadLayer(name, live = liveDirectory()) {
+  if (!live) throw new Error('未配置工作區；請先在 Hers Life 設定頁初始化工作區')
   const spec = LAYERS[name]
   // 2026-11-17（R09）：路径不再写死 live/ —— 指针指向完整且不过期的一代时，从那一代读。
-  const where = layerFiles(name)
+  const where = layerFiles(name, live)
   const embPath = where.emb
   const idsPath = where.ids
   const corpusPath = where.corpus
@@ -190,7 +189,7 @@ function loadLayer(name) {
   const hit = cache.get(name)
   if (hit && hit.sig === sig) return hit
 
-  const manifest = readManifest(name, manifestPath) // 没有清单返回 null（旧格式）
+  const manifest = readManifest(name, manifestPath, live) // 没有清单返回 null（旧格式）
 
   const buf = readFileSync(embPath)
   if (buf.byteLength % (4 * DIM) !== 0) throw new Error('向量文件不完整或维度不符')
@@ -300,17 +299,18 @@ export async function ragSearch(query, { layer = 'all', k = 5, since = '', until
   const want = layer === 'all' ? ['doc', 'web'] : [layer].filter((x) => LAYERS[x])
   if (!want.length) throw new Error('layer 只認 doc / web / all')
 
+  const live = liveDirectory()
   const entries = new Map()
   const issues = []
   for (const name of want) {
     try {
-      const entry = loadLayer(name)
+      const entry = loadLayer(name, live)
       entries.set(name, entry)
       // info 级的（比如没有清单）跟着返回，但不把状态打成 partial。
       for (const it of entry.issues || []) issues.push(it)
     } catch (e) {
       if (e && e.code === 'EINCOMPAT' && Array.isArray(e.issues)) issues.push(...e.issues)
-      else issues.push({ layer: name, status: !LIVE ? 'unconfigured' : e.code === 'ENOENT' ? 'missing' : 'invalid' })
+      else issues.push({ layer: name, status: !live ? 'unconfigured' : e.code === 'ENOENT' ? 'missing' : 'invalid' })
     }
   }
   const used = [...entries.keys()]

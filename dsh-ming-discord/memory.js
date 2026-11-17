@@ -30,11 +30,29 @@ export class DiscordBrain {
     await mkdir(this.live, { recursive: true })
     try {
       const raw = await readFile(this.file, 'utf8')
+      const byKey = new Map()
       for (const line of raw.split(/\r?\n/)) {
         if (!line.trim()) continue
-        try { const item = JSON.parse(line); if (item?.id) this.addMemory(item, false) } catch {}
+        try {
+          const item = JSON.parse(line)
+          if (!item?.id || !item?.text) continue
+          const key = eventKey(item)
+          // Keep the newest version of a repeated message while preserving its provenance.
+          byKey.delete(key)
+          byKey.set(key, item)
+        } catch {}
       }
-    } catch {}
+      const limit = Math.max(1000, Number(this.settings.get('memory.maxEvents', 20000)) || 20000)
+      const rows = [...byKey.values()].slice(-limit)
+      for (const item of rows) this.addMemory(item, false)
+      if (rows.length !== byKey.size) {
+        const temp = this.file + '.compact-' + process.pid
+        await writeFile(temp, rows.map((item) => JSON.stringify(item)).join('\n') + (rows.length ? '\n' : ''), 'utf8')
+        await rename(temp, this.file)
+      }
+    } catch (error) {
+      this.logger?.warn?.('Discord memory load failed: ' + String(error?.message ?? error))
+    }
     await this.loadNotes()
     this.loaded = true
   }

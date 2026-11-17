@@ -26,7 +26,7 @@ import os from 'node:os'
 import { readFileSync } from 'node:fs'
 
 export const name = 'ming-skill-isolate'
-export const inject = ['skills', 'tools']
+export const inject = ['skills', 'tools', 'hersLifeDiscord']
 
 /** 遮罩条目的 rank：必须小于 BUNDLED_SKILL_RANK(600)，否则在同一个 layer 里排不到前面 */
 const SHADOW_RANK = 1
@@ -82,6 +82,10 @@ async function writeState(stateFile, state) {
 
 export function apply(ctx, config) {
   const cfg = normalize(config)
+  if (ctx.hersLifeDiscord?.workspace) {
+    cfg.root = path.resolve(ctx.hersLifeDiscord.workspace)
+    if (!config?.stateFile) cfg.stateFile = path.join(cfg.root, 'skills-off.json')
+  }
   const controls = new Set()
   const retainControl = (control) => {
     if (control.signal?.aborted) return

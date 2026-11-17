@@ -1,4 +1,5 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -40,12 +41,32 @@ function cleanStringList(value) {
   if (!Array.isArray(value)) return []
   return [...new Set(value.map((item) => String(item ?? '').trim()).filter(Boolean))]
 }
+function safeRelativePath(value, fallback = '') {
+  const raw = String(value ?? '').trim().replace(/\\/g, '/')
+  if (!raw) return fallback
+  if (raw.startsWith('/') || /^[a-zA-Z]:/.test(raw) || raw.split('/').some((part) => !part || part === '.' || part === '..')) {
+    throw new Error('路徑必須是工作區內的相對路徑，不能包含 .. 或絕對路徑')
+  }
+  return raw
+}
+function safeRelativeList(value, fallback) {
+  const source = Array.isArray(value) ? value : fallback
+  return [...new Set(source.map((item) => safeRelativePath(item)).filter(Boolean))]
+}
 export class SettingsStore {
   constructor(config = {}, options = {}) {
     this.home = options.home || path.join(os.homedir(), '.dsh')
     this.file = path.join(this.home, 'hers-life.json')
     this.secretsFile = path.join(this.home, 'hers-life-secrets.json')
-    this.settings = merge(DEFAULTS, config)
+    let saved = {}
+    try { saved = JSON.parse(readFileSync(this.file, 'utf8')) } catch {}
+    // The workspace must be visible synchronously to dependent plugins during
+    // their apply() phase; token loading remains asynchronous and secret-only.
+    this.settings = merge(merge(DEFAULTS, config), saved)
+    this.settings.workspace = path.resolve(String(this.settings.workspace || DEFAULTS.workspace))
+    this.settings.ownerIds = cleanStringList(this.settings.ownerIds)
+    this.settings.personaFiles = safeRelativeList(this.settings.personaFiles, DEFAULTS.personaFiles)
+    this.settings.diaryDir = safeRelativePath(this.settings.diaryDir, DEFAULTS.diaryDir)
     this.token = ''
   }
   async load() {
@@ -57,6 +78,8 @@ export class SettingsStore {
     } catch {}
     this.settings.workspace = path.resolve(String(this.settings.workspace || DEFAULTS.workspace))
     this.settings.ownerIds = cleanStringList(this.settings.ownerIds)
+    this.settings.personaFiles = safeRelativeList(this.settings.personaFiles, DEFAULTS.personaFiles)
+    this.settings.diaryDir = safeRelativePath(this.settings.diaryDir, DEFAULTS.diaryDir)
     return this
   }
   get(key, fallback) {
@@ -104,6 +127,8 @@ export class SettingsStore {
     this.settings = merge(this.settings, picked)
     this.settings.workspace = path.resolve(String(this.settings.workspace || DEFAULTS.workspace))
     this.settings.ownerIds = cleanStringList(this.settings.ownerIds)
+    this.settings.personaFiles = safeRelativeList(this.settings.personaFiles, DEFAULTS.personaFiles)
+    this.settings.diaryDir = safeRelativePath(this.settings.diaryDir, DEFAULTS.diaryDir)
     if (!['all', 'mention', 'own'].includes(this.settings.discord.mode)) this.settings.discord.mode = 'mention'
     if (!['owner', 'anyone', 'whitelist'].includes(this.settings.discord.dmPolicy)) this.settings.discord.dmPolicy = 'owner'
     this.settings.discord.guildIds = cleanStringList(this.settings.discord.guildIds)

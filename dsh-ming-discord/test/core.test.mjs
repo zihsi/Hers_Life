@@ -73,17 +73,26 @@ test('shared memory recalls across guilds and hides private source attribution',
       channelName: 'hardware', authorId: 'member-2', authorName: 'member-two',
     })
     await brain.queue
-    const prompt = await brain.recallContext('RTX 5080', {
+    const ownerPrompt = await brain.recallContext('RTX 5080', {
+      kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'owner-1',
+    }, 'discord-channel-guild-b-chan-b')
+    assert.match(ownerPrompt, /伺服器 A/)
+    assert.match(ownerPrompt, /RTX 5080/)
+    assert.match(ownerPrompt, /私人背景（來源隱去）/)
+    assert.doesNotMatch(ownerPrompt, /Discord 私訊/)
+    assert.doesNotMatch(ownerPrompt, /owner-secret/)
+
+    // Other members may recall public cross-guild events, but never Owner DM context.
+    const memberPrompt = await brain.recallContext('RTX 5080', {
       kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'member-3',
     }, 'discord-channel-guild-b-chan-b')
-    assert.match(prompt, /伺服器 A/)
-    assert.match(prompt, /RTX 5080/)
-    assert.match(prompt, /私人背景（來源隱去）/)
-    assert.doesNotMatch(prompt, /Discord 私訊/)
-    assert.doesNotMatch(prompt, /owner-secret/)
+    assert.match(memberPrompt, /伺服器 A/)
+    assert.doesNotMatch(memberPrompt, /私人背景/)
+    assert.doesNotMatch(memberPrompt, /主人提過 RTX 5080/)
+
     config.memory.allowPrivateContextInGuild = false
     const noPrivate = await brain.recallContext('RTX 5080', {
-      kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'member-3',
+      kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'owner-1',
     }, 'discord-channel-guild-b-chan-b')
     assert.doesNotMatch(noPrivate, /主人提過 RTX 5080/)
   } finally {

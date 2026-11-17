@@ -2,9 +2,10 @@ import { resolve } from 'node:path'
 import { createActivityStore, fault } from './store.js'
 
 export const name = 'ming-activities'
+export const inject = ['hersLifeDiscord']
 
 export function apply(ctx, config = {}) {
-  const configured = config.root || process.env.MING_WORKSPACE || ''
+  const configured = config.root || ctx.hersLifeDiscord?.workspace || process.env.MING_WORKSPACE || ''
   const root = typeof configured === 'string' && configured.trim() ? resolve(configured.trim()) : ''
   const store = createActivityStore(root)
   ctx.inject(['webServer'], c => {

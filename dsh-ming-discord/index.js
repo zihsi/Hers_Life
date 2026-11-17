@@ -20,7 +20,7 @@ const TEMPLATES = {
   'persona/名字.md': '# 名字與稱呼\n\n- 自己的名字：\n- 全名：\n- 稱呼主人：\n',
   'persona/约定.md': '# 相處約定\n\n- 尊重使用者的最新指示。\n- 不確定的事要承認不確定。\n- 不把私訊內容原句洩漏到公開頻道。\n',
   'AGENTS.md': '# Hers Life 工作區規則\n\n- 這個工作區屬於同一個 AI 身分；各 Discord 會話有獨立歷史。\n- 跨會話記憶必須標示來源，不得把其他頻道的對話冒充成目前對話。\n- 私訊內容預設不對伺服器成員公開。\n',
-  'live/interests.json': '[]\n',
+  'live/interests.json': '{\n  "topics": [],\n  "mute": []\n}\n',
   'live/status.json': '{}\n',
   'live/discord-sessions.json': '{}\n',
   'live/discord-memory.jsonl': '',
@@ -222,7 +222,7 @@ export function apply(ctx, pluginConfig = {}) {
             if (nextWorkspace !== previousWorkspace) migration = await copyMissing(previousWorkspace, nextWorkspace)
             await ensureWorkspace(nextWorkspace)
             await startAdapter()
-            send(res, 200, { ok: true, settings: settings.publicConfig(), status, migration })
+            send(res, 200, { ok: true, settings: settings.publicConfig(), status, migration, restartRequired: nextWorkspace !== previousWorkspace })
             return
           }
           if (req.method === 'POST' && route === 'initialize') {
@@ -264,6 +264,53 @@ export function apply(ctx, pluginConfig = {}) {
             const body = await readBody(req)
             const enabled = await interests.setOff(body.off !== false)
             send(res, 200, { ok: true, off: !enabled })
+            return
+          }
+          if (req.method === 'GET' && route === 'workspace/files') {
+            const root = settings.resolve().workspace
+            const diaryDir = String(settings.get('diaryDir', 'diary') || 'diary').replace(/\\/g, '/')
+            const paths = new Set(['AGENTS.md', ...settings.get('personaFiles', [])])
+            const diaryRoot = path.join(root, diaryDir)
+            try {
+              const names = (await readdir(diaryRoot)).filter((name) => /^\\d{4}-\\d{2}-\\d{2}\\.md$/i.test(name)).sort().reverse().slice(0, 12)
+              for (const name of names) paths.add(diaryDir + '/' + name)
+            } catch {}
+            const now = new Date()
+            const today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-')
+            paths.add(diaryDir + '/' + today + '.md')
+            const files = []
+            for (const relative of paths) {
+              const normalized = String(relative).replace(/\\/g, '/')
+              const isPersona = settings.get('personaFiles', []).includes(normalized)
+              const isAllowedDiary = normalized.startsWith(diaryDir + '/') && /^\\d{4}-\\d{2}-\\d{2}\\.md$/.test(path.posix.basename(normalized))
+              if (normalized !== 'AGENTS.md' && !isPersona && !isAllowedDiary) continue
+              const target = path.resolve(root, normalized)
+              const rel = path.relative(root, target)
+              if (rel.startsWith('..') || path.isAbsolute(rel)) continue
+              let content = ''
+              try { content = await readFile(target, 'utf8') } catch {}
+              files.push({ path: normalized, content, kind: isPersona ? 'persona' : isAllowedDiary ? 'diary' : 'rules' })
+            }
+            send(res, 200, { ok: true, root, files })
+            return
+          }
+          if (req.method === 'POST' && route === 'workspace/file') {
+            const body = await readBody(req, 160 * 1024)
+            const relative = String(body.path ?? '').replace(/\\/g, '/')
+            const content = String(body.content ?? '')
+            if (content.length > 120000) throw new Error('單一檔案最多 120,000 字元')
+            const diaryDir = String(settings.get('diaryDir', 'diary') || 'diary').replace(/\\/g, '/')
+            const isPersona = settings.get('personaFiles', []).includes(relative)
+            const isRules = relative === 'AGENTS.md'
+            const isDiary = relative.startsWith(diaryDir + '/') && /^\\d{4}-\\d{2}-\\d{2}\\.md$/.test(path.posix.basename(relative))
+            if (!isPersona && !isRules && !isDiary) throw new Error('只能編輯已設定的人設檔、AGENTS.md 或日期格式日記')
+            const root = settings.resolve().workspace
+            const target = path.resolve(root, relative)
+            const rel = path.relative(root, target)
+            if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error('檔案路徑超出工作區')
+            await mkdir(path.dirname(target), { recursive: true })
+            await writeFile(target, content, 'utf8')
+            send(res, 200, { ok: true, path: relative, chars: content.length })
             return
           }
           if (req.method === 'GET' && route === 'events') {

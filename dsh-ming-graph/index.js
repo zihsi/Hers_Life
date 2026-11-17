@@ -42,12 +42,17 @@ let neuronLoadError = ''
 let costIndexing = null
 
 export const name = 'dsh-ming-graph'
+export const inject = ['hersLifeDiscord']
 
 // 工作区：环境变量优先；没有就从本机配置的 diaryDir（<ws>\diary）推，再退 workspace 键。
 // 2026-11-15 14:4x：面板第一版上线就撞上这件事——宿主进程里根本没有 MING_WORKSPACE，
 // 而本机配置只写了 diaryDir，于是 /acp 读不到账本。同一个坑也让 cost 页的价目表一直指着 '\live\...'。
 function resolveWorkspace() {
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
+  try {
+    const central = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'hers-life.json'), 'utf8'))
+    if (central && central.workspace) return String(central.workspace)
+  } catch { /* first-run settings may not exist */ }
   try {
     const central = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
     if (central && central.root) return String(central.root)
@@ -60,7 +65,7 @@ function resolveWorkspace() {
   } catch { /* 没本机配置就空着，下面的报错会说明 */ }
   return ''
 }
-const WORKSPACE = (() => { const w = resolveWorkspace(); return w ? path.normalize(w) : '' })()
+let WORKSPACE = (() => { const w = resolveWorkspace(); return w ? path.normalize(w) : '' })()
 
 const DEFAULTS = {
   // 记忆側預設值（notes、Discord 事件、記憶卡、日記目錄）由 memory 套件提供，
@@ -258,9 +263,18 @@ export const __internals = { build, readDsh, readDiscord, readPeople, DEFAULTS, 
 
 // ---------- 服务 ----------
 export function apply(ctx, config) {
-  const cfg = { ...DEFAULTS, ...loadLocalConfig(), ...(config || {}) }
-  const currentWorkspace = resolveWorkspace()
-  if (currentWorkspace) cfg.workspace = currentWorkspace
+  const local = loadLocalConfig()
+  const cfg = { ...DEFAULTS, ...local, ...(config || {}) }
+  const currentWorkspace = ctx.hersLifeDiscord?.workspace || resolveWorkspace()
+  if (currentWorkspace) {
+    WORKSPACE = path.normalize(currentWorkspace)
+    cfg.workspace = WORKSPACE
+    if (!local.skillsCwd && !config?.skillsCwd) cfg.skillsCwd = WORKSPACE
+    if (!local.diaryDir && !config?.diaryDir) cfg.diaryDir = path.join(WORKSPACE, 'diary')
+    if (!local.discordMemoryFile && !config?.discordMemoryFile) cfg.discordMemoryFile = path.join(WORKSPACE, 'live', 'discord-memory.jsonl')
+    if (!local.costPricesFile && !config?.costPricesFile && !process.env.MING_COST_PRICES) cfg.costPricesFile = path.join(WORKSPACE, 'live', 'cost-prices.json')
+    if (!local.costAutoFile && !config?.costAutoFile && !process.env.MING_COST_AUTO) cfg.costAutoFile = path.join(WORKSPACE, 'live', 'cost-prices.auto.json')
+  }
   // Discord server/channel labels travel with each event; optional roomLabels may override the display name.
   cfg.roomLabels = { ...GROUP_NAMES, ...(cfg.roomLabels || {}) }
   if (cfg.workspace) {

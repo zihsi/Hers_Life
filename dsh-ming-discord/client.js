@@ -41,6 +41,9 @@ window.__ModuleLoader__.load({
       const [interestTopicsText, setInterestTopicsText] = React.useState('')
       const [interestMuteText, setInterestMuteText] = React.useState('')
       const [interestState, setInterestState] = React.useState(null)
+      const [workspaceFiles, setWorkspaceFiles] = React.useState([])
+      const [workspaceFilePath, setWorkspaceFilePath] = React.useState('persona/人设.md')
+      const [workspaceFileContent, setWorkspaceFileContent] = React.useState('')
       const [busy, setBusy] = React.useState(false)
       const [note, setNote] = React.useState('')
       const [error, setError] = React.useState('')
@@ -76,6 +79,19 @@ window.__ModuleLoader__.load({
             setInterestMuteText((configData.config?.mute || []).join(', '))
           }
           if (stateResponse.ok && stateData.ok) setInterestState(stateData)
+        } catch {}
+        try {
+          const r = await fetch(API + '/workspace/files', { cache: 'no-store' })
+          const d = await r.json()
+          if (r.ok && d.ok && Array.isArray(d.files)) {
+            const files = d.files
+            setWorkspaceFiles(files)
+            const chosen = files.find((file) => file.path === workspaceFilePath) || files.find((file) => file.path === 'persona/人设.md') || files[0]
+            if (chosen) {
+              setWorkspaceFilePath(chosen.path)
+              setWorkspaceFileContent(chosen.content || '')
+            }
+          }
         } catch {}
 
         try {
@@ -132,7 +148,46 @@ window.__ModuleLoader__.load({
           setToken('')
           setStatus(d.status || {})
           setMigration(d.migration || null)
-          setNote('已儲存。Discord 連線設定已重新載入。')
+          if (d.restartRequired) {
+            setNote('工作區已切換並保全式複製資料。請重啟 DSH，讓所有配套插件一起切換到新路徑。')
+            try {
+              const filesResponse = await fetch(API + '/workspace/files', { cache: 'no-store' })
+              const filesData = await filesResponse.json()
+              if (filesResponse.ok && filesData.ok) {
+                setWorkspaceFiles(filesData.files || [])
+                const chosen = (filesData.files || []).find((file) => file.path === workspaceFilePath) || (filesData.files || [])[0]
+                if (chosen) { setWorkspaceFilePath(chosen.path); setWorkspaceFileContent(chosen.content || '') }
+              }
+            } catch {}
+          } else {
+            setNote('已儲存。Discord 連線設定已重新載入。')
+          }
+        } catch (e) { setError(String(e.message || e)) }
+        setBusy(false)
+      }
+      const refreshWorkspaceFiles = async () => {
+        setBusy(true); setError('')
+        try {
+          const r = await fetch(API + '/workspace/files', { cache: 'no-store' })
+          const d = await r.json()
+          if (!r.ok || !d.ok) throw new Error(d.error || '工作區檔案讀取失敗')
+          setWorkspaceFiles(d.files || [])
+          const chosen = (d.files || []).find((file) => file.path === workspaceFilePath) || (d.files || [])[0]
+          if (chosen) { setWorkspaceFilePath(chosen.path); setWorkspaceFileContent(chosen.content || '') }
+        } catch (e) { setError(String(e.message || e)) }
+        setBusy(false)
+      }
+      const saveWorkspaceFile = async () => {
+        setBusy(true); setError(''); setNote('')
+        try {
+          const r = await fetch(API + '/workspace/file', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ path: workspaceFilePath, content: workspaceFileContent }),
+          })
+          const d = await r.json()
+          if (!r.ok || !d.ok) throw new Error(d.error || '檔案保存失敗')
+          setWorkspaceFiles((old) => old.map((file) => file.path === workspaceFilePath ? { ...file, content: workspaceFileContent } : file))
+          setNote('已保存 ' + workspaceFilePath + '（' + d.chars + ' 字元）。')
         } catch (e) { setError(String(e.message || e)) }
         setBusy(false)
       }
@@ -189,6 +244,7 @@ window.__ModuleLoader__.load({
           const d = await r.json()
           if (!r.ok || !d.ok) throw new Error(d.error || '初始化失敗')
           setNote('工作區初始化完成。新建 ' + (d.created || []).length + ' 個模板；既有檔案沒有覆蓋。')
+          await refreshWorkspaceFiles()
         } catch (e) { setError(String(e.message || e)) }
         setBusy(false)
       }
@@ -275,6 +331,34 @@ window.__ModuleLoader__.load({
               input('人設注入字元上限', 'maxChars', '', 'number')),
             area('人設檔案清單（每行一個相對路徑）', 'personaFiles', '首次初始化會建立預設檔案；自訂路徑若不存在不會覆蓋其他檔案。', 3),
             h('div', { className: 'hl-actions' }, button('初始化／補齊工作區', initialize, true, busy)))),
+        card('人設、規則與日記編輯', '直接在 Hers Life 設定頁編輯工作區內的 Markdown，不必自行尋找檔案。人設檔、AGENTS.md 與日期格式日記才允許寫入。',
+          h(React.Fragment, null,
+            h('div', { className: 'hl-grid' },
+              h('label', { className: 'hl-field' },
+                h('span', { className: 'hl-label' }, '要編輯的檔案'),
+                h('select', {
+                  className: 'hl-input',
+                  value: workspaceFilePath,
+                  onChange: (e) => {
+                    const selected = workspaceFiles.find((file) => file.path === e.target.value)
+                    setWorkspaceFilePath(e.target.value)
+                    setWorkspaceFileContent(selected?.content || '')
+                  },
+                }, workspaceFiles.map((file) => h('option', { key: file.path, value: file.path }, file.path))),
+              ),
+              h('div', { className: 'hl-muted' }, '可編輯 ' + workspaceFiles.length + ' 個檔案；日記列表保留最近 12 篇，並包含今天的日記檔。')),
+            h('label', { className: 'hl-field' },
+              h('span', { className: 'hl-label' }, 'Markdown 內容'),
+              h('textarea', {
+                className: 'hl-input hl-area',
+                rows: 14,
+                value: workspaceFileContent,
+                onChange: (e) => setWorkspaceFileContent(e.target.value),
+                placeholder: '選擇一份人設檔、規則檔或日記開始編輯。',
+              })),
+            h('div', { className: 'hl-actions' },
+              button('保存檔案', saveWorkspaceFile, true, busy),
+              button('重新讀取檔案', refreshWorkspaceFiles, false, busy)))),
         card('跨頻道與跨伺服器記憶', 'DM、一般頻道與 Thread 各有獨立 session；這裡控制的是相關事件能否被其他 session 召回，不是把整份聊天歷史混在一起。',
           h(React.Fragment, null,
             check('啟用跨會話記憶召回', 'memory.enabled', '關閉後只保留各 session 自己的歷史。'),
@@ -307,7 +391,7 @@ window.__ModuleLoader__.load({
             h('div', { className: 'hl-actions' },
               button('保存興趣主題', saveInterestConfig, false, busy),
               button(interestState?.state?.off ? '恢復興趣喚醒' : '暫停興趣喚醒', toggleInterestPause, false, busy),
-              h('span', { className: 'hl-muted' }, '最近一小時喚醒：' + (interestState?.state?.wakesLastHour ?? 0) + ' / ' + (interestState?.state?.maxPerHour ?? cfg.interest.maxPerHour ?? 3)))))),
+              h('span', { className: 'hl-muted' }, '最近一小時喚醒：' + (interestState?.state?.wakesLastHour ?? 0) + ' / ' + (interestState?.state?.maxPerHour ?? cfg.interest.maxPerHour ?? 3))))),
 
         card('即時診斷與近期事件', '事件列表可協助確認 Bot 是否收到伺服器、頻道、Thread 的 Gateway 事件。',
           h(React.Fragment, null,
