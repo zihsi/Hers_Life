@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## Discord-only 重构（2026-11-17，分支 `discord-dsh-only`）
+
+本分支将整套 Hers Life 插件集改为 **Discord + DSH** 唯一组合；QQ、OneBot、QQ-Agent、AstrBot 与旧平台桥接目录均已移除，不再保留兼容入口。
+
+- **独立会话**：Discord DM、服务器频道与 Thread 各有稳定且独立的 DSH session ID。
+- **共同记忆**：公开事件写入 `live/discord-memory.jsonl`，保留 Discord message ID、作者、服务器、频道、Thread、时间与所属 session；其他 session 依相关性召回，不把所有聊天记录无差别灌入上下文。
+- **隐私边界**：Owner 私讯只在 Owner 私讯会话之间共享；公开频道中的私人背景只会在 Owner 本人发言时召回，来源标签与私人原文不会提供给其他成员。
+- **Hers Life 专属设置中心**：Discord Token、Owner ID、工作区、人设文件清单、日记路径、记忆范围、兴趣、语音等在插件自己的页面管理；不依赖 DSH 全域设置表单。页面可直接编辑允许的人设 Markdown、`AGENTS.md` 与日期格式日记。
+- **工作区初始化与迁移**：自动补齐目录和模板；切换工作区时只复制缺少的文件、不覆盖目的地已有内容。切换后需重启 DSH，让所有配套插件一起切换路径。
+- **配套插件迁移**：自由活动改用私有 `ming-browse` 工作会话，Owner 控制仅接受 Discord Owner DM；语音通过 Discord 文件发送工具；提醒、接续、技能隔离、桌宠、活动卡、星图与语义检索改用同一中央工作区。
+- **插件市场**：受影响插件版本已更新，市场索引 pin 到本分支的整合提交。
+
+验证范围：修改过的核心 JavaScript 文件通过语法解析；市场 JSON 与各 package 版本／commit pin 已核对；仓库树确认旧平台目录与旧平台命名路径已清除。**本轮未在真实 DSH 进程中连接 Discord，也未执行完整 `node --test` 套件**；干净环境安装、真实 Gateway、语音链路与跨会话运行仍待本机验收。
+
 ## v1.2.1（2026-11-17 紧急补丁）
 
 **v1.2.0 的 `dsh-ming-browse` 会把自己拦死。** `permissionPolicy` 默认 `browse_only`，`run_code` 不在分类表 → UNKNOWN → 拒；而 `run_code` 是唯一能直接调用的工具，于是自由活动那一轮连读文件都做不到。用 v1.2.0 的原文件实测：

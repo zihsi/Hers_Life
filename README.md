@@ -76,7 +76,7 @@ https://raw.githubusercontent.com/zihsi/Hers_Life/discord-dsh-only/market/index.
 **每次发版要重跑一次**，否则市场里还停在旧 commit：
 
 ```bash
-node scripts/make-market-index.mjs --ref=v1.2.1 --validator="<DSH_HOME>/data/versions/<版本>/node_modules"
+node scripts/make-market-index.mjs --ref=discord-dsh-only --validator="<DSH_HOME>/data/versions/<版本>/node_modules"
 ```
 
 `--validator` 会调宿主自带的 `@deepseek-ai/dsh-plugin-market-index` 按 format 1 校验；不给就跳过，并明说「没验过」。

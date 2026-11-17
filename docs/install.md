@@ -39,7 +39,7 @@ Windows 路径用正斜杠。`link:` 指向的目录必须是**运行目录**（
 | 数据工作区（`MING_WORKSPACE`） | 人设、日记、`live/`、索引 | `C:\dsh\hers_workplace` |
 | 宿主配置目录 | profile 的 `cordis.patch.yml`、插件 config | `C:\Users\<你>\.dsh\profiles\web` |
 
-`MING_ROOT` 与数据工作区**不是一回事**：前者是代码目录，后者由 Discord 设置中心统一指定。`MING_WORKSPACE` 只保留为高级环境变量覆盖。
+`MING_ROOT` 与数据工作区**不是一回事**：前者是代码目录，后者由 Hers Life 插件自己的设置页统一指定（不是 DSH 全域设置）。`MING_WORKSPACE` 只保留为高级环境变量覆盖。变更工作区时只复制缺少的文件、不覆盖目的地已有数据；变更后请重启 DSH，让所有配套插件一起切换。
 
 ## 4. 递进组合（别一次全装）
 
