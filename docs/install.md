@@ -10,7 +10,16 @@
 | Windows | 10.0.26100.8457 | 只有这一个版本验过 |
 | Node | v24.21.0（Discord 适配器要求 Node 22+） | 使用 ESM、原生 WebSocket 与现代 Node API |
 | DSH | 0.2.2-rc.1 | 插件靠 Cordis 的 `inject` / `tools` / `agents`；低版本不一定有 |
-| Discord Bot | Bot Token + Message Content Intent | 由 `dsh-ming-discord` 统一连接；无需额外消息桥 |
+| Discord Bot | Bot Token + Message Content Intent + Server Members Intent | 两项都要在 Developer Portal 开启，否则可能 Gateway 4014；由 `dsh-ming-discord` 统一连接，无需额外消息桥 |
+
+### Discord Bot 必要 Intent
+
+在 Discord Developer Portal → Bot → Privileged Gateway Intents 開啟：
+
+- **Message Content Intent**
+- **Server Members Intent**
+
+此分支的 Gateway Identify 會要求以上兩項。只改程式、不在 Developer Portal 啟用，Discord 會以 `4014 Disallowed Intents` 關閉連線；開啟後要重連 Bot／重啟 DSH。詳見 [Discord 官方說明](https://support-dev.discord.com/hc/en-us/articles/6207308062871-What-are-Privileged-Intents)。
 
 ## 2. 安装方式
 
@@ -67,6 +76,8 @@ Windows 路径用正斜杠。`link:` 指向的目录必须是**运行目录**（
 | `ffplay` | 语音试听 | 只有试听不可用，合成不受影响；用 `MING_FFPLAY` 指定路径 |
 | B 站凭证（`~/.dsh/bili-duty/bili_credential.json`） | B 站工具 | 只读接口仍可用，需要登录的返回明确错误 |
 | Discord Bot Token | Discord 聊天入口 | 未配置时适配器保持 `needs-token`，本地记忆与其它 DSH 插件仍可单独使用 |
+| Discord 特權 Intent | 讀取群聊內容與成員事件 | Developer Portal 必須啟用 Message Content + Server Members；否則 Gateway 可能以 4014 拒絕連線 |
+| DAVE 原生模組 | 非 Stage Discord 語音 | `dsh-ming-discord/discord/dave/davey.node` 必須能被目前 Node／Electron 載入；缺失時語音明確不可用，文字 Discord 不受影響 |
 
 ## 7. 启动后怎么算成功
 
