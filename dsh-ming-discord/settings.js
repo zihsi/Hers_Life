@@ -6,7 +6,12 @@ const DEFAULTS = {
   enabled: false,
   workspace: path.join(os.homedir(), 'hers-life-workspace'),
   ownerIds: [],
-  agentPreset: '',\n  personaFiles: ['persona/人设.md', 'persona/名字.md', 'persona/约定.md'],\n  diaryDir: 'diary',\n  diaryCount: 3,\n  diaryChars: 8000,\n  maxChars: 12000,
+  agentPreset: '',
+  personaFiles: ['persona/人设.md', 'persona/名字.md', 'persona/约定.md'],
+  diaryDir: 'diary',
+  diaryCount: 3,
+  diaryChars: 8000,
+  maxChars: 12000,
   discord: {
     enabled: false, mode: 'mention', allowDm: true, dmPolicy: 'owner',
     guildIds: [], channelIds: [], whitelist: [], typing: true,
