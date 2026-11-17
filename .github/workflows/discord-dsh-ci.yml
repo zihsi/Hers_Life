@@ -35,6 +35,11 @@ jobs:
             dsh-ming-wake/reliability.test.mjs \
             dsh-ming-graph/fingerprint-cache.test.mjs
 
+      - name: Run deterministic browser and permission audits
+        run: |
+          node dsh-ming-browse/qa-audit.mjs
+          node dsh-ming-browse/qa-rotate.mjs
+
       - name: Run deterministic distribution and pricing checks
         run: |
           node dsh-ming-browse/heartbeat.test.mjs

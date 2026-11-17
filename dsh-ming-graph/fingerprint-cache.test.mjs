@@ -23,7 +23,7 @@ test('declared graph, neuron and unified dependencies invalidate on their own co
   const cfg={dshMemoryDir:dir,discordMemoryFile:path.join(dir,'observations.jsonl'),peopleIndex:path.join(dir,'people.json'),memoryCard:path.join(dir,'card.md'),diaryDir:path.join(dir,'diaries')}
   await fs.mkdir(cfg.diaryDir); await fs.mkdir(path.join(dir,'notes'))
   const source=path.join(dir,'neuron.mjs'); await fs.writeFile(source,'export {}')
-  for (const [file, deps] of [[cfg.peopleIndex,graphDependencies(cfg)],[cfg.peopleIndex,neuronDependencies(cfg,source)],[cfg.memoryCard,unifiedDependencies(cfg)],[path.join(cfg.diaryDir,'2026-01-01.md'),unifiedDependencies(cfg)],[path.join(dir,'recall-log.jsonl'),neuronDependencies(cfg,source)]]) {
+  for (const [file, deps] of [[cfg.discordMemoryFile,graphDependencies(cfg)],[cfg.discordMemoryFile,neuronDependencies(cfg,source)],[cfg.memoryCard,unifiedDependencies(cfg)],[path.join(cfg.diaryDir,'2026-01-01.md'),unifiedDependencies(cfg)],[path.join(dir,'recall-log.jsonl'),neuronDependencies(cfg,source)]]) {
     const a=await fingerprint(deps); await fs.writeFile(file,'first'); const b=await fingerprint(deps); assert.notEqual(a,b)
     await fs.writeFile(file,'other'); assert.notEqual(await fingerprint(deps),b)
     await fs.unlink(file); assert.equal(await fingerprint(deps),a)

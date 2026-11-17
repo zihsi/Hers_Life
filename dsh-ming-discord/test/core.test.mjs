@@ -89,8 +89,9 @@ test('shared memory recalls across guilds and hides private source attribution',
       kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'member-3',
     }, 'discord-channel-guild-b-chan-b')
     assert.match(memberPrompt, /伺服器 A/)
-    assert.doesNotMatch(memberPrompt, /私人背景/)
+    assert.doesNotMatch(memberPrompt, /主人背景：/)
     assert.doesNotMatch(memberPrompt, /主人提過 RTX 5080/)
+    assert.doesNotMatch(memberPrompt, /owner-secret/)
 
     config.memory.allowPrivateContextInGuild = false
     const noPrivate = await brain.recallContext('RTX 5080', {
@@ -160,6 +161,11 @@ test('Discord memory model and graph retain guild, channel, thread and author pr
     const neuronRows = await readDiscordEvents(file)
     assert.equal(neuronRows.length, 1)
     assert.equal(neuronRows[0].guildId, 'guild-1')
+    assert.equal(neuronRows[0].guildName, 'Lab')
+    assert.equal(neuronRows[0].channelId, 'thread-1')
+    assert.equal(neuronRows[0].channelName, 'project-chat')
+    assert.equal(neuronRows[0].authorId, 'user-1')
+    assert.equal(neuronRows[0].messageId, 'message-1')
     assert.equal(neuronRows[0].threadId, 'thread-1')
     assert.equal(neuronRows[0].subjectName, 'tester')
   } finally {

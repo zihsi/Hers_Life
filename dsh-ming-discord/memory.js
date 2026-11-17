@@ -31,8 +31,10 @@ export class DiscordBrain {
     try {
       const raw = await readFile(this.file, 'utf8')
       const byKey = new Map()
+      let rawLineCount = 0
       for (const line of raw.split(/\r?\n/)) {
         if (!line.trim()) continue
+        rawLineCount += 1
         try {
           const item = JSON.parse(line)
           if (!item?.id || !item?.text) continue
@@ -45,7 +47,10 @@ export class DiscordBrain {
       const limit = Math.max(1000, Number(this.settings.get('memory.maxEvents', 20000)) || 20000)
       const rows = [...byKey.values()].slice(-limit)
       for (const item of rows) this.addMemory(item, false)
-      if (rows.length !== byKey.size) {
+      // Compact malformed, duplicate or over-limit input records on disk as well
+      // as in memory. Comparing against raw line count catches duplicates even
+      // when their normalized keys have already collapsed in the map.
+      if (rows.length !== rawLineCount) {
         const temp = this.file + '.compact-' + process.pid
         await writeFile(temp, rows.map((item) => JSON.stringify(item)).join('\n') + (rows.length ? '\n' : ''), 'utf8')
         await rename(temp, this.file)

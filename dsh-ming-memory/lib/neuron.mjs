@@ -114,6 +114,15 @@ export async function readDiscordEvents(file) {
       chatKey,
       room: chatKey,
       roomLabel,
+      sessionId: String(event.sessionId || ''),
+      guildId: String(event.guildId || ''),
+      guildName: String(event.guildName || ''),
+      channelId: String(event.channelId || ''),
+      channelName: String(event.channelName || ''),
+      threadId: String(event.threadId || ''),
+      authorId: String(event.authorId || ''),
+      authorName: String(event.authorName || ''),
+      messageId: String(event.messageId || ''),
       supersedes: '',
     })
   }
