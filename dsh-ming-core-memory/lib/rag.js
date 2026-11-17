@@ -19,6 +19,12 @@ import { homedir } from 'node:os'
 
 function resolveWorkspace() {
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
+  // Hers Life settings are the source of truth; keep the older shared-memory
+  // file as a migration fallback for existing installations.
+  try {
+    const settings = JSON.parse(readFileSync(join(homedir(), '.dsh', 'hers-life.json'), 'utf8'))
+    if (typeof settings.workspace === 'string' && settings.workspace.trim()) return settings.workspace
+  } catch {}
   try {
     const settings = JSON.parse(readFileSync(join(homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
     if (typeof settings.root === 'string' && settings.root.trim()) return settings.root

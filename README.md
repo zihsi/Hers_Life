@@ -51,7 +51,7 @@ Discord 原生适配器负责 Gateway、频道／私讯／Thread 会话、附件
 // <DSH_HOME>/profiles/web/package.json 的 dependencies
 "dsh-ming-graph": "link:<workspace>\ming/dsh-ming-graph",
 "dsh-ming-mousepet": "link:<workspace>\ming/dsh-ming-mousepet",
-// ……其余九个同理
+// 其他必需配套插件照此添加；dsh-ming-activities 是可选扩展
 ```
 
 再把它们加进同一个文件的 `dsh.profile.bundles` 数组，重启 DSH。

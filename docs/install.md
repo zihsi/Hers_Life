@@ -45,7 +45,7 @@ Windows 路径用正斜杠。`link:` 指向的目录必须是**运行目录**（
 
 1. **最小可用**：`dsh-ming-discord` + `dsh-ming-core-memory` + `dsh-ming-memory`。Discord 连接、Owner、工作区与人设路径都在统一设置页完成。
 2. **加 UI**：`dsh-ming-graph`（关系图）→ 需要先构建生成物：`node dsh-ming-graph/build.mjs`。
-3. **加自己玩**：`dsh-ming-browse`（要 `workspacePath` 指向数据工作区）。
+3. **加自己玩**：`dsh-ming-browse`（会从 Discord 设置中心取得工作区，不需要手动填写路径）。
 4. **加声音/桌宠**：`dsh-ming-voice`（要 ffplay）、`dsh-ming-mousepet`（要 Windows 桌面）。
 5. **连接 Discord**：在 Hers Life 设置页贴入 Bot Token、填写 Owner Discord ID，并启用 Bot。
 

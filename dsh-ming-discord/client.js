@@ -127,7 +127,7 @@ window.__ModuleLoader__.load({
           : String(path.split('.').reduce((o, k) => o?.[k], cfg) ?? ''),
           onChange: (e) => {
             const raw = e.target.value
-            set(path, path.endsWith('Ids') || path === 'ownerIds' || path === 'personaFiles' ? raw.split(/[,\n]/).map((x) => x.trim()).filter(Boolean) : raw)
+            set(path, path.endsWith('Ids') || path === 'discord.whitelist' || path === 'ownerIds' || path === 'personaFiles' ? raw.split(/[,\n]/).map((x) => x.trim()).filter(Boolean) : raw)
           } }),
         hint ? h('small', { className: 'hl-hint' }, hint) : null)
       const card = (title, desc, children) => h('section', { className: 'hl-card', key: title },
@@ -294,6 +294,7 @@ window.__ModuleLoader__.load({
               area('Owner Discord User ID（可多個）', 'ownerIds', '填使用者 ID，不是伺服器 ID；可用逗號或換行分隔。', 2),
               select('伺服器回覆模式', 'discord.mode', [['mention','只在 @ 或回覆時回答'],['all','所有頻道訊息都回答'],['own','不回覆伺服器訊息']]),
               select('私訊允許範圍', 'discord.dmPolicy', [['owner','僅 Owner'],['whitelist','白名單'],['anyone','任何人']]),
+              area('私訊白名單使用者 ID', 'discord.whitelist', '當上方選擇「白名單」時，只有 Owner 與這裡列出的 Discord User ID 可以私訊。', 2),
               area('允許的 Guild ID（空白 = 全部）', 'discord.guildIds', '限制 Bot 會處理哪些伺服器。', 2),
               area('允許的 Channel ID（空白 = 全部）', 'discord.channelIds', '限制 Bot 會處理哪些文字頻道與 Thread。', 2)),
             check('啟用 Hers Life Discord 適配器', 'enabled', '總開關；關閉不會刪除任何資料。'),

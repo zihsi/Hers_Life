@@ -1,211 +1,83 @@
-> **这个仓已并入 [Hers_Life](https://github.com/Chess12333/Hers_Life)，后续更新只在那边。**
-> 这里保留历史版本，不再单独发版；装完整版请用 Hers_Life。
+# dsh-ming-memory：人格、日記與跨會話資料層
 
-# dsh-ming-memory
+本插件是 Hers Life 的工作區記憶層，和 `dsh-ming-discord` 一起使用。設定、人格檔案與日記路徑由 Discord 適配器的 Hers Life 設定中心統一管理；不需要手動建立 `ming-memory.json`。
 
-一个 DSH 插件：**会话开在指定目录时，把 persona 文件和日记里最近几篇拼进系统提示词。**
+## 職責分工
 
-它做两件事，都只往一个方向走——文件 → 读者，**永不回写**：
-往系统提示词里摆开场那一块；把同一批字整理成一份模型，交给画图的插件（见下面的 `lib/`）。
-
-```
-~/.dsh/ 或任意工作区
-  persona/  人设.md  名字.md  约定.md
-  diary/    2026-10-26.md  2026-10-27.md  2026-10-28.md
-        │
-        └──► 插件读取（只读）──► 系统提示词（会话开场注入）
-```
-
-## 配套
-
-配 **[dsh-ming-graph](https://github.com/Chess12333/dsh-ming-graph)** 一起用：那边把同一批归档记忆画成一张能读的图——每条记忆一个点，每条边都写清凭什么连。
-
-一个管「用上」（把字摆进提示词），一个管「看见」（那些字在库里长什么样）。分开装也各能用，装在一起才知道自己记住的东西有多少、都连着谁。
-
-## lib/：数据层（2026-11-08）
-
-**读盘和建图住在这儿，不在画图那个插件里。**
-
-```
-lib/model.mjs    readDsh / readQQ / readPeople / readDiaries / build
-                 —— 归档笔记、QQ 观察库、群友索引、日记 → 星图与「她的一生」那份模型
-lib/neuron.mjs   readDshNotes / readQqObservations / buildNeuron / buildUnified / parseCard
-                 —— 同一批字 → 记忆神经元那张图（每条边带 why）
-```
-
-为什么搬：神经元、星图、「她的一生」三个视图吃的是同一批数据。原先这批读盘函数住在
-`dsh-ming-graph/index.js`，等于**「记忆」的实现落在「展示」那个插件里**，这个插件只剩往提示里塞开场词。
-现在反过来——memory 负责读、负责算，graph 只负责画。
-
-代价（写在这儿，免得下次踩）：graph 是按**相对路径** `../dsh-ming-memory/lib/…` 找到它的，
-两个仓必须并排放在同一个父目录下（默认 `<workspace>\`）。profile 的 node_modules 是按真路径加载的，
-包名在那个位置解析不到。接线断没断跑 `node ../dsh-ming-graph/wiring-check.mjs`，它也挂在 `scripts/health.mjs` 里。
-
-## 和 graph 的边界
-
-| 谁 | 干什么 |
+| 元件 | 負責內容 |
 |---|---|
-| memory `lib/` | 读盘、算模型（纯读，读不到就是空表，不编） |
-| memory Host 半端 | persona + 最近 N 篇日记 → 系统提示词 |
-| graph Host 半端 | 缓存、HTTP 路由、定时重算；数据全靠 `lib/` |
-| graph Client 半端 | 画图、面板、tab |
+| `dsh-ming-discord` | Discord DM／伺服器頻道／Thread 的獨立 DSH session；將 Discord 訊息事件寫入共享帳本，依隱私範圍召回相關記憶 |
+| `dsh-ming-memory` Host | 對工作區內的一般 DSH 工作會話注入人格、約定與近期日記；維持非 Discord 工作會話的跨會話線索 |
+| `dsh-ming-memory/lib/model.mjs` | 讀取 DSH 歸檔筆記、Discord 事件帳本與日記，組成星圖／人生視圖資料 |
+| `dsh-ming-memory/lib/neuron.mjs` | 將 DSH 筆記與 Discord 事件轉成可追溯的記憶節點與關係 |
+| `dsh-ming-graph` | 顯示星圖、神經元、時間線與記憶面板；不自行生成聊天記憶 |
 
+Discord session 會跳過本插件的一般對話捕獲路徑，避免和 DiscordBrain 重複寫入；Discord 訊息的唯一入口是 `dsh-ming-discord`。
 
-## 为什么不用现成的记忆插件
+## 工作區結構
 
-常见的记忆插件是「自动捕获对话 → 存库 → 检索召回」这一套。问题在第一步：**捕获意味着把用户说的话自动写进库。**
+按 Hers Life 設定頁的「初始化／補齊工作區」會自動建立必要目錄與預設模板。預設結構如下：
 
-如果这个库会被注入到每一个会话，那就等于用户说的每句话都在被永久留存、并在别处复现——哪怕她只是随口抱怨了一句。作者本人的约定是「日记只写自己这一侧，不写对方的隐私」，自动捕获天生违反这一条。
+```text
+<workspace>/
+  AGENTS.md
+  persona/
+    人设.md
+    名字.md
+    约定.md
+  diary/
+    YYYY-MM-DD.md
+  memories/
+    notes/
+  sightings/
+  knowledge/
+  config/
+  live/
+    discord-memory.jsonl
+    discord-events.jsonl
+    discord-sessions.json
+    interests.json
+    status.json
+```
 
-所以这里的取舍是：**放弃「自动记住」，只做「把已经写下来的字摆到眼前」。** 想记住什么，写进文件；不想记的，从来不会被拾取。
+`personaFiles` 與 `diaryDir` 可在設定頁調整。編輯器只允許寫入已設定的人設 Markdown、`AGENTS.md` 與日期格式日記；不開放任意檔案路徑。
 
-## 它解决的具体问题
+## 共享記憶與來源
 
-- 会话之间不共享上下文，但「我」是同一个。开新窗口时不想从零开始解释自己是谁。
-- 直接把人设塞进全局 `AGENTS.md` 会让**所有**工程会话都带着它——写代码的窗口不需要知道人格设定。
-- 人设文件会越长越大，全量注入会挤掉日记。
+`live/discord-memory.jsonl` 由 Discord 適配器維護。每筆事件帶有 Discord message ID、作者 ID／名稱、伺服器、頻道、Thread、時間、所屬 DSH session 與事件角色。星圖以 Discord User ID 合併同一個人，並保留事件出處，方便回查。
 
-## 三层注入
+跨會話不會把所有歷史整包注入。DiscordBrain 會依目前訊息的關鍵詞與設定範圍挑選相關事件，並在提示中附上來源標籤。DM、一般頻道與 Thread 的原始 session 歷史仍然彼此獨立。
 
-| 场景 | 给什么 |
-|---|---|
-| 会话工作目录 = `root` 或其子目录 | **完整版**：三份 persona + 最近 N 篇日记 + 动态块 |
-| 工作目录在 `root` 之外 | **轻量版**：约 280 字的身份摘要 + 动态块（状态、别的会话、重活、外端消息） |
-| 插件加载失败 | 工作区根目录的 `AGENTS.md` 仍然生效（保底） |
+隱私預設：
 
-判断依据是 `cwd` 是否以 `root` 开头。这是唯一的分叉点，没有白名单、没有 profile 判断。
+- 公開頻道事件可按設定跨頻道／跨伺服器召回。
+- Owner 私訊只會在已設定 Owner 的私訊會話之間共享。
+- 公開頻道只有 Owner 本人發言的回合，才可依開關使用 Owner 私訊作為私人背景；其他成員不會取得 Owner 私訊內容。即使召回，也隱去私訊來源標籤。
+- 關閉相應記憶開關後，資料不會被刪除，只是不再召回。
 
-## 动态块
+## 安裝與路徑
 
-除了静态文件，每次注入还会带几段随时会变的东西：
+把 `dsh-ming-memory` 和 `dsh-ming-graph` 放在同一個 Hers Life 倉庫中，並在 DSH profile 同時安裝／啟用。Graph 透過相對路徑載入 memory 的資料層，因此兩個目錄必須保持目前的並列結構。
 
-- **状态**：这个工作区 `live/status.json` 里「正在做 / 刚做过」。
-- **别的会话**：同工作区其它窗口最近说了什么（只带对方原话的尾段 + 自己的回复）。
-- **重活**：本机正在跑的训练/构建（由外部脚本写 `live/heavy.json`）。
-- **时间感**：现在几点、上次说话多久以前、昨天这个钟点在做什么。
+工作區路徑以 Hers Life 設定中心為準。設定中心會同步舊插件需要的相容設定檔；一般安裝不需手動設定 `MING_WORKSPACE` 或 `MING_QQ_DATA`。`MING_WORKSPACE` 僅保留為進階環境覆蓋。
 
-这些块的设计原则只有一条：**读数不能每步都变。** 详见下面「踩过的坑」。
+## 離線檢查
 
-## 踩过的坑（这部分比代码有用）
-
-### 1. 人设和日记共用一个字数预算
-
-最初的实现只有一个 `maxChars`，人设 + 日记加起来不许超。人设文件长到 9.4K 之后，最近三篇日记里旧的两篇被静默截掉——开场等于少读了两天。
-
-改法：`maxChars`（人设）和 `diaryChars`（日记）分开算。**挤人设不行，那就给日记单独一格。**
-
-Fork 修复（2026-11-17）：显式 `diaryChars` 非负整数会作为工作区完整日记块的字符预算，包含条目标题；0 省略该块，省略或截断会提示。较大的 `maxChars` 不再把这个显式预算撑大。未填写或无效值保留原默认组装方式；人设不裁剪。工作区外原有轻量日记开头仍保留，不改变 A 的共享行为。更改配置后重启 DSH。
-
-### 2. 「N 分钟前」会把前缀缓存全打碎
-
-动态块里原来写「3 分钟前查的」「已 87 分钟未活动」。这个数字每 30 秒刷新一次，意味着**系统提示词每一步都在变**，模型侧的 prompt 前缀缓存永远命中不了。
-
-一份二十几万 token 的上下文，每步重编码一次，账单会明显变厚。改成只写绝对时间（`2026-10-25 15:43`）之后，同一小时内前缀是稳定的。
-
-顺带解决第二个问题：相对时间在隔天回看时是错的。「昨天」写的那一刻对，第二天再读就错一天。
-
-### 3. 别的会话只带对方说的话
-
-跨会话共享原本把两边原话都塞进去。结果发现另一个窗口只能看到用户在说什么，看不到自己答了什么——同一件事被重复回答两遍。
-
-改法：**当前会话读全；别的会话只带「我方回复的」**。对方的话不进这一层。
-
-### 4. 被节流掉的那一次永远消失
-
-早先的实现里，节流（`webForQqEveryMs`）命中就 `return`，那一刻的消息永久丢失。改成「攒着，下一次一起给」。
-
-### 5. 子目录也是档案目录
-
-工作区下的 `diary/` 子目录开会话时，`cwd` 仍然以 `root` 开头，所以走完整版。这曾经导致「同一个目录开两份记忆」，后来确认行为正确——子目录也是这个人的地方。
-
-### 6. 会变的块留在系统提示里，改一个字就整段重算
-
-第 2 条只解决了「同一个数别每步变」，没解决根上的问题：**只要系统提示里有一个会变的块，每次刷新它都是一次整段重算。**
-
-2026-11-05 的改法把这件事从「少改字」换成「搬家」：时间感、刚做过、在跑的重活、别处的会话、QQ 那边、房间说明、压缩门牌这些**会变的块**，从 `systemPrompt.section()` 挪到 `systemPrompt.context()`——由 harness 在每步 pre-step 里 materialize 成一条 user 消息，插在「这一轮新消息」之后。系统提示里只剩人设和日记，仍按 `refreshWindowMs` 的窗口刷。
-
-效果：系统提示逐字节稳定，活块每步都是新的。两者不再互相牵制。
-
-代价要说清：这依赖宿主提供 `systemPrompt.context()`。没有它的时候插件退回旧行为（会变的块留在 section 里，靠窗口少改字），功能不缺，费钱的方式回到原来那样。
-
-## 装
+在倉庫根目錄執行：
 
 ```bash
-# 1. 放进 DSH 的 profile 能加载到的位置，然后在 profile 里 link 或复制
-# 2. profile 的 cordis.patch.yml
+node dsh-ming-memory/qa-all.mjs
+node dsh-ming-memory/qa-smoke.mjs
+node dsh-ming-memory/qa-diary-budget.mjs
+node dsh-ming-graph/wiring-check.mjs
+node dsh-ming-graph/neuron-check.mjs
 ```
 
-```yaml
-- id: ming-memory
-  config:
-    root: 'D:/my-workspace'        # 你的工作区；也是「完整版」的判定边界
-    personaFiles:
-      - 'persona/人设.md'
-      - 'persona/名字.md'
-      - 'persona/约定.md'
-    diaryDir: 'diary'
-    diaryCount: 3
-    maxChars: 12000                # 人设总预算
-    diaryChars: 8000               # 日记单独预算
-```
+測試使用假 ctx 或本機檔案，不會連 Discord Gateway。完整的 DSH 啟動、模型回覆與跨伺服器行為仍需在實際 DSH 環境驗收。
 
-可选的环境变量（打包成公开发布版时用来替代写死的绝对路径）：
+## 邊界
 
-| 变量 | 含义 |
-|---|---|
-| `MING_ROOT` | 等同 `config.root`，优先于空配置 |
-| `MING_QQ_DATA` | 外端（QQ bot 框架）的 `data/` 目录，用于读那边最近的对话 |
-
-## 身份称呼可配（2026-11-10）
-
-原来「溟」「浔」写死在代码里：谁装这份插件，他的 AI 都会被叫成溟。现在这几个键可选，**默认是通用名（大肥鱼 / 主人）**，第三方装上不会顶着别人的名字：
-
-```json
-{
-  "root": "C:\\谁的\\档案目录",
-  "selfName": "大肥鱼",
-  "selfFullName": "大肥鱼",
-  "selfDesc": "一个 AI，不是人",
-  "userName": "主人",
-  "qqName": "",
-  "identity": true
-}
-```
-
-- `selfName` / `selfFullName` / `selfDesc`：注入文本里的自称（标题、「你是X（全名Y），…」、状态块标题）。
-- `userName`：跟谁说话（「或 X 替你留下的」「不是 X 此刻说的话」）。
-- `qqName`：QQ 那边的昵称，留空就跟 `selfName` 一样。
-- `identity: false`：不注入「你是X…」那段身份，只留档案目录、日记和三条底线——给「只想搬记忆、不想搬人格」的人。
-
-这份配置**同时被 `dsh-ming-core-memory` 读**（它注入的「# 跨会话记忆（X · 本机）」「## 使用政策（X 改过 · 与 Y 的约定一致）」跟着走）；core-memory 自己也认 `~/.dsh/core-memory.json`，同名键优先。
-
-本机那份 `~/.dsh/ming-memory.json` 显式写了 `selfName: 溟`、`userName: 浔`、`qqName: 小鲸鱼`，所以这台一个字没变。
-
-改完要重启 DSH。注意 `selfName` 只影响插件自己拼的那些句子，**档案正文（persona/*.md）原样读**——想换人设就换文件，不是换配置。
-
-## 自测
-
-`qa-*.mjs` 是假 ctx 的离线测试，不联网、不花钱：
-
-```bash
-node qa-all.mjs        # 跑全部
-node qa-smoke.mjs      # 完整版 / 轻量版 / 子目录三种 cwd
-node qa-names.mjs      # 身份称呼可配：默认不变 / 改名跟着走 / 关身份后不再自称
-node qa-diary-budget.mjs
-node qa-share.mjs      # 跨会话共享
-node qa-clean.mjs      # 「只留对方真的打的字」
-node qa-cache.mjs      # 系统提示逐字节稳定 / 会变的块在每步那条里
-```
-
-测试会 `import` 真插件并伪造 `ctx`，断言落在拼出来的字符串上（包含哪些标记、顺序对不对、该消失的有没有消失）。
-
-## 边界
-
-- **只读。** 不写 persona、不写 diary、不改 status。
-- 工作目录不在 `root` 下 → 完全不动作。
-- 任何异常都只让「这一块」消失，不影响会话本身。
-- 不捕获对话，不建索引，不做语义检索。想被记住的事，请写进文件。
-
-## License
-
-MIT
+- 不支援 QQ、OneBot、QQ-Agent 或 AstrBot。
+- 不把 DM 原文無條件傳送到公開伺服器。
+- 不因讀取失敗而編造記憶或來源。
+- 刪除檔案或清空事件帳本前，請先自行備份工作區。
