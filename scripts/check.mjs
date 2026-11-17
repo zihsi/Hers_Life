@@ -2,7 +2,7 @@
 // scripts/check.mjs —— 统一检查入口（交接书 L-1 / L-3 的最小版）
 //
 // 为什么用显式清单而不是扫 *.mjs：这个仓库里既有测试脚本，也有会读真实记忆、
-// 会点鼠标、会给 QQ 发消息的运维脚本。扫一遍全跑等于把工具当测试。
+// 会操作桌面或连接真实账号的运维脚本。扫一遍全跑等于把工具当测试。
 //
 // 用法：
 //   node scripts/check.mjs --list
@@ -70,7 +70,7 @@ const CHECKS = [
   { id: 'browse/audit', suite: 'offline', cwd: 'dsh-ming-browse', cmd: ['node', 'qa-audit.mjs'], why: '自己玩：配置/护栏审计' },
   { id: 'activities/qa', suite: 'offline', cwd: 'dsh-ming-activities', cmd: ['node', 'qa-activities.mjs'], why: 'PR#8 共同活动插件' },
   { id: 'build/graph', suite: 'build', cwd: 'dsh-ming-graph', cmd: ['node', 'build.mjs', '--check'], why: 'F-1 构建根与生成物是否最新' },
-  { id: 'build/memory', suite: 'build', cwd: 'dsh-ming-memory', cmd: ['node', 'build.mjs'], why: 'F-1 memory 构建（该脚本无 --check，只重建）' },
+  { id: 'build/memory', suite: 'build', cwd: 'dsh-ming-memory', cmd: ['node', 'build.mjs', '--check'], why: 'Memory client.js 是否与共用主题及面板源码一致' },
   { id: 'fixture/always-fail', suite: 'fixture', cwd: '.', cmd: ['node', 'test-support/qa-fixture-fail.mjs'], why: 'L-T2 专用：故意失败，验证 runner 返回非零' },
   {
     id: 'windows/sidecar-parse', suite: 'windows-live', cwd: 'dsh-ming-mousepet',
