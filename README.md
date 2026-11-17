@@ -16,6 +16,8 @@
 
 Discord 原生适配器负责 Gateway、频道／私讯／Thread 会话、附件、语音、兴趣唤醒与统一设置页。Bot Token 存在 `~/.dsh/hers-life-secrets.json`；设置页只显示是否已配置，不回传密钥。
 
+首次設定 Bot 時，請在 Developer Portal → Bot → Privileged Gateway Intents 開啟 **Message Content Intent** 與 **Server Members Intent**；本程式兩項都會送入 Gateway Identify，未啟用時可能收到 `4014 Disallowed Intents`。語音另需 FFmpeg 與可載入的 DAVE 原生模組，詳見 [Discord 適配器說明](dsh-ming-discord/README.md)。
+
 ## 这里面有什么
 
 | 包 | 干什么 |
