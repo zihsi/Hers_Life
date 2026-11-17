@@ -35,6 +35,9 @@ jobs:
             dsh-ming-wake/reliability.test.mjs \
             dsh-ming-graph/fingerprint-cache.test.mjs
 
+      - name: Verify Bilibili package payload and ESM plugin activation
+        run: node dsh-ming-bilibili-account/qa-load.mjs
+
       - name: Run deterministic browser and permission audits
         run: |
           node dsh-ming-browse/qa-audit.mjs

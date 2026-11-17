@@ -1353,7 +1353,7 @@ export class VoiceManager {
     const connection = new VoiceConnection({
       gateway: this.gateway,
       rest: this.rest,
-      logger: this.logger?.child('voice'),
+      logger: this.logger,
       ffmpeg: this.settings.resolve().ffmpeg,
       guildId: key,
       channelId: String(channelId),

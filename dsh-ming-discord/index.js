@@ -129,7 +129,7 @@ function send(res, status, body) {
 }
 
 export function apply(ctx, pluginConfig = {}) {
-  const logger = ctx.logger?.child ? ctx.logger.child('hers-life-discord') : ctx.logger
+  const logger = ctx.logger('hers-life-discord')
   const settings = new SettingsStore(pluginConfig)
   let rest = null
   let gateway = null
@@ -168,7 +168,9 @@ export function apply(ctx, pluginConfig = {}) {
       pool = new DiscordSessionPool({ ctx, settings, logger })
       await pool.load()
       gateway = new DiscordGateway({ token: settings.token, logger })
-      voice = settings.get('voice.enabled', true) ? new VoiceManager({ gateway, rest, settings, logger }) : null
+      voice = settings.get('voice.enabled', true)
+        ? new VoiceManager({ gateway, rest, settings, logger: ctx.logger('hers-life-discord:voice') })
+        : null
       bridge = new DiscordBridge({ ctx, settings, logger, rest, gateway, brain, pool, voice, interests, events, dataRoot: settings.resolve().dataRoot })
       detach = bridge.attach()
       gateway.on('ready', (data) => {
@@ -377,6 +379,7 @@ export function apply(ctx, pluginConfig = {}) {
     name: 'discord_send_to_owner',
     description: '透過 Discord 私訊向設定頁中的 Owner 發送文字。',
     parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'], additionalProperties: false },
+    output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: String(value) }] },
     async execute(args) { return JSON.stringify(await sendToOwner(String(args?.text ?? ''))) },
   })
   ctx.tools?.register?.({
@@ -387,6 +390,7 @@ export function apply(ctx, pluginConfig = {}) {
         channelId: { type: 'string' }, path: { type: 'string' }, caption: { type: 'string' },
       }, required: ['channelId', 'path'], additionalProperties: false,
     },
+    output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: String(value) }] },
     async execute(args) { return JSON.stringify(await sendFile(args.channelId, args.path, args.caption ?? '')) },
   })
 }

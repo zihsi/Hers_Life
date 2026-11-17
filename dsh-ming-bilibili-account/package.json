@@ -1,6 +1,6 @@
 {
   "name": "dsh-ming-bilibili-account",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "溟的 B 站账号工具：扫码登录、查账号能力状态、改昵称。登录态只存进程内存，不落盘。",
@@ -12,7 +12,7 @@
   },
   "files": [
     "index.js",
-    "lib/*.js",
+    "lib",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg"
@@ -21,5 +21,19 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-attachment": ">=0.2.0",
+    "@deepseek-ai/dsh-llm": ">=0.2.0",
+    "@deepseek-ai/dsh-tools": ">=0.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-attachment": ">=0.2.0",
+    "@deepseek-ai/dsh-llm": ">=0.2.0",
+    "@deepseek-ai/dsh-tools": ">=0.2.0"
+  },
+  "engines": {
+    "node": ">=22",
+    "dsh": ">=0.2.0"
   }
 }

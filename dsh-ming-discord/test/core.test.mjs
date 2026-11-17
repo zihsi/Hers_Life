@@ -8,6 +8,8 @@ import { readDiscordEvents } from '../../dsh-ming-memory/lib/neuron.mjs'
 import { SettingsStore, isDiaryFilename, isDiaryPath } from '../settings.js'
 import { DiscordSessionPool } from '../pool.js'
 import { DiscordBrain } from '../memory.js'
+import { apply as applyDiscord } from '../index.js'
+import { apply as applyMemory, inject as memoryInject } from '../../dsh-ming-memory/index.js'
 
 test('DM, guild channel and thread get distinct durable session ids', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-pool-'))
@@ -205,4 +207,92 @@ test('Discord memory ledger deduplicates and compacts to the configured event li
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+
+test('Discord plugin activation registers DSH-valid tools and provides the service required by memory', async t => {
+  const home = await mkdtemp(path.join(os.tmpdir(), 'hers-life-plugin-home-'))
+  const workspace = path.join(home, 'workspace')
+  const oldHome = process.env.HOME
+  const oldUserProfile = process.env.USERPROFILE
+  process.env.HOME = home
+  if (process.platform === 'win32') process.env.USERPROFILE = home
+  t.after(async () => {
+    if (oldHome === undefined) delete process.env.HOME
+    else process.env.HOME = oldHome
+    if (oldUserProfile === undefined) delete process.env.USERPROFILE
+    else process.env.USERPROFILE = oldUserProfile
+    await rm(home, { recursive: true, force: true })
+  })
+
+  const services = new Map()
+  const definitions = []
+  const namedLoggers = []
+  const makeLogger = name => {
+    namedLoggers.push(name)
+    return { name, debug() {}, info() {}, warn() {}, error() {} }
+  }
+  const logger = Object.assign(name => makeLogger(name), makeLogger('context'))
+  const listeners = new Map()
+  const ctx = {
+    logger,
+    tools: {
+      register(definition) {
+        assert.ok(definition.output && definition.output.schema, `${definition.name} must declare canonical output`)
+        assert.equal(typeof definition.output.render, 'function', `${definition.name} must render canonical output`)
+        assert.equal(definition.output.schema.type, 'string')
+        definitions.push(definition)
+        return () => {}
+      },
+    },
+    inject() { return () => {} },
+    provide(name, value) {
+      services.set(name, value)
+      return () => services.delete(name)
+    },
+    get hersLifeDiscord() { return services.get('hersLifeDiscord') },
+    on(name, listener) {
+      listeners.set(name, listener)
+      return () => listeners.delete(name)
+    },
+  }
+
+  applyDiscord(ctx, { enabled: false, workspace })
+  assert.deepEqual(definitions.map(item => item.name), ['discord_send_to_owner', 'discord_send_file'])
+  assert.ok(namedLoggers.includes('hers-life-discord'))
+  const discordService = services.get('hersLifeDiscord')
+  assert.ok(discordService, 'Discord must publish hersLifeDiscord before dependent plugins load')
+  assert.equal(discordService.workspace, workspace)
+
+  const marker = path.join(workspace, 'diary', 'README.md')
+  const deadline = Date.now() + 5000
+  let workspaceReady = false
+  while (Date.now() < deadline) {
+    try { await readFile(marker, 'utf8'); workspaceReady = true; break } catch {}
+    await new Promise(resolve => setTimeout(resolve, 10))
+  }
+  assert.equal(workspaceReady, true, 'Discord workspace initialization should complete without a token')
+
+  await writeFile(path.join(workspace, 'persona', '人设.md'), '# 測試人設\\nSERVICE-WORKSPACE-MARKER\\n', 'utf8')
+  assert.deepEqual(memoryInject, ['hersLifeDiscord'])
+  applyMemory(ctx, {})
+  const onCreated = listeners.get('agent/created')
+  assert.equal(typeof onCreated, 'function', 'memory should activate after the Discord service is provided')
+
+  const sections = []
+  const agent = {
+    id: 'hers-life-test-agent',
+    session: { id: 'discord-dm-test', header: { cwd: workspace } },
+    ctx: {
+      systemPrompt: {
+        section(definition) { sections.push(definition); return () => {} },
+        context(definition) { sections.push({ ...definition, kind: 'context' }); return () => {} },
+      },
+    },
+  }
+  await onCreated({ agent })
+  const opening = sections.find(section => section.name === 'ming:opening')
+  assert.ok(opening, 'memory should attach its opening section to an agent in the Discord workspace')
+  assert.ok(opening.text().includes('SERVICE-WORKSPACE-MARKER'), 'memory should resolve its root from hersLifeDiscord.workspace')
+  listeners.get('agent/disposed')?.({ agent })
 })
