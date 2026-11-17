@@ -3,7 +3,7 @@
  *
  * ⚠ 生成物，别手改：改 src/*.js 或各插件的 src/panel.js，然后 `node build.mjs`。
  *   现在是不是最新的：`node build.mjs --check`
- *   build fb6d7f70594d1a23
+ *   build c6eb373de89de27c
  *
  * 入口：左侧图标栏一个图标（sidebar.panellist），点开占满主区域（main 面板 key = ming-graph）。
  * 数据来自 Host 半端 /_dsh/dsh-ming-graph/neurons，自己拉、自己画，不经过模型。
@@ -1918,6 +1918,9 @@ function InterestPanel() {
 
   useEffect(() => { load() }, [load])
 
+  const st = (data && data.state) || {}
+  const off = !!st.off
+
   const toggle = useCallback(() => {
     const nextOff = !off
     setSwitching(true)
@@ -1926,14 +1929,12 @@ function InterestPanel() {
       .then(() => load())
       .catch((e) => setErr(String((e && e.message) || e)))
       .finally(() => setSwitching(false))
-  }, [load])
+  }, [load, off])
 
-  const st = (data && data.state) || {}
   const topics = (data && data.config && data.config.topics) || []
   const learned = (data && data.learned) || []
   const mute = (data && data.config && data.config.mute) || []
   const quiet = st.quiet || st.skip
-  const off = !!st.off
   const tone = off ? 'danger' : quiet ? 'warn' : 'ok'
   const label = off ? '唤醒关着' : quiet ? '现在不叫' : '在线'
   // 「跳过原因」拆成几条：她要知道是哪一条卡着，不是一句日志
