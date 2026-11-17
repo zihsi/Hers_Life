@@ -29,8 +29,8 @@ const opt = (key, fallback = '') => {
 const ref = opt('ref', 'HEAD')
 const outFile = path.resolve(ROOT, opt('out', 'market/index.json'))
 const validatorDir = opt('validator', '')
-const REPO_URL = 'https://github.com/Chess12333/Hers_Life'
-const REPO_DIR = 'https://github.com/Chess12333/Hers_Life'
+const REPO_URL = 'https://github.com/zihsi/Hers_Life'
+const REPO_DIR = 'https://github.com/zihsi/Hers_Life'
 
 const git = (...args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim()
 // 2026-11-17（核查 4.5-4）：`rev-parse v1.2.2` 对**附注标签**返回的是 tag 对象，不是提交。
@@ -52,7 +52,7 @@ for (const dir of readdirSync(ROOT).filter((d) => d.startsWith('dsh-ming-')).sor
     name: pkg.name,
     title: pkg.name,
     description: pkg.description || pkg.name,
-    author: 'Chess12333',
+    author: 'zihsi',
     homepage: REPO_DIR,
     repository: { url: REPO_URL, directory: dir },
     versions: [{

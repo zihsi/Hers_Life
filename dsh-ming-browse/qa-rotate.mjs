@@ -57,6 +57,9 @@ const makeAgent = (id) => ({
 const ctx = {
   logger: { info: () => {}, warn: () => {}, error: () => {} },
   on: () => {},
+  inject: (deps, fn) => {
+    fn({ effect: () => {}, webServer: { register: () => ({ dispose() {} }) } })
+  },
   get: () => undefined,
   effect: () => {},
   interval: (fn) => { ctx.__tick = fn },
@@ -162,6 +165,9 @@ const makeAgent2 = (id) => ({
 const ctx2 = {
   logger: { info: () => {}, warn: () => {}, error: () => {} },
   on: () => {},
+  inject: (deps, fn) => {
+    fn({ effect: () => {}, webServer: { register: () => ({ dispose() {} }) } })
+  },
   get: (key) => (key === 'workspaceRegistry' ? { archivedSessionIds: archived2 } : undefined),
   effect: () => {},
   interval: (fn) => { ctx2.__tick = fn },
