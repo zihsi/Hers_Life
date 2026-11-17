@@ -8,6 +8,7 @@ import { readDiscordEvents } from '../../dsh-ming-memory/lib/neuron.mjs'
 import { SettingsStore, isDiaryFilename, isDiaryPath } from '../settings.js'
 import { DiscordSessionPool } from '../pool.js'
 import { DiscordBrain } from '../memory.js'
+import { DiscordInterestStore } from '../interests.js'
 import { apply as applyDiscord } from '../index.js'
 import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
 
@@ -40,6 +41,30 @@ test('DM, guild channel and thread get distinct durable session ids', async () =
     await Promise.all([pool.acquire(dm), pool.acquire(channel), pool.acquire(thread)])
     assert.equal(new Set(created).size, 3)
     assert.equal(pool.list().length, 3)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('interest pause state is reversible and reports its skip reason', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-interest-'))
+  try {
+    const config = { interest: { enabled: true, quietHours: '00:00-00:00', minGapMinutes: 20, maxPerHour: 3, channelGapMinutes: 45 } }
+    const settings = {
+      get(key, fallback) {
+        const value = key.split('.').reduce((at, part) => at == null ? undefined : at[part], config)
+        return value === undefined ? fallback : value
+      },
+    }
+    const store = new DiscordInterestStore({ workspace: root, settings })
+    await store.load()
+    assert.equal(store.snapshot().state.off, false)
+    await store.setOff(true)
+    assert.equal(store.snapshot().state.off, true)
+    assert.match(store.snapshot().state.skip, /已手動暫停/)
+    await store.setOff(false)
+    assert.equal(store.snapshot().state.off, false)
+    assert.doesNotMatch(store.snapshot().state.skip, /已手動暫停/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
