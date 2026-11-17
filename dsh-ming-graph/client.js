@@ -3,7 +3,7 @@
  *
  * ⚠ 生成物，别手改：改 src/*.js 或各插件的 src/panel.js，然后 `node build.mjs`。
  *   现在是不是最新的：`node build.mjs --check`
- *   build 40ba6c6371ef88e3
+ *   build fb6d7f70594d1a23
  *
  * 入口：左侧图标栏一个图标（sidebar.panellist），点开占满主区域（main 面板 key = ming-graph）。
  * 数据来自 Host 半端 /_dsh/dsh-ming-graph/neurons，自己拉、自己画，不经过模型。
@@ -612,7 +612,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MING_UI
     const canvas = document.createElement('canvas')
     stage.appendChild(canvas)
     const legend = document.createElement('div'); legend.className = 'nv-legend'
-    legend.innerHTML = '<span><i style="background:#14b8a6"></i>DSH 记忆</span><span><i style="background:#e0803a"></i>QQ 观察</span><span><i style="background:#5b8def"></i>项目</span><span><i style="background:#e05a8a"></i>人</span>'
+    legend.innerHTML = '<span><i style="background:#14b8a6"></i>DSH 记忆</span><span><i style="background:#e0803a"></i>Discord 對話</span><span><i style="background:#5b8def"></i>项目</span><span><i style="background:#e05a8a"></i>人</span>'
     stage.appendChild(legend)
     const side = document.createElement('aside'); side.className = 'nv-side'
     body.appendChild(stage); body.appendChild(side)
@@ -648,7 +648,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MING_UI
     // 颜色（从主题里读一次，canvas 用不了 CSS 变量）
     const cs = getComputedStyle(document.body)
     const colDsh = opts.colorDsh || '#14b8a6'
-    const colQq = opts.colorQq || '#e0803a'
+    const colDiscord = opts.colorQq || '#e0803a'
     const colProj = opts.colorProj || '#5b8def'
     const colPerson = opts.colorPerson || '#e05a8a'
     const colDim = cs.getPropertyValue('--dsw-alias-label-tertiary') || '#888'
@@ -668,10 +668,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MING_UI
     }
     const SPR = 64
     const spriteDsh = sprite(colDsh, SPR)
-    const spriteQq = sprite(colQq, SPR)
+    const spriteDiscord = sprite(colDiscord, SPR)
     const spriteProj = sprite(colProj, SPR)
     const spritePerson = sprite(colPerson, SPR)
-    // 2026-11-07：日记（星图时间环用）自己的灰，不然会落进 QQ 那档橙色
+    // 2026-11-07：日记（星图时间环用）自己的灰，不然会落进 Discord 事件的橙色
     const colDiary = opts.colorDiary || '#c9cdd4'
     const spriteDiary = sprite(colDiary, SPR)
 
@@ -790,7 +790,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MING_UI
         const hotBoost = isBig ? 0 : Math.min(1.6, (n.hot || 0) * 0.9)
         const base = isBig ? 3.2 + Math.min(3, Math.log((n.count || 1) + 1)) : 1.55 + hotBoost
         const rad = Math.max(0.9, base * q.s)
-        const sp = isPerson ? spritePerson : n.kind === 'diary' ? spriteDiary : n.side === 'dsh' ? spriteDsh : n.side === 'qq' ? spriteQq : spriteProj
+        const sp = isPerson ? spritePerson : n.kind === 'diary' ? spriteDiary : n.side === 'dsh' ? spriteDsh : n.side === 'discord' ? spriteDiscord : spriteProj
         const glow = rad * (isFocus ? 7 : isBig ? 4.2 : 3.2)
         // 越新越亮（2026-11-07，借自星汐）：老记忆只是变暗，不会消失。
         // at 是毫秒时间戳；项目和人是聚合节点（at 为 null），不参与衰减。
@@ -806,7 +806,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MING_UI
         ctx.globalAlpha = (isFocus ? 0.95 : isNear ? 0.85 : isBig ? 0.7 : 0.5) * fresh
         ctx.drawImage(sp, q.x - glow / 2, q.y - glow / 2, glow, glow)
         ctx.globalAlpha = (isFocus ? 1 : isNear ? 1 : 0.9) * fresh
-        ctx.fillStyle = isPerson ? colPerson : isProj ? colProj : n.kind === 'diary' ? colDiary : n.side === 'dsh' ? colDsh : colQq
+        ctx.fillStyle = isPerson ? colPerson : isProj ? colProj : n.kind === 'diary' ? colDiary : n.side === 'dsh' ? colDsh : colDiscord
         ctx.beginPath(); ctx.arc(q.x, q.y, rad, 0, Math.PI * 2); ctx.fill()
       }
       ctx.globalAlpha = 1
@@ -1079,7 +1079,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MING_UI
       list.appendChild(h)
 
       const kindRow = document.createElement('div'); kindRow.className = 'nv-kv'
-      kindRow.innerHTML = '<span>来源</span><b>' + (n.kind === 'project' ? '项目（聚合点）' : n.kind === 'person' ? '人' : n.side === 'dsh' ? 'DSH 归档记忆' : 'QQ 观察') + '</b>'
+      kindRow.innerHTML = '<span>来源</span><b>' + (n.kind === 'project' ? '项目（聚合点）' : n.kind === 'person' ? '人' : n.side === 'dsh' ? 'DSH 归档记忆' : 'Discord 對話') + '</b>'
       list.appendChild(kindRow)
       if (n.kind === 'project') {
         const r = document.createElement('div'); r.className = 'nv-kv'
@@ -1191,7 +1191,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MING_UI
         const on = !hl || hl === n.id
         ctx.save()
         ctx.globalAlpha = (on ? 1 : 0.28) * Math.min(1, t * 2.2)
-        ctx.fillStyle = n.kind === 'person' ? colPerson : n.kind === 'project' ? colProj : n.side === 'dsh' ? colDsh : colQq
+        ctx.fillStyle = n.kind === 'person' ? colPerson : n.kind === 'project' ? colProj : n.side === 'dsh' ? colDsh : colDiscord
         ctx.beginPath(); ctx.arc(it.dx, it.dy, (big ? 5.2 : 3.2) * (0.4 + 0.6 * t), 0, Math.PI * 2); ctx.fill()
         ctx.restore()
       }
@@ -1277,7 +1277,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MING_UI
       side.appendChild(ex)
 
       const mk = (k, v) => { const d = document.createElement('div'); d.className = 'nv-kv'; d.innerHTML = `<span>${k}</span><b>${v}</b>`; side.appendChild(d) }
-      mk('来源', n.kind === 'project' ? '项目（聚合点）' : n.side === 'dsh' ? 'DSH 归档记忆' : 'QQ 观察')
+      mk('来源', n.kind === 'project' ? '项目（聚合点）' : n.side === 'dsh' ? 'DSH 归档记忆' : 'Discord 對話')
       if (n.kind === 'memory') {
         mk('归类', n.projectLabel || n.project || '—')
         mk('时间', fmtDate(n.at))
@@ -1888,7 +1888,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = MING_UI
 })()
 
 
-const INTEREST_API = '/_dsh/dsh-ming-interest'
+const INTEREST_API = '/_dsh/dsh-ming-discord/interest'
 
 function fmtAgo(ms) {
   if (!ms || ms < 0) return '—'
@@ -1919,8 +1919,9 @@ function InterestPanel() {
   useEffect(() => { load() }, [load])
 
   const toggle = useCallback(() => {
+    const nextOff = !off
     setSwitching(true)
-    fetch(INTEREST_API + '/toggle', { method: 'POST' })
+    fetch(INTEREST_API + '/toggle', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ off: nextOff }) })
       .then((r) => r.json())
       .then(() => load())
       .catch((e) => setErr(String((e && e.message) || e)))
@@ -1928,7 +1929,9 @@ function InterestPanel() {
   }, [load])
 
   const st = (data && data.state) || {}
-  const topics = (data && data.topics) || []
+  const topics = (data && data.config && data.config.topics) || []
+  const learned = (data && data.learned) || []
+  const mute = (data && data.config && data.config.mute) || []
   const quiet = st.quiet || st.skip
   const off = !!st.off
   const tone = off ? 'danger' : quiet ? 'warn' : 'ok'
@@ -1990,7 +1993,7 @@ function InterestPanel() {
       h('div', { className: 'ming-sec' },
         h('div', { className: 'ming-sec-h' },
           h('span', { className: 'ming-sec-t' }, '盯着的话题'),
-          h('span', { className: 'ming-sec-n' }, topics.length + ' 个 · 改 live/interests.json，下一轮生效'),
+          h('span', { className: 'ming-sec-n' }, topics.length + ' 個 · 在 Discord 設定頁編輯'),
         ),
         h('div', { className: 'ming-sec-b flush' },
           h('div', { className: 'ming-list' },
@@ -2001,12 +2004,22 @@ function InterestPanel() {
               ),
               h('div', { style: { display: 'flex', gap: 4, flexWrap: 'wrap' } },
                 (t.keywords || []).map((k, j) => h('span', { key: j, className: 'ming-pill' }, k)),
-                (t.mute || []).map((k, j) => h('span', { key: 'm' + j, className: 'ming-pill', 'data-tone': 'danger', title: '出现就整条不算' }, '✕ ' + k)),
+                mute.map((k, j) => h('span', { key: 'm' + j, className: 'ming-pill', 'data-tone': 'danger', title: '出現就忽略這則訊息' }, '✕ ' + k)),
               ),
             )),
           ),
         ),
       ),
+      learned.length ? h('div', { className: 'ming-sec' },
+        h('div', { className: 'ming-sec-h' },
+          h('span', { className: 'ming-sec-t' }, '自動學到的詞'),
+          h('span', { className: 'ming-sec-n' }, learned.length + ' 個'),
+        ),
+        h('div', { className: 'ming-sec-b' },
+          learned.slice(0, 30).map((item, i) => h('span', { key: i, className: 'ming-pill', style: { margin: 3 } },
+            item.name + ' · ' + item.count + ' 次' + (item.promoted ? ' · 已啟用' : ''))),
+        ),
+      ) : null,
     ),
   )
 }
@@ -2804,7 +2817,7 @@ function AcpPanel() {
           h('path', { d: 'M16 14l4 4-4 4' }))),
       h('div', { className: 'ming-ph-tx' },
         h('div', { className: 'ming-ph-t' }, '委托'),
-        h('div', { className: 'ming-ph-d' }, 'QQ 那边转过来的活，跑在 DSH 这边，全程没有界面')),
+        h('div', { className: 'ming-ph-d' }, 'Discord 對話轉交的工作，跑在 DSH 这边，全程没有界面')),
       h('button', { className: 'mg-btn', onClick: load, disabled: busy }, busy ? '读…' : '刷新'),
     ),
 

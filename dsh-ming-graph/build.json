@@ -1,7 +1,7 @@
 {
-  "hash": "40ba6c6371ef88e3",
-  "at": "2026-11-17T02:39:08.424Z",
-  "bytes": 231671,
+  "hash": "fb6d7f70594d1a23",
+  "at": "2026-11-17T16:04:59.162Z",
+  "bytes": 233009,
   "units": [
     {
       "label": "主题",
@@ -11,7 +11,7 @@
     {
       "label": "神经元",
       "path": "C:/dsh/Hers_Life/dsh-ming-graph/src/neuron-view.js",
-      "chars": 55285
+      "chars": 55341
     },
     {
       "label": "星图",
@@ -20,8 +20,8 @@
     },
     {
       "label": "兴趣",
-      "path": "C:/dsh/Hers_Life/dsh-ming-interest/src/panel.js",
-      "chars": 5236
+      "path": "C:/dsh/Hers_Life/dsh-ming-discord/src/interest-panel.js",
+      "chars": 5995
     },
     {
       "label": "声音",
@@ -36,7 +36,7 @@
     {
       "label": "壳 extras",
       "path": "C:/dsh/Hers_Life/dsh-ming-graph/src/panels.js",
-      "chars": 9844
+      "chars": 9849
     },
     {
       "label": "主面板·公共",
@@ -61,7 +61,7 @@
     {
       "label": "主面板",
       "path": "C:/dsh/Hers_Life/dsh-ming-graph/src/panel.js",
-      "chars": 41654
+      "chars": 42172
     }
   ]
 }
