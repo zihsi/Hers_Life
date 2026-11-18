@@ -105,3 +105,8 @@ jobs:
         shell: pwsh
         run: |
           node --test dsh-ming-discord/test/core.test.mjs
+
+      - name: Run all offline plugin checks on Windows
+        shell: pwsh
+        run: |
+          node scripts/check.mjs --suite offline
