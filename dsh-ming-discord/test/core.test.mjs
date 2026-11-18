@@ -680,6 +680,45 @@ test('private DMs never train shared interests or write into the shared diary', 
   assert.equal(publicCalls.learned.length, 1, 'public text retains interest learning')
 })
 
+test('remembered DM notes stay private to the exact Owner and survive restart', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-private-notes-'))
+  try {
+    const ownerId = '123456789012345678'
+    const settings = {
+      home: root,
+      ownerIds() { return [ownerId] },
+      isOwner(id) { return String(id) === ownerId },
+      get(_key, fallback) { return fallback },
+    }
+    const brain = new DiscordBrain({ workspace: root, settings })
+    await brain.load()
+    await brain.writeNote({
+      title: '私訊專案備忘',
+      body: '這是只屬於 Owner 私訊的秘密代號：藍鯨-739。',
+      private: true,
+      ownerId,
+    })
+    assert.equal(brain.search('藍鯨-739').length, 0, 'private DM notes must not enter the shared note index')
+    const ownerDm = await brain.recallContext('藍鯨-739', { kind: 'dm', channelId: 'dm-1', userId: ownerId }, 'dm-session')
+    assert.match(ownerDm, /藍鯨-739/)
+    assert.equal(await brain.recallContext('藍鯨-739', {
+      kind: 'channel', channelId: 'guild-chan', guildId: 'guild-1', userId: ownerId,
+    }, 'guild-session'), '', 'private notes must never be injected into public channels')
+    assert.equal(await brain.recallContext('藍鯨-739', {
+      kind: 'dm', channelId: 'dm-2', userId: '999999999999999999',
+    }, 'other-dm-session'), '', 'another Owner must not retrieve this private note')
+
+    const restored = new DiscordBrain({ workspace: root, settings })
+    await restored.load()
+    const afterRestart = await restored.recallContext('藍鯨-739', {
+      kind: 'dm', channelId: 'dm-1', userId: ownerId,
+    }, 'dm-session-restarted')
+    assert.match(afterRestart, /藍鯨-739/, 'private DM notes must survive restart')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('shared memory recalls across guilds and hides private source attribution', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-memory-'))
   try {
