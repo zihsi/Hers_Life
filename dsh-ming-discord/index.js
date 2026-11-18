@@ -107,7 +107,7 @@ async function migrateLegacyBrowseSettings(settings) {
   return true
 }
 
-async function syncBrowseSettings(settings) {
+export async function syncBrowseSettings(settings) {
   const browse = settings.get('browse', {})
   const workspace = settings.resolve().workspace
   const file = path.join(workspace, 'live', 'browse-config.json')
