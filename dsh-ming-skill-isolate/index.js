@@ -85,12 +85,34 @@ async function writeState(stateFile, state) {
   const tmp = stateFile + '.' + randomUUID() + '.tmp'
   try {
     await writeFile(tmp, JSON.stringify(state, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' })
-    await rename(tmp, stateFile)
+    await replaceFile(tmp, stateFile)
   } finally {
     await unlink(tmp).catch(() => {})
   }
 }
 
+async function replaceFile(temp, target) {
+  try { await rename(temp, target); return }
+  catch (error) {
+    if (process.platform !== 'win32' || !['EPERM', 'EEXIST', 'ENOTEMPTY'].includes(error?.code)) throw error
+    const backup = target + '.' + randomUUID() + '.bak'
+    let moved = false
+    try {
+      await rename(target, backup)
+      moved = true
+      await rename(temp, target)
+      await unlink(backup).catch(() => {})
+    } catch (replaceError) {
+      if (moved) {
+        try { await rename(backup, target) } catch {}
+      } else if (replaceError?.code === 'ENOENT') {
+        await rename(temp, target)
+      } else {
+        throw replaceError
+      }
+    }
+  }
+}
 export function apply(ctx, config) {
   const central = ctx.hersLifeDiscord?.getSetting?.('skillIsolate', {}) || {}
   if (central.enabled === false) return
