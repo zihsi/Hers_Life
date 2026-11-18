@@ -43,6 +43,28 @@ function norm(cfg) {
   return { root: typeof c.root === 'string' && c.root ? c.root : DEFAULT_ROOT }
 }
 
+async function replaceFile(temp, target) {
+  try { await rename(temp, target); return }
+  catch (error) {
+    if (process.platform !== 'win32' || !['EPERM', 'EEXIST', 'ENOTEMPTY'].includes(error?.code)) throw error
+    const backup = target + '.' + randomUUID() + '.bak'
+    let moved = false
+    try {
+      await rename(target, backup)
+      moved = true
+      await rename(temp, target)
+      await unlink(backup).catch(() => {})
+    } catch (replaceError) {
+      if (moved) {
+        try { await rename(backup, target) } catch {}
+      } else if (replaceError?.code === 'ENOENT') {
+        await rename(temp, target)
+      } else {
+        throw replaceError
+      }
+    }
+  }
+}
 export function apply(ctx, config) {
   const central = ctx.hersLifeDiscord?.getSetting?.('wake', {}) || {}
   if (central.enabled === false) return
@@ -86,7 +108,7 @@ export function apply(ctx, config) {
     const body = { updatedAt: new Date().toISOString(), items }
     try {
       await writeFile(tmp, JSON.stringify(body, null, 2), 'utf8')
-      await rename(tmp, armPath)
+      await replaceFile(tmp, armPath)
     } finally {
       await unlink(tmp).catch(() => {})
     }
