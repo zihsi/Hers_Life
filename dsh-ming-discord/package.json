@@ -22,7 +22,8 @@
     "discord",
     "interests.js",
     "src/interest-panel.js",
-    "privacy.js"
+    "privacy.js",
+    "cordis.patch.yml"
   ],
   "dsh": {
     "bundle": {
