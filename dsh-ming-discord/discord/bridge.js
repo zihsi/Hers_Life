@@ -845,6 +845,7 @@ export class DiscordBridge {
    * the SessionPool key for DM, guild-channel and thread sessions.
    */
   enqueueSession(channelId, task) {
+    if (!(this.sessionQueues instanceof Map)) this.sessionQueues = new Map()
     const key = String(channelId ?? '')
     if (key === '') return Promise.reject(new Error('Discord turn has no channel id'))
     const previous = this.sessionQueues.get(key) ?? Promise.resolve()
