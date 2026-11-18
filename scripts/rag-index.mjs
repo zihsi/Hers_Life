@@ -224,7 +224,7 @@ if (cmd === 'plan') {
     files: { total: seen.size, added: added.length, changed: changed.length, removed: removed.length, unchanged: same.length },
     estimatedChunks: { added: sum(added), changed: sum(changed), removed: removed.length, reused: same.length },
     samples: { added: added.slice(0, 5).map((x) => x.rel), changed: changed.slice(0, 5).map((x) => x.rel), removed: removed.slice(0, 5) },
-    note: '只估 doc 层；web/qq 的源是聊天记录，要读数据库，本命令不估。块数按 400 字/块粗估。',
+    note: '只估 doc 层；web 层的源是聊天记录，要读数据库，本命令不估。块数按 400 字/块粗估。',
   }
   if (argFlag('json')) { console.log(JSON.stringify(out, null, 2)); process.exit(0) }
   console.log('doc 层 · 源目录 ' + out.sourceDirs.join(', '))
@@ -261,7 +261,7 @@ if (cmd === 'verify') {
     for (const i of v.issues) console.log('       - ' + i)
     if (!v.ok) bad++
   }
-  console.log('\n' + (bad ? bad + ' 层有问题' : '三层都完整'))
+  console.log('\n' + (bad ? bad + ' 层有问题' : '两层都完整'))
   process.exit(bad ? 1 : 0)
 }
 
