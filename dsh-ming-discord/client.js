@@ -200,7 +200,7 @@ window.__ModuleLoader__.load({
               }
             } catch {}
           } else {
-            setNote('已儲存。Discord 連線設定已重新載入。')
+            setNote('已儲存。Discord 連線設定即時重新載入；其他插件參數請重新啟動 DSH 後套用。')
           }
         } catch (e) { setError(String(e.message || e)) }
         setBusy(false)
@@ -440,6 +440,82 @@ window.__ModuleLoader__.load({
               button('保存興趣主題', saveInterestConfig, false, busy),
               button(interestState?.state?.off ? '恢復興趣喚醒' : '暫停興趣喚醒', toggleInterestPause, false, busy),
               h('span', { className: 'hl-muted' }, '最近一小時喚醒：' + (interestState?.state?.wakesLastHour ?? 0) + ' / ' + (interestState?.state?.maxPerHour ?? cfg.interest.maxPerHour ?? 3))))),
+
+        card('Browse 自主瀏覽與手機操作', '所有排程、ADB、目標 App 與限制都集中在這裡。花費／購買不再有隱藏硬攔截；關機、重啟、刷機仍保留安全限制。修改後請重啟 DSH。',
+          h(React.Fragment, null,
+            check('啟用自主瀏覽', 'browse.enabled', '關閉後不再排程或執行自主瀏覽。'),
+            h('div', { className: 'hl-grid' },
+              input('空閒多久後開始（分鐘）', 'browse.idleMinutes', '', 'number'),
+              input('兩輪最小間隔（分鐘）', 'browse.minGapMinutes', '', 'number'),
+              input('每日最多輪數', 'browse.dailyMax', '', 'number'),
+              input('每輪最多 Session 數', 'browse.sessionRounds', '', 'number'),
+              input('每輪最多開啟項目', 'browse.maxItems', '', 'number'),
+              input('每輪最多截圖數', 'browse.maxShots', '', 'number'),
+              input('靜默時段', 'browse.quietHours', '例如 08:00-18:30'),
+              input('假日設定檔（相對工作區）', 'browse.holidaysFile', '例如 live/holidays.json'),
+              input('ADB 執行檔完整路徑', 'browse.adbPath', '例如 D:\\MuMuPlayer\\nx_device\\12.0\\shell\\adb.exe'),
+              input('ADB 裝置序號', 'browse.serial', '例如 127.0.0.1:16448')),
+            area('允許瀏覽的平台（每行一個）', 'browse.targets', '例如 bilibili、xiaohongshu。', 2),
+            area('社交 App 套件名稱（每行一個）', 'browse.socialApps', '用於判斷目前前景 App。', 3),
+            area('仍需限制的社交互動詞（每行一個）', 'browse.socialWriteWords', '保留你先前指定的社交平台互動限制。', 3),
+            h('label', { className: 'hl-field' },
+              h('span', { className: 'hl-label' }, '自由時段（JSON 陣列）'),
+              h('textarea', { className: 'hl-input hl-area', rows: 5, value: browseWindowsDraft, onChange: (e) => setBrowseWindowsDraft(e.target.value) }),
+              h('small', { className: 'hl-hint' }, '格式：[{"start":"18:30","end":"08:00"},{"start":"13:50","end":"18:15","only":"rest"}]。時間使用 24 小時制。')))),
+
+        card('Resume 中斷接續', '管理手機中斷後的媒體恢復與 ADB 連線；不需要手動修改插件設定檔。',
+          h(React.Fragment, null,
+            check('啟用中斷接續', 'resume.enabled', '關閉後不會自動恢復中斷前的播放狀態。'),
+            check('中斷時暫停媒體', 'resume.pauseMediaOnInterrupt', '重新連線後依保存狀態恢復。'),
+            h('div', { className: 'hl-grid' },
+              input('ADB 執行檔完整路徑', 'resume.adbPath', '留空使用系統預設。'),
+              input('ADB 裝置序號', 'resume.serial', '例如 127.0.0.1:7555')))),
+
+        card('Wake 主動提醒', '管理 Wake 插件是否啟用。排程仍使用目前 Discord Session，不會把不同頻道合併。',
+          check('啟用 Wake 排程', 'wake.enabled', '關閉後不再建立或觸發 Wake 任務。')),
+
+        card('Voice 與 TTS 執行環境', '除了 Discord 語音選項，也可指定本機執行檔，避免依賴 Windows PATH。修改後請重啟 DSH。',
+          h(React.Fragment, null,
+            h('div', { className: 'hl-grid' },
+              input('FFmpeg 完整路徑', 'voice.ffmpeg', 'ffmpeg 或絕對路徑。'),
+              input('Python 完整路徑', 'voice.python', 'python 或 python.exe 完整路徑。'),
+              input('語音請求逾時（毫秒）', 'voice.timeoutMs', '', 'number')))),
+
+        card('Mousepet 桌寵與網頁拾取', '桌寵游標、泡泡及網頁拾取資料夾。留空的工作區會沿用 Hers Life 共用工作區。',
+          h(React.Fragment, null,
+            check('啟用 Mousepet', 'mousepet.enabled', '關閉後不啟動桌寵工具。'),
+            h('div', { className: 'hl-grid' },
+              input('游標模式（companion／clean）', 'mousepet.cursorMode', 'companion 或 clean'),
+              input('游標停留時間（毫秒）', 'mousepet.cursorHoldMs', '', 'number'),
+              input('游標尺寸', 'mousepet.cursorSize', '', 'number'),
+              input('網頁拾取資料夾', 'mousepet.webpickDir', '留空使用工作區預設位置'),
+              input('桌寵工作區覆寫', 'mousepet.companion.workspace', '留空沿用共用工作區'),
+              input('桌寵更新間隔（毫秒）', 'mousepet.companion.tickMs', '0 表示使用預設節奏。', 'number'),
+              input('桌寵模型供應商', 'mousepet.companion.provider', ''),
+              input('桌寵模型名稱', 'mousepet.companion.model', ''),
+              input('對話泡泡顯示時間（毫秒）', 'mousepet.companion.bubbleMs', '', 'number')),
+            check('啟用桌寵主動陪伴', 'mousepet.companion.enabled', '關閉後保留桌寵本體，但停止主動陪伴。')),
+
+        card('Bilibili 帳號與資料', 'Cookie 由帳號管理器及 DSH 憑證服務管理；這裡只設定憑證檔位置與讀取上限，不會把 Cookie 顯示在 UI。',
+          h(React.Fragment, null,
+            check('啟用 Bilibili 功能', 'bilibili.enabled', '關閉後不註冊 Bilibili 工具。'),
+            h('div', { className: 'hl-grid' },
+              input('憑證檔路徑', 'bilibili.credentialFile', '留空使用 DSH_HOME/bili-duty/bili_credential.json。'),
+              input('搜尋最大頁數', 'bilibili.searchMaxPageSize', '', 'number'),
+              input('字幕最大字元數', 'bilibili.subtitleMaxChars', '', 'number'),
+              input('請求逾時（毫秒）', 'bilibili.timeoutMs', '', 'number')))),
+
+        card('Activities、Skill Isolate 與 Graph', '集中管理其他配套插件的啟用狀態、資料檔路徑與同步頻率。修改後請重啟 DSH。',
+          h(React.Fragment, null,
+            check('啟用 Activities', 'activities.enabled', '活動排程與活動工具。'),
+            check('啟用 Skill Isolate', 'skillIsolate.enabled', '技能隔離與狀態保存。'),
+            input('Skill Isolate 狀態檔路徑', 'skillIsolate.stateFile', '留空使用 DSH_HOME 預設位置。'),
+            check('啟用 Graph', 'graph.enabled', '關閉後停止 Graph 同步與相關面板。'),
+            h('div', { className: 'hl-grid' },
+              input('Graph 同步間隔（秒）', 'graph.syncSeconds', '', 'number'),
+              input('價格資料檔路徑', 'graph.costPricesFile', '留空使用工作區預設位置。'),
+              input('自動價格資料檔路徑', 'graph.costAutoFile', '留空使用 DSH_HOME 預設位置。')))),
+
 
         card('即時診斷與近期事件', '事件列表可協助確認 Bot 是否收到伺服器、頻道、Thread 的 Gateway 事件。',
           h(React.Fragment, null,
