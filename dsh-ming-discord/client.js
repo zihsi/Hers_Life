@@ -524,7 +524,7 @@ window.__ModuleLoader__.load({
             h('div', { className: 'hl-muted' },
               '登入狀態：' + (status.plugins?.bilibili?.loggedIn ? '已登入' : status.plugins?.bilibili ? '未登入' : '插件尚未回報狀態') + '\n'
               + '帳號：' + (status.plugins?.bilibili?.userName || '—') + '\n'
-              + 'UID：' + (status.plugins?.bilibili?.userId || '—'))),
+              + 'UID：' + (status.plugins?.bilibili?.userId || '—')))),
 
         card('Activities、Skill Isolate 與 Graph', '集中管理其他配套插件的啟用狀態、資料檔路徑與同步頻率。修改後請重啟 DSH。',
           h(React.Fragment, null,
