@@ -145,6 +145,28 @@ test('workspace initialization rejects persona paths that escape through directo
   }
 })
 
+test('the selected core-memory directory is shared by Discord notes and Graph config', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-core-memory-dir-'))
+  try {
+    const home = path.join(root, '.dsh')
+    const settings = new SettingsStore({
+      workspace: path.join(root, 'workspace'),
+      coreMemory: { directory: 'vault/shared-memory' },
+    }, { home })
+    await settings.load()
+    const expected = path.join(home, 'vault', 'shared-memory')
+    assert.equal(settings.resolve().coreMemoryDir, expected)
+    const brain = new DiscordBrain({ workspace: settings.resolve().workspace, settings, logger: null })
+    await brain.writeNote({ title: '共同記憶路徑測試', body: '這條筆記必須放在自訂核心記憶資料夾。' })
+    const files = await readdir(path.join(expected, 'notes'))
+    assert.equal(files.length, 1)
+    assert.match(await readFile(path.join(expected, 'notes', files[0]), 'utf8'), /自訂核心記憶資料夾/)
+    await assert.rejects(readdir(path.join(home, 'memory', 'notes')), { code: 'ENOENT' })
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('Discord journal writes respect the configured diary folder', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-journal-'))
   try {
