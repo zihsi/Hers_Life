@@ -17,23 +17,41 @@ import { readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 
+function dshHome() { return process.env.DSH_HOME || join(homedir(), '.dsh') }
+function readHersLifeSettings() {
+  try { return JSON.parse(readFileSync(join(dshHome(), 'hers-life.json'), 'utf8')) } catch { return {} }
+}
 function resolveWorkspace() {
+  // The Hers Life settings UI is authoritative. Legacy environment variables
+  // remain fallback-only for older installations, never a required setup step.
+  const central = readHersLifeSettings()
+  if (typeof central.workspace === 'string' && central.workspace.trim()) return central.workspace
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
-  // Hers Life settings are the source of truth; keep the older shared-memory
-  // file as a migration fallback for existing installations.
   try {
-    const settings = JSON.parse(readFileSync(join(homedir(), '.dsh', 'hers-life.json'), 'utf8'))
-    if (typeof settings.workspace === 'string' && settings.workspace.trim()) return settings.workspace
-  } catch {}
-  try {
-    const settings = JSON.parse(readFileSync(join(homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    const settings = JSON.parse(readFileSync(join(dshHome(), 'ming-memory.json'), 'utf8'))
     if (typeof settings.root === 'string' && settings.root.trim()) return settings.root
   } catch {}
   return join(homedir(), 'hers-life-workspace')
 }
 function liveDirectory() { const workspace = resolveWorkspace(); return workspace ? join(workspace, 'live') : '' }
-const ENDPOINT = process.env.EMB_ENDPOINT || 'http://127.0.0.1:18091/v1/embeddings'
-const MODEL = process.env.EMB_MODEL || 'bge-base-zh-v1.5-q8_0'
+const DEFAULT_ENDPOINT = 'http://127.0.0.1:18091/v1/embeddings'
+const DEFAULT_MODEL = 'bge-base-zh-v1.5-q8_0'
+export function getEmbeddingConfig() {
+  const core = readHersLifeSettings().coreMemory || {}
+  const endpointValue = Object.hasOwn(core, 'embeddingEndpoint')
+    ? core.embeddingEndpoint
+    : (process.env.EMB_ENDPOINT || DEFAULT_ENDPOINT)
+  const modelValue = Object.hasOwn(core, 'embeddingModel')
+    ? core.embeddingModel
+    : (process.env.EMB_MODEL || DEFAULT_MODEL)
+  let endpoint = String(endpointValue || DEFAULT_ENDPOINT).trim()
+  try {
+    const parsed = new URL(endpoint)
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) endpoint = DEFAULT_ENDPOINT
+  } catch { endpoint = DEFAULT_ENDPOINT }
+  const model = String(modelValue || DEFAULT_MODEL).trim().slice(0, 200) || DEFAULT_MODEL
+  return { endpoint, model }
+}
 const DIM = 768
 const PREFIX = '为这个句子生成表示以用于检索相关文章：'
 
@@ -140,7 +158,7 @@ function readManifest(name, manifestPath, live = liveDirectory()) {
 }
 
 /** 清单与查询端是否兼容；不兼容返回 issues（带 severity），不抛。 */
-function verifyManifest(name, m, rowCount) {
+function verifyManifest(name, m, rowCount, queryModel = getEmbeddingConfig().model) {
   const issues = []
   const e = m.embedding && typeof m.embedding === 'object' ? m.embedding : {}
   const dim = Number(e.dimensions)
@@ -150,8 +168,8 @@ function verifyManifest(name, m, rowCount) {
     // 不拿查询端的 768 去读一份 512 维的向量：字节数对不上，读出来也是乱的。
     issues.push({ layer: name, code: 'manifest-dim-mismatch', severity: 'error', indexDim: dim, queryDim: DIM })
   }
-  if (typeof e.model === 'string' && e.model && e.model !== MODEL) {
-    issues.push({ layer: name, code: 'manifest-model-mismatch', severity: 'error', indexModel: e.model, queryModel: MODEL })
+  if (typeof e.model === 'string' && e.model && e.model !== queryModel) {
+    issues.push({ layer: name, code: 'manifest-model-mismatch', severity: 'error', indexModel: e.model, queryModel })
   }
   if (Number(m.rowCount) !== rowCount) {
     issues.push({ layer: name, code: 'manifest-rowcount-mismatch', severity: 'error', rowCount: Number(m.rowCount), actual: rowCount })
@@ -225,7 +243,7 @@ function loadLayer(name, live = liveDirectory()) {
   // 清单校验放在解析之后：条数要拿真实的 n 去对。
   let issues = []
   if (manifest) {
-    const bad = verifyManifest(name, manifest, n)
+    const bad = verifyManifest(name, manifest, n, getEmbeddingConfig().model)
     if (bad.length) {
       throw Object.assign(new Error('索引清单与查询端不兼容：' + bad.map(x => x.code).join(',')), {
         code: 'EINCOMPAT',
@@ -243,10 +261,11 @@ function loadLayer(name, live = liveDirectory()) {
 }
 
 async function queryVector(text) {
-  const r = await fetch(ENDPOINT, {
+  const { endpoint, model } = getEmbeddingConfig()
+  const r = await fetch(endpoint, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ input: [PREFIX + text], model: MODEL }),
+    body: JSON.stringify({ input: [PREFIX + text], model }),
     signal: AbortSignal.timeout(8000),
   })
   if (!r.ok) throw new Error('嵌入端 HTTP ' + r.status)
