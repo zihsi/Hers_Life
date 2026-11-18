@@ -17,7 +17,6 @@ test('explicit diary budget controls real prompt without shortening persona', as
   })
   await mkdir(join(root, 'diary'))
   await mkdir(join(root, 'persona'))
-  await mkdir(join(root, 'noqq'))
   const persona = 'P'.repeat(14000) + 'PERSONA_END'
   await writeFile(join(root, 'persona/test.md'), persona)
   await writeFile(join(root, 'diary/2026-11-17.md'), 'D'.repeat(12000) + 'DIARY_END')
@@ -25,7 +24,7 @@ test('explicit diary budget controls real prompt without shortening persona', as
   let n = 0
   const prompt = async patch => {
     const m = mount({ root, personaFiles: ['persona/test.md'], diaryCount: 1, maxChars: 100000,
-      qq: { dir: join(root, 'noqq') }, identity: false, ...patch })
+      identity: false, ...patch })
     const a = agentFor('budget-' + n++, root)
     await m.created(a.agent)
     return a.prompt()
