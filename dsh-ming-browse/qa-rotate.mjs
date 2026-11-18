@@ -107,8 +107,10 @@ const readLedger = async (workspace, expected = {}) => {
 // ---------------------------------------------------------------- 跑 16 轮
 for (let i = 1; i <= PER_SESSION + 1; i += 1) {
   await ctx.__tick()
-  await sleep(30) // 让 saveRotation 落盘
+  await sleep(30)
 }
+// tick schedules an async wake; wait for its followup call, not just the timer.
+for (let attempt = 0; attempt < 200 && created.length < PER_SESSION + 1; attempt += 1) await sleep(10)
 
 ok(created.length === PER_SESSION + 1, '醒了 ' + (PER_SESSION + 1) + ' 轮', '实际 ' + created.length)
 ok(created.slice(0, PER_SESSION).every((id) => id === 'ming-browse'),
