@@ -435,7 +435,7 @@ test('shared memory recalls across guilds and hides private source attribution',
   try {
     await mkdir(path.join(root, 'live'), { recursive: true })
     const config = {
-      ownerIds: ['owner-1'],
+      ownerIds: ['owner-1', 'owner-2'],
       memory: {
         enabled: true, shareAcrossChannels: true, shareAcrossGuilds: true,
         sharePrivateToOwner: true, allowPrivateContextInGuild: true,
@@ -448,7 +448,7 @@ test('shared memory recalls across guilds and hides private source attribution',
         const value = key.split('.').reduce((at, part) => at == null ? undefined : at[part], config)
         return value === undefined ? fallback : value
       },
-      isOwner(id) { return String(id) === 'owner-1' },
+      isOwner(id) { return ['owner-1', 'owner-2'].includes(String(id)) },
     }
     const brain = new DiscordBrain({ workspace: root, settings })
     await brain.load()
@@ -485,6 +485,28 @@ test('shared memory recalls across guilds and hides private source attribution',
       kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'owner-1',
     }, 'discord-channel-guild-b-chan-b')
     assert.doesNotMatch(noPrivate, /主人提過 RTX 5080/)
+
+    // A second configured Owner is still a different person: Owner A's
+    // private DM must not become background for Owner B's DM or public turn.
+    const otherOwnerDm = await brain.recallContext('RTX 5080', {
+      kind: 'dm', channelId: 'dm-2', userId: 'owner-2',
+    }, 'discord-dm-2')
+    assert.doesNotMatch(otherOwnerDm, /主人提過 RTX 5080|私人背景（來源隱去）/)
+
+    const otherOwnerPublic = await brain.recallContext('RTX 5080', {
+      kind: 'channel', channelId: 'chan-c', guildId: 'guild-c', userId: 'owner-2',
+    }, 'discord-channel-guild-c-chan-c')
+    assert.doesNotMatch(otherOwnerPublic, /主人提過 RTX 5080|私人背景（來源隱去）/)
+
+    // With cross-guild sharing disabled, a DM has no guild identity to match;
+    // it must not become a wildcard that sees every server's public messages.
+    config.memory.allowPrivateContextInGuild = true
+    config.memory.shareAcrossGuilds = false
+    const dmWithoutCrossGuild = await brain.recallContext('RTX 5080', {
+      kind: 'dm', channelId: 'dm-1', userId: 'owner-1',
+    }, 'discord-dm-1b')
+    assert.doesNotMatch(dmWithoutCrossGuild, /伺服器 A/)
+    assert.match(dmWithoutCrossGuild, /主人提過 RTX 5080/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
