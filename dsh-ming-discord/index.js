@@ -376,14 +376,30 @@ export function apply(ctx, pluginConfig = {}) {
           if (req.method === 'POST' && route === 'settings') {
             const body = await readBody(req)
             const previousWorkspace = settings.resolve().workspace
+            const previousCoreMemoryDir = settings.resolve().coreMemoryDir
             await settings.patch(body.settings ?? {}, body.token)
             if (body.clearToken === true) await settings.saveToken('')
+            const nextWorkspace = settings.resolve().workspace
+            const nextCoreMemoryDir = settings.resolve().coreMemoryDir
+            let migration = null
+            let coreMemoryMigration = null
+            if (nextWorkspace !== previousWorkspace) migration = await copyMissing(previousWorkspace, nextWorkspace)
+            if (nextCoreMemoryDir !== previousCoreMemoryDir) {
+              let oldExists = false
+              try { oldExists = (await stat(previousCoreMemoryDir)).isDirectory() } catch (error) { if (error?.code !== 'ENOENT') throw error }
+              if (oldExists) {
+                const oldToNew = path.relative(previousCoreMemoryDir, nextCoreMemoryDir)
+                const newToOld = path.relative(nextCoreMemoryDir, previousCoreMemoryDir)
+                const nested = oldToNew === '' || (!oldToNew.startsWith('..') && !path.isAbsolute(oldToNew))
+                  || newToOld === '' || (!newToOld.startsWith('..') && !path.isAbsolute(newToOld))
+                if (!nested) coreMemoryMigration = await copyMissing(previousCoreMemoryDir, nextCoreMemoryDir)
+                else coreMemoryMigration = { copied: 0, kept: 0, warning: '新舊核心記憶資料夾互相包含，為避免遞迴複製，保留原資料夾並只建立新位置。' }
+              }
+              await mkdir(nextCoreMemoryDir, { recursive: true })
+            }
             await syncMemorySettings(settings)
             await syncGraphSettings(settings)
             await syncBrowseSettings(settings)
-            const nextWorkspace = settings.resolve().workspace
-            let migration = null
-            if (nextWorkspace !== previousWorkspace) migration = await copyMissing(previousWorkspace, nextWorkspace)
             await ensureWorkspace(nextWorkspace, { personaFiles: settings.get('personaFiles', []), diaryDir: settings.get('diaryDir', 'diary') })
             await ensurePrivacy()
             await startAdapter()
@@ -412,11 +428,11 @@ export function apply(ctx, pluginConfig = {}) {
               bilibiliCredentials: path.join(settings.home, 'bili-duty', 'bili_credential.json'),
               skillIsolationState: settings.get('skillIsolate.stateFile') || path.join(resolved.workspace, 'skills-off.json'),
             }
-            send(res, 200, { ok: true, settings: settings.publicConfig(), status: { ...status, paths }, paths, migration, restartRequired: nextWorkspace !== previousWorkspace })
+            send(res, 200, { ok: true, settings: settings.publicConfig(), status: { ...status, paths }, paths, migration, coreMemoryMigration, restartRequired: nextWorkspace !== previousWorkspace || nextCoreMemoryDir !== previousCoreMemoryDir })
             return
           }
           if (req.method === 'POST' && route === 'initialize') {
-            const result = await ensureWorkspace(settings.resolve().workspace)
+            const result = await ensureWorkspace(settings.resolve().workspace, { personaFiles: settings.get('personaFiles', []), diaryDir: settings.get('diaryDir', 'diary') })
             const privacy = await ensurePrivacy()
             send(res, 200, { ok: true, ...result, privacy })
             return
