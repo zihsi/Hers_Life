@@ -28,7 +28,6 @@ export const inject = ['hersLifeDiscord']
 // 2026-11-08 安菲（卡米安菲家的工程师）把它单独 eval 了一遍抓出来的；
 // 三个兄弟包（voice / browse / skill-isolate）写的都是双反斜杠，只有这里漏了。
 function resolveWorkspace() {
-  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
     const data = JSON.parse(readFileSync(path.join(DSH_HOME, 'ming-memory.json'), 'utf8'))
     if (typeof data.root === 'string' && data.root.trim()) return data.root
