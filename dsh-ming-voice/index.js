@@ -228,6 +228,7 @@ async function pruneOldVoices(dir) {
     const names = (await readdir(dir)).filter((n) => n.endsWith('.mp3')).sort()
     for (const name of names.slice(0, Math.max(0, names.length - KEEP_VOICE_FILES))) {
       try { await unlink(path.join(dir, name)) } catch { /* 单个删不掉就算了 */ }
+      try { await unlink(path.join(dir, name + '.session')) } catch { /* 舊版檔案可能沒有標籤 */ }
     }
   } catch { /* 目录读不到就算了 */ }
 }
