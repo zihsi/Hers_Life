@@ -15,12 +15,12 @@
       },
       "versions": [
         {
-          "version": "0.1.10",
-          "publishTimestamp": 1794975381,
+          "version": "0.1.11",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-discord"
           },
           "engines": {
@@ -41,12 +41,12 @@
       },
       "versions": [
         {
-          "version": "0.1.1",
-          "publishTimestamp": 1794975381,
+          "version": "0.1.2",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-activities"
           },
           "engines": {
@@ -67,12 +67,12 @@
       },
       "versions": [
         {
-          "version": "0.1.3",
-          "publishTimestamp": 1794975381,
+          "version": "0.1.4",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-bilibili-account"
           },
           "engines": {
@@ -93,12 +93,12 @@
       },
       "versions": [
         {
-          "version": "0.1.4",
-          "publishTimestamp": 1794975381,
+          "version": "0.1.5",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-browse"
           },
           "engines": {
@@ -119,12 +119,12 @@
       },
       "versions": [
         {
-          "version": "1.0.3-ming.2",
-          "publishTimestamp": 1794975381,
+          "version": "1.0.3-ming.3",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-core-memory"
           },
           "engines": {
@@ -145,12 +145,12 @@
       },
       "versions": [
         {
-          "version": "1.1.3",
-          "publishTimestamp": 1794975381,
+          "version": "1.1.4",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-graph"
           },
           "engines": {
@@ -171,12 +171,12 @@
       },
       "versions": [
         {
-          "version": "0.2.3",
-          "publishTimestamp": 1794975381,
+          "version": "0.2.4",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-memory"
           },
           "engines": {
@@ -197,12 +197,12 @@
       },
       "versions": [
         {
-          "version": "1.0.2",
-          "publishTimestamp": 1794975381,
+          "version": "1.0.3",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-mousepet"
           },
           "engines": {
@@ -223,12 +223,12 @@
       },
       "versions": [
         {
-          "version": "0.1.2",
-          "publishTimestamp": 1794975381,
+          "version": "0.1.3",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-resume"
           },
           "engines": {
@@ -249,12 +249,12 @@
       },
       "versions": [
         {
-          "version": "0.1.2",
-          "publishTimestamp": 1794975381,
+          "version": "0.1.3",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-skill-isolate"
           },
           "engines": {
@@ -275,12 +275,12 @@
       },
       "versions": [
         {
-          "version": "0.1.4",
-          "publishTimestamp": 1794975381,
+          "version": "0.1.5",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-voice"
           },
           "engines": {
@@ -301,12 +301,12 @@
       },
       "versions": [
         {
-          "version": "0.1.2",
-          "publishTimestamp": 1794975381,
+          "version": "0.1.3",
+          "publishTimestamp": 1795116000,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "cf802658bb1fdb465d705ebbe18742f9aada594b",
+            "commit": "132821a63f64cc1eadebac2559926923ce726811",
             "path": "dsh-ming-wake"
           },
           "engines": {
