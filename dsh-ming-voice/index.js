@@ -15,7 +15,7 @@
 import { execFile } from 'node:child_process'
 import os from 'node:os'
 import { readFileSync } from 'node:fs'
-import { mkdir, stat, readdir, unlink } from 'node:fs/promises'
+import { mkdir, stat, readdir, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 export const name = 'ming-voice'
@@ -187,7 +187,9 @@ export function apply(ctx, config) {
       schema: { type: 'string' },
       render: (_args, value) => [{ type: 'text', text: String(value) }],
     },
-    async execute(args) {
+    async execute(args, exec) {
+      const sessionId = String(exec?.agent?.session?.id ?? '')
+      if (!sessionId) throw new Error('voice_say 需要目前 DSH Agent 的 Session 身分')
       const text = typeof args?.text === 'string' ? args.text.trim() : ''
       if (!text) return 'text 是空的，没东西可合成。'
       if (text.length > 800) return '太长了（' + text.length + ' 字）。语音只适合一两句；长内容用字发。'
@@ -206,6 +208,10 @@ export function apply(ctx, config) {
         engine = 'sapi'
         if (fallback) return '合成失败。Edge TTS：' + error + '；SAPI：' + fallback
       }
+      // Tag each generated voice file with the exact DSH session that created it.
+      // Discord's send-file tool checks this sidecar before a non-Owner can post
+      // it, preventing another channel from forwarding private DM voice output.
+      await writeFile(out + '.session', sessionId, { encoding: 'utf8', mode: 0o600 })
       pruneOldVoices(dir).catch(() => {})   // ★ 只进不出的清理（见函数说明）
       return 'OK ' + engine + ' ' + out
     },
