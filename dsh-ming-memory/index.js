@@ -1069,16 +1069,13 @@ function readCwd(agent) {
 }
 
 export function apply(ctx, config) {
-  const centralSetting = (key, fallback) => ctx.hersLifeDiscord?.getSetting?.(key, fallback) ?? fallback
-  const cfg = normalize({
-    ...(config || {}),
-    personaFiles: centralSetting('personaFiles', config?.personaFiles),
-    diaryDir: centralSetting('diaryDir', config?.diaryDir),
-    diaryCount: centralSetting('diaryCount', config?.diaryCount),
-    diaryChars: centralSetting('diaryChars', config?.diaryChars),
-    maxChars: centralSetting('maxChars', config?.maxChars),
-    root: config?.root || ctx.hersLifeDiscord?.workspace || loadLocalConfig().root,
-  })
+  const mergedConfig = { ...(config || {}) }
+  for (const key of ['personaFiles', 'diaryDir', 'diaryCount', 'diaryChars', 'maxChars']) {
+    const value = ctx.hersLifeDiscord?.getSetting?.(key, config?.[key]) ?? config?.[key]
+    if (value !== undefined) mergedConfig[key] = value
+  }
+  mergedConfig.root = config?.root || ctx.hersLifeDiscord?.workspace || loadLocalConfig().root
+  const cfg = normalize(mergedConfig)
   registerArchiveRoutes(ctx)
   loadShared(cfg).catch(() => {})
 
