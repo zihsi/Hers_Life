@@ -111,6 +111,11 @@ jobs:
         run: |
           node scripts/check.mjs --suite offline
 
+      - name: Run plugin build checks on Windows
+        shell: pwsh
+        run: |
+          node scripts/check.mjs --suite build
+
       - name: Run stateful plugin regression tests on Windows
         shell: pwsh
         run: |
