@@ -74,7 +74,7 @@ test('RAG availability uses synthetic files and never a real service', async t =
   await t.test('tool reports partial and wholly unavailable searches truthfully', async () => {
     const tools = {}
     const { apply } = await import('./lib/index.js')
-    apply({ tools: { register(d) { tools[d.name] = d } }, systemPrompt: { section() {} }, inject() {} })
+    apply({ on() {}, tools: { register(d) { tools[d.name] = d } }, systemPrompt: { section() {} }, inject() {} })
     await tools.memory_core.execute({ action: 'append', section: 'test', text: 'fixture' })
     const partial = await tools.rag_recall.execute({ query: 'fact' })
     assert.match(partial, /部分资料/)
