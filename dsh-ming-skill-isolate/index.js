@@ -35,7 +35,6 @@ const SHADOW_RANK = 1
 const PROVIDER = 'ming-skill-isolate'
 
 function resolveWorkspace() {
-  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
     const data = JSON.parse(readFileSync(path.join(DSH_HOME, 'ming-memory.json'), 'utf8'))
     if (typeof data.root === 'string' && data.root.trim()) return data.root
