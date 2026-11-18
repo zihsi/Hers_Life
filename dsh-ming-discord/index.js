@@ -287,6 +287,10 @@ export function apply(ctx, pluginConfig = {}) {
             const resolved = settings.resolve()
             const paths = {
               dshHome: settings.home,
+              settingsFile: settings.file,
+              secretsFile: settings.secretsFile,
+              memoryConfig: path.join(settings.home, 'ming-memory.json'),
+              graphConfig: path.join(settings.home, 'ming-graph.json'),
               workspace: resolved.workspace,
               dataRoot: resolved.dataRoot,
               diary: path.join(resolved.workspace, String(settings.get('diaryDir', 'diary') || 'diary')),
