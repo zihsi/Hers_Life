@@ -81,11 +81,11 @@ function normalizePluginSettings(settings) {
   settings.activities = { ...DEFAULTS.activities, ...(settings.activities || {}) }
   settings.skillIsolate = { ...DEFAULTS.skillIsolate, ...(settings.skillIsolate || {}) }
   settings.graph = { ...DEFAULTS.graph, ...(settings.graph || {}) }
-  settings.browse.idleMinutes = clampNumber(settings.browse.idleMinutes, 0, 1440, DEFAULTS.browse.idleMinutes)
+  settings.browse.idleMinutes = clampNumber(settings.browse.idleMinutes, 1, 1440, DEFAULTS.browse.idleMinutes)
   settings.browse.minGapMinutes = clampNumber(settings.browse.minGapMinutes, 0, 1440, DEFAULTS.browse.minGapMinutes)
   settings.browse.dailyMax = clampNumber(settings.browse.dailyMax, 0, 500, DEFAULTS.browse.dailyMax)
   settings.browse.sessionRounds = clampNumber(settings.browse.sessionRounds, 1, 100, DEFAULTS.browse.sessionRounds)
-  settings.browse.maxItems = clampNumber(settings.browse.maxItems, 0, 50, DEFAULTS.browse.maxItems)
+  settings.browse.maxItems = clampNumber(settings.browse.maxItems, 1, 50, DEFAULTS.browse.maxItems)
   settings.browse.maxShots = clampNumber(settings.browse.maxShots, 0, 50, DEFAULTS.browse.maxShots)
   settings.browse.gapMode = ['fixed', 'random', 'heartbeat'].includes(settings.browse.gapMode) ? settings.browse.gapMode : DEFAULTS.browse.gapMode
   settings.browse.hbMin = clampNumber(settings.browse.hbMin, 1, 1438, DEFAULTS.browse.hbMin)
