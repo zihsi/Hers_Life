@@ -271,7 +271,7 @@ test('voice join waits for DAVE readiness and playback refuses inactive E2EE', a
     guildId: 'guild-not-ready', channelId: 'voice-not-ready', userId: 'bot-not-ready',
   })
   notReady.state = 'ready'
-  notReady.dave = { active: false }
+  notReady.dave = { active: false, destroy() {} }
   await assert.rejects(notReady.playPackets([]), /DAVE MLS is not ready/)
   await notReady.leave()
 })
