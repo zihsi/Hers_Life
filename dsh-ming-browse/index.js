@@ -1233,7 +1233,7 @@ export function apply(ctx, config) {
   const sessionHasHistory = (id) => {
     if (!id) return false
     try {
-      const home = process.env.DSH_HOME || path.join(DSH_HOME)
+      const home = DSH_HOME
       const root = path.join(home, 'sessions')
       for (const entry of readdirSync(root, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue
