@@ -464,12 +464,16 @@ export class DiscordBridge {
       if (body === '') return '这条没有正文，图片和附件我还不会这样记。'
       const who = picked.author?.global_name ?? picked.author?.username ?? '某人'
       const title = body.replace(/\s+/g, ' ').slice(0, 40)
+      const isPrivateDm = interaction.guild_id === null || interaction.guild_id === undefined
+      const ownerId = String(interaction.member?.user?.id ?? interaction.user?.id ?? '')
       const note = await this.brain.writeNote({
         title,
         body,
         tags: [who, 'discord'],
         status: 'active',
         source: 'user_statement',
+        private: isPrivateDm,
+        ownerId,
       })
       this.logger?.info('remembered from a context menu: ' + note.id)
       return { content: '记住了：' + note.title, flags: 64 }
