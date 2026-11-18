@@ -396,6 +396,7 @@ export function apply(ctx, pluginConfig = {}) {
     sendToOwner,
     sendFile: (channelId, filePath, caption, actor) => sendFile(channelId, filePath, caption, actor),
     isOwner: (userId) => settings.isOwner(userId),
+    getSetting: (key, fallback) => settings.get(key, fallback),
     actorForExecution: (exec) => bridge?.actorForExecution(exec) ?? null,
     sessionIdFor: (target) => pool?.sessionIdFor(target) ?? '',
     ownerIds: () => settings.ownerIds(),
