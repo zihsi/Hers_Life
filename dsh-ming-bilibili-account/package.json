@@ -3,7 +3,7 @@
   "version": "0.1.2",
   "private": true,
   "type": "module",
-  "description": "溟的 B 站账号工具：扫码登录、查账号能力状态、改昵称。登录态只存进程内存，不落盘。",
+  "description": "B站帳號工具：掃碼登入、帳號狀態與社交工具；登入態同步持久化於 DSH credentials service 與本機憑證檔。",
   "main": "index.js",
   "exports": {
     ".": "./index.js",
