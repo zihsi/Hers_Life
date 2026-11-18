@@ -4,7 +4,7 @@
 
 ## 能力
 
-- Discord Gateway v10、REST v10、訊息串流、斜線指令、按鈕／互動、圖片與附件、Thread、語音。
+- Discord Gateway v10、REST v10、訊息串流、斜線指令、按鈕／互動、圖片與附件、PNG／APNG／GIF 貼圖圖像輸入、Thread、語音。Lottie 貼圖目前只提供文字描述。
 - 每個 DM / Guild Channel / Thread 以 Discord channel id 建立獨立持久 DSH session。
 - live/discord-memory.jsonl 是跨會話事件記憶帳本；每筆包含伺服器、頻道、Thread、作者、訊息 id、session 與時間。
 - 跨會話召回只選相關事件，不把所有頻道歷史塞進 prompt。
@@ -12,7 +12,7 @@
 - 私訊政策可選「僅 Owner／白名單／任何人」；白名單模式的 Discord User ID 可直接在同一設定頁維護。
 - 舊工作區缺少目錄或模板時會自動建立，不覆蓋既有檔案。
 - 指令權限沿用伺服器／頻道白名單與 DM 政策；`/memory`、`/status`、`/say`、`/voice`、右鍵「記下來」僅限 Owner。記憶與狀態回覆使用 ephemeral，不公開顯示。
-- `discord_send_file` 只能傳送目前發起這輪對話的頻道；Owner 可傳工作區內檔案，其他成員只能傳本次會話產生的 `live/voice/` 語音（帶 session 標籤）或 `outbox/<session-id>/` 暫存檔。路徑會經 realpath 檢查，避免用 symlink 逃出工作區。
+- `discord_send_file` 只能傳送目前發起這輪對話的頻道；Owner 可傳工作區內檔案，其他成員只能傳本次使用者／會話產生且有標籤的 `live/voice/` 語音，或 `outbox/<session-id>/<user-id>/` 暫存檔。路徑會經 realpath 檢查，避免用 symlink 逃出工作區。
 
 ## 安裝
 
@@ -30,8 +30,9 @@
 ## 注意
 
 - Discord Bot Token 只存在本機 ~/.dsh/hers-life-secrets.json，UI 不會讀回明碼。
-- 私訊內容不寫入共用日記、不參與公開興趣學習，也不出現在共用事件預覽；私訊本身仍可保留在該 Owner 私訊 session 的私有記憶帳本。
+- 私訊內容不寫入共用日記、不參與公開興趣學習，也不出現在共用事件預覽；私訊本身仍可保留在該 Owner 私訊 session 的私有記憶帳本。舊版已寫進共用日記的 `私聊 ...` 條目會自動搬到 `~/.dsh/privacy-quarantine/private-dm-diary/`，保留原文但不再作為其他會話的開場記憶。
 - 需要 Node 22+（建議 DSH 自帶的 Node 24）。
+- `/ask` 依 DM 政策／Guild／Channel 白名單；`/memory`、`/status`、`/say`、`/voice`、右鍵「記下來」僅限 Owner。TTS 預設音色與語速可在同一設定頁調整。
 - Token 不會出現在設定 API 回傳內容；一般設定檔中若有舊版明碼 Token，啟動遷移時會搬到獨立密鑰檔。
 - 請先理解 Owner 私訊背景只會在 Owner 自己發言的公開回合中召回；需要最嚴格的隔離時，關閉「允許 Owner 本人發言時使用私訊作為背景」。
 - 切換工作區會保全式複製缺少的檔案；請重啟 DSH，讓所有配套插件一起切換到新工作區。
