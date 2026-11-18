@@ -124,7 +124,7 @@ async function ensureCoreMemoryFile(settings) {
       '## 專案',
       '- （進行中的專案、關鍵決策與約定）',
       '',
-    ].join('\\n')
+    ].join('\n')
     try { await writeFile(target, template, { encoding: 'utf8', flag: 'wx', mode: 0o600 }) }
     catch (error) { if (error.code !== 'EEXIST') throw error }
   }
