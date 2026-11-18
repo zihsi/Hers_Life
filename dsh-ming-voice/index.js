@@ -197,13 +197,20 @@ export function apply(ctx, config) {
       if (!text) return 'text 是空的，没东西可合成。'
       if (text.length > 800) return '太长了（' + text.length + ' 字）。语音只适合一两句；长内容用字发。'
 
-      const voice = typeof args?.voice === 'string' && args.voice.trim() ? args.voice.trim() : cfg.voice
-      const rate = typeof args?.rate === 'string' && args.rate.trim() ? args.rate.trim() : cfg.rate
+      const sharedSetting = (key, fallback) => {
+        try { return ctx.hersLifeDiscord?.getSetting?.(key, fallback) ?? fallback } catch { return fallback }
+      }
+      const voice = typeof args?.voice === 'string' && args.voice.trim()
+        ? args.voice.trim()
+        : String(sharedSetting('voice.ttsVoice', cfg.voice) || cfg.voice)
+      const rate = typeof args?.rate === 'string' && args.rate.trim()
+        ? args.rate.trim()
+        : String(sharedSetting('voice.ttsRate', cfg.rate) || cfg.rate)
       const dir = path.join(cfg.root, 'live', 'voice')
       await mkdir(dir, { recursive: true })
       const out = path.join(dir, stamp() + '-' + Math.random().toString(36).slice(2, 6) + '.mp3')
 
-      const local = { ...cfg, voice, rate }
+      const local = { ...cfg, voice, rate, ffmpeg: String(sharedSetting('voice.ffmpeg', cfg.ffmpeg) || cfg.ffmpeg) }
       let error = await edgeTts(local, text, out)
       let engine = 'edge-tts'
       if (error) {
