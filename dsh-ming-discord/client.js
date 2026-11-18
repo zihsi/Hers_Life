@@ -369,7 +369,7 @@ window.__ModuleLoader__.load({
           h(React.Fragment, null,
             check('啟用跨會話記憶召回', 'memory.enabled', '關閉後只保留各 session 自己的歷史。'),
             check('同一伺服器不同頻道互相記得', 'memory.shareAcrossChannels', '例如 #頻道一談過的主題可在 #頻道二被想起。'),
-            check('不同伺服器之間也可互相記得', 'memory.shareAcrossGuilds', '公開伺服器訊息可跨伺服器召回。'),
+            check('同一 Owner 的跨伺服器記憶', 'memory.shareAcrossGuilds', '只有目前發言者是同一位 Owner 時，才會召回他在其他伺服器的訊息與她對他的回覆；其他成員不跨伺服器共享。'),
             check('Owner 私訊可在 Owner 的其他私訊會話中共享', 'memory.sharePrivateToOwner', '不會讀取其他使用者的私訊。'),
             check('允許 Owner 本人發言時使用私訊作為背景', 'memory.allowPrivateContextInGuild', '只在 Owner 自己於公開頻道發言時召回；不向其他成員透露私訊原文、措辭、時間或來源。', true),
             h('div', { className: 'hl-grid' },
