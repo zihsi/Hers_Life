@@ -353,6 +353,11 @@ test('SettingsStore migrates the old Memory workspace and persona/diary settings
       diaryCount: 7,
       diaryChars: 6500,
       maxChars: 14000,
+      selfName: '小鯨魚',
+      selfFullName: '小鯨魚',
+      selfDesc: '藍白色系的 AI 角色',
+      userName: '爸爸',
+      identity: true,
     }), 'utf8')
     const migrated = new SettingsStore({}, { home: dshHome })
     assert.equal(migrated.resolve().workspace, oldWorkspace)
@@ -364,6 +369,11 @@ test('SettingsStore migrates the old Memory workspace and persona/diary settings
     assert.equal(persisted.workspace, oldWorkspace)
     assert.deepEqual(persisted.personaFiles, ['persona/legacy-voice.md'])
     assert.equal(persisted.diaryDir, 'records/old-diary')
+    await syncMemorySettings(migrated)
+    const syncedLegacy = JSON.parse(await readFile(path.join(dshHome, 'ming-memory.json'), 'utf8'))
+    assert.equal(syncedLegacy.selfName, '小鯨魚')
+    assert.equal(syncedLegacy.userName, '爸爸')
+    assert.equal(syncedLegacy.identity, true, 'syncing Hers Life paths must preserve existing identity settings')
 
     const selectedWorkspace = path.join(root, 'selected-workspace')
     await writeFile(path.join(dshHome, 'hers-life.json'), JSON.stringify({
