@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// scripts/rag-index.mjs —— 三层索引的代际快照、校验与回退（交接书 J.6 / J.11 的最小实现）
+// scripts/rag-index.mjs —— 两层索引的代际快照、校验与回退（交接书 J.6 / J.11 的最小实现）
 //
-// 它**不生成向量**——生成仍由 doc-emb.mjs / chat-embed.mjs / qq-embed.mjs 做。
+// 它**不生成向量**——生成仍由 doc-emb.mjs / chat-embed.mjs 做。
 // 这里只管三件事：给一次生成结果拍快照、验它完整、能退回上一代。
 //
 // 为什么需要：现在索引只有 live/ 里那一份。重建一次写坏了，就没有「上一代」可回。
@@ -9,7 +9,7 @@
 //
 // 布局（2026-11-17 起读端也认这个指针：指针指的那一代完整、且不比 live 旧，就从那一代读）：
 //   live/rag-index/
-//     current.json                 → {generation, at, layers:{doc:{...},web:...,qq:...}}
+//     current.json                 → {generation, at, layers:{doc:{...},web:...}}
 //     generations/<generation>/
 //       doc/{manifest.json,vectors.f32,ids.json}
 //       web/{manifest.json,vectors.f32,ids.json,corpus.jsonl}
@@ -35,7 +35,11 @@ const flag = (k, d = '') => {
 }
 const cmd = argv.find((x) => !x.startsWith('--')) || 'list'
 
-const LIVE = flag('live') || (process.env.MING_WORKSPACE ? path.join(process.env.MING_WORKSPACE, 'live') : 'live')
+const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
+let centralSettings = {}
+try { centralSettings = JSON.parse(fs.readFileSync(path.join(DSH_HOME, 'hers-life.json'), 'utf8')) } catch {}
+const workspace = String(centralSettings.workspace || process.env.MING_WORKSPACE || '')
+const LIVE = flag('live') || path.join(workspace, 'live')
 const ROOT = path.join(LIVE, 'rag-index')
 const GEN = path.join(ROOT, 'generations')
 const CURRENT = path.join(ROOT, 'current.json')
@@ -43,7 +47,6 @@ const CURRENT = path.join(ROOT, 'current.json')
 const LAYERS = [
   { name: 'doc', emb: 'doc-emb.f32', ids: 'doc-emb-ids.json', corpus: null, manifest: 'doc-emb.manifest.json' },
   { name: 'web', emb: 'chat-emb.f32', ids: 'chat-emb-ids.json', corpus: 'chat-corpus.jsonl', manifest: 'chat-emb.manifest.json' },
-  { name: 'qq', emb: 'qq-emb.f32', ids: 'qq-emb-ids.json', corpus: 'qq-corpus.jsonl', manifest: 'qq-emb.manifest.json' },
 ]
 
 const DIM = 768
