@@ -12,6 +12,7 @@ import { DiscordBrain } from '../memory.js'
 import { DiscordInterestStore } from '../interests.js'
 import { quarantinePrivateDmDiary } from '../privacy.js'
 import { DiscordBridge } from '../discord/bridge.js'
+import { DaveSession } from '../discord/dave.js'
 import { apply as applyDiscord } from '../index.js'
 import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
 import { apply as applyVoice } from '../../dsh-ming-voice/index.js'
@@ -176,6 +177,33 @@ test('interest pause state is reversible and reports its skip reason', async () 
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+test('DAVE protocol zero is rejected and never enables plaintext passthrough', () => {
+  const dave = Object.create(DaveSession.prototype)
+  let nativeExecute = 0
+  let passthrough = 0
+  dave.logger = null
+  dave.userId = 'bot-1'
+  dave.channelId = 'voice-1'
+  dave.protocolVersion = 1
+  dave.degraded = false
+  dave.pendingTransitions = new Map([[9, 0]])
+  dave.session = {
+    executeTransition() { nativeExecute += 1; return true },
+    setPassthroughMode() { passthrough += 1 },
+  }
+  assert.throws(() => dave.reinit(0), /protocol version 0.*plaintext voice fallback is disabled/)
+  assert.throws(() => dave.prepareTransition({ transition_id: 10, protocol_version: 0 }), /protocol version 0/)
+  assert.throws(() => dave.executeTransition(9), /protocol version 0.*unencrypted voice fallback/)
+  assert.equal(dave.protocolVersion, 1)
+  assert.equal(nativeExecute, 0, 'native MLS state must not be switched into an unencrypted mode')
+  assert.equal(passthrough, 0, 'DAVE passthrough must never be activated')
+
+  dave.reinit = version => {
+    if (version <= 0) throw new Error('DAVE protocol version 0 would disable end-to-end encryption')
+  }
+  assert.throws(() => dave.prepareEpoch({ epoch: 1, protocol_version: 0 }), /protocol version 0/)
 })
 
 test('Discord PNG, APNG and GIF stickers are passed to the model as images', async () => {
