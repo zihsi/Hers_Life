@@ -235,9 +235,19 @@ async function replaceFile(temp, target) {
 }
 export function apply(ctx, config) {
   const central = ctx.hersLifeDiscord?.getSetting?.('browse', {}) || {}
-  if (central.enabled === false) return
   const cfg = normalize({ ...(config || {}), ...central })
   if (ctx.hersLifeDiscord?.workspace) cfg.workspacePath = path.resolve(ctx.hersLifeDiscord.workspace)
+  const liveConfigFile = path.join(cfg.workspacePath, 'live', 'browse-config.json')
+  // The central settings UI writes this file on every save. Re-read it at
+  // execution boundaries so changing ADB, platforms, social-write policy,
+  // targets or the Agent preset takes effect without restarting DSH.
+  const refreshConfig = () => {
+    try {
+      const disk = JSON.parse(readFileSync(liveConfigFile, 'utf8'))
+      const next = normalize({ ...cfg, ...disk, workspacePath: cfg.workspacePath })
+      Object.assign(cfg, next)
+    } catch { /* first run or a concurrent atomic replace: keep last good config */ }
+  }
 
   // ---- 面板用的只读口（2026-11-07）----
   // 只报「这一轮在逛什么」：live/browse-now.md 原文 + 会话轮次账本。只读。
@@ -1173,6 +1183,7 @@ export function apply(ctx, config) {
    * 关闭限制时查不到前台仍 fail closed，避免误点到未知 App。
    */
   const checkTap = (args) => {
+    refreshConfig()
     if (cfg.allowSocialWrites !== false) return null
     const text = [args?.label, args?.query, args?.text].filter((x) => typeof x === 'string').join(' ')
     const word = cfg.socialWriteWords.find((k) => text.includes(k))
@@ -1190,6 +1201,7 @@ export function apply(ctx, config) {
 
   ctx.on('tools/pre-execute', (exec, next) => {
     try {
+      refreshConfig()
       // 只在「这一轮是自己出门闲逛」的时候收紧：被她正常叫到时，手是自由的。
       if (guarded === null || exec?.agent?.id !== guarded) return next()
       const tool = String(exec.name || '')
@@ -1528,6 +1540,8 @@ export function apply(ctx, config) {
     if (wakePending) return { ok: false, reason: 'wake pending' }
     wakePending = true
     try {
+    refreshConfig()
+    if (!cfg.enabled) return { ok: false, reason: 'autonomous browsing is disabled in Hers Life settings' }
     const dispatchFile = path.join(cfg.workspacePath, 'live', 'browse-dispatch-pending.json')
     if (existsSync(dispatchFile)) return { ok: false, status: 'unknown', reason: 'previous dispatch unresolved; inspect browse-dispatch-pending.json before clearing' }
     const now = new Date()
@@ -1646,6 +1660,8 @@ export function apply(ctx, config) {
     if (tickPending) return
     tickPending = true
     try {
+      refreshConfig()
+      if (!cfg.enabled) return note({ at: new Date().toISOString(), skip: 'disabled in Hers Life settings' })
       const now = new Date()
       loadHolidays()
       const day = dayKey(now)
