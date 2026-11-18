@@ -372,7 +372,7 @@ window.__ModuleLoader__.load({
               h('label', { className: 'hl-field' }, h('span', { className: 'hl-label' }, '自稱描述'), h('input', { className: 'hl-input', value: identity.selfDesc || '', onChange: (e) => setIdentity((v) => Object.assign({}, v, { selfDesc: e.target.value })) }))),
             h('label', { className: 'hl-check' }, h('input', { type: 'checkbox', checked: identity.identity !== false, onChange: (e) => setIdentity((v) => Object.assign({}, v, { identity: e.target.checked })) }), '把身份資訊加入開場提示'),
             h('div', { className: 'hl-actions' }, button('保存身份與稱呼', saveIdentity, false, busy)))),
-        card('人格檔案、日記與工作區', '路徑相對於工作區根目錄；變更工作區時會採取「只補缺少檔案」的保全式複製，不刪除舊資料。',
+        card('人格檔案、日記與工作區', '路徑相對於工作區根目錄；變更工作區時會採取「只補缺少檔案」的保全式複製，不刪除舊資料。DSH_HOME 由 DSH 自動提供，不需要你手動設定環境變數。',
           h(React.Fragment, null,
             h('div', { className: 'hl-grid' },
               input('工作區路徑', 'workspace', '存放人格、日記、見聞、共享記憶與 Discord 會話索引。'),
