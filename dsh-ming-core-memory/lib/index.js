@@ -8,7 +8,8 @@
 //               2026-10-30 加后四个字段：状态（候选/生效/被取代/作废）、来源（她说的/我推断的/
 //               观察到的）、被哪条取代、最近一次被证据确认的日期。检索默认不返回作废/被取代的。
 //   index.json  元数据索引（list/search 的真相源；损坏时从 notes/ 重建）
-import { readFile, writeFile, rename, mkdir, readdir } from 'node:fs/promises';
+import { readFile, writeFile, rename, mkdir, readdir, rm } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -283,11 +284,42 @@ function readFileSyncOrNull(path) {
   try { return readFileSync(path, 'utf8'); } catch { return null; }
 }
 
-async function atomicWrite(path, content) {
-  await mkdir(dirname(path), { recursive: true });
-  const tmp = `${path}.tmp-${process.pid}-${Date.now()}`;
-  await writeFile(tmp, content, 'utf8');
-  await rename(tmp, path);
+const atomicWriteQueues = new Map();
+async function atomicWrite(target, content) {
+  const write = async () => {
+    await mkdir(dirname(target), { recursive: true });
+    const tmp = `${target}.tmp-${randomUUID()}`;
+    try {
+      await writeFile(tmp, content, 'utf8');
+      try {
+        await rename(tmp, target);
+      } catch (error) {
+        if (process.platform !== 'win32' || !['EPERM', 'EEXIST', 'ENOTEMPTY'].includes(error?.code)) throw error;
+        const backup = `${target}.bak-${randomUUID()}`;
+        let moved = false;
+        try {
+          await rename(target, backup);
+          moved = true;
+          await rename(tmp, target);
+          await rm(backup, { force: true }).catch(() => {});
+        } catch (replaceError) {
+          if (moved) {
+            try { await rename(backup, target); } catch {}
+          } else if (replaceError?.code === 'ENOENT') {
+            await rename(tmp, target);
+          } else {
+            throw replaceError;
+          }
+        }
+      }
+    } finally {
+      await rm(tmp, { force: true }).catch(() => {});
+    }
+  };
+  const previous = atomicWriteQueues.get(target) || Promise.resolve();
+  const task = previous.then(write, write);
+  atomicWriteQueues.set(target, task.catch(() => {}));
+  return task;
 }
 
 async function rebuildIndex() {
