@@ -934,7 +934,7 @@ test('Discord memory compaction safely replaces an existing JSONL file on Window
       sessionId: 'discord-channel-channel-1', role: 'user', text: 'Windows compaction test',
       scope: 'guild', guildId: 'guild-1', authorId: 'owner-1',
     }
-    await writeFile(file, JSON.stringify(event) + '\n' + JSON.stringify({ ...event, id: 'duplicate-event-copy' }) + '\\n', 'utf8')
+    await writeFile(file, JSON.stringify(event) + '\n' + JSON.stringify({ ...event, id: 'duplicate-event-copy' }) + '\n', 'utf8')
     const settings = {
       home: root,
       ownerIds() { return [] },
