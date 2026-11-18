@@ -48,6 +48,14 @@ test('Persona and diary UI paths are synchronized to the Memory plugin config', 
   }
 })
 
+test('Discord package contains the DSH startup patch declared by its manifest', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
+  const patch = String(manifest.dsh?.bundle?.patch || '').replace(/^\.\//, '')
+  assert.ok(patch, 'the Discord package must declare its DSH bundle patch')
+  assert.ok(manifest.files.includes(patch), 'npm package files whitelist must include the DSH patch')
+  assert.ok((await readFile(new URL('../' + patch, import.meta.url), 'utf8')).length > 0)
+})
+
 test('Browse settings UI values are fully synchronized to the live runtime config', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-browse-settings-'))
   try {
