@@ -16,7 +16,13 @@
     "client.js",
     "cordis.patch.yml",
     "locale/*.json",
-    "icon.svg"
+    "icon.svg",
+    "people-merge.mjs",
+    "skills-lib.mjs",
+    "cost-lib.mjs",
+    "price-index.mjs",
+    "fingerprint-cache.mjs",
+    "lib"
   ],
   "dsh": {
     "bundle": {
