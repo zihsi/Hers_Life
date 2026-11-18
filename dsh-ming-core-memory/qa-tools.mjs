@@ -6,6 +6,7 @@ import { apply } from './lib/index.js';
 
 const tools = {};
 const ctx = {
+  on: () => {},
   tools: { register: (def) => { tools[def.name] = def; } },
   systemPrompt: { section: () => {} },
   inject: () => {},
