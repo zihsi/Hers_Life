@@ -124,6 +124,7 @@ export class VoiceConnection extends EventEmitter {
     this.playing = null
     this.recording = null
     this.dave = null
+    this.daveReady = false
     this.connectedClients = new Set()
     // ssrc -> user id, filled from the speaking packets the server forwards so
     // incoming DAVE frames can be decrypted against their sender.
@@ -141,6 +142,50 @@ export class VoiceConnection extends EventEmitter {
     // 4006 redial state: how many silent retries are left, and the pending timer.
     this.reconnects = 0
     this.reconnectTimer = null
+  }
+
+  markDAVEReady() {
+    if (this.daveReady || !this.dave?.active) return false
+    this.daveReady = true
+    this.logger?.info('voice: DAVE MLS is ready; encrypted audio is available')
+    this.emitSafe('daveReady')
+    return true
+  }
+
+  waitForDAVE(timeoutMs = 20_000) {
+    if (this.daveReady && this.dave?.active) return Promise.resolve(this)
+    if (this.closed || this.state === 'failed' || this.state === 'closed') {
+      return Promise.reject(new Error('voice: connection closed before DAVE became ready'))
+    }
+    return new Promise((resolve, reject) => {
+      let settled = false
+      const cleanup = () => {
+        clearTimeout(timer)
+        this.off('daveReady', onReady)
+        this.off('error', onError)
+        this.off('close', onClose)
+      }
+      const finish = (fn, value) => {
+        if (settled) return
+        settled = true
+        cleanup()
+        fn(value)
+      }
+      const onReady = () => {
+        if (this.daveReady && this.dave?.active) finish(resolve, this)
+      }
+      const onError = error => finish(reject, error instanceof Error ? error : new Error(String(error)))
+      const onClose = () => finish(reject, new Error('voice: left before DAVE became ready'))
+      const timer = setTimeout(() => {
+        const error = new Error('voice: DAVE MLS handshake timed out; no unencrypted audio was sent')
+        this.fail(error)
+        finish(reject, error)
+      }, Math.max(1, Number(timeoutMs) || 20_000))
+      this.on('daveReady', onReady)
+      this.on('error', onError)
+      this.on('close', onClose)
+      onReady()
+    })
   }
 
   /** Emit without letting one listener's throw become an uncaught exception. */
@@ -414,9 +459,11 @@ export class VoiceConnection extends EventEmitter {
         return
       case DAVE_OP.MLS_ANNOUNCE_COMMIT:
         dave.processTransition('commit', payload)
+        this.markDAVEReady()
         return
       case DAVE_OP.MLS_WELCOME:
         dave.processTransition('welcome', payload)
+        this.markDAVEReady()
         return
       default:
         return
@@ -481,6 +528,7 @@ export class VoiceConnection extends EventEmitter {
           if (sendReady) {
             this.sendWs({ op: DAVE_OP.TRANSITION_READY, d: { transition_id: packet.d.transition_id } })
           }
+          this.markDAVEReady()
         } catch (error) {
           this.fail(error)
         }
@@ -489,12 +537,14 @@ export class VoiceConnection extends EventEmitter {
       case VOICE_OP.DAVE_EXECUTE_TRANSITION:
         try {
           this.dave?.executeTransition(packet.d?.transition_id)
+          this.markDAVEReady()
         } catch (error) {
           this.fail(error)
         }
         return
       case VOICE_OP.DAVE_PREPARE_EPOCH:
         try {
+          this.daveReady = false
           this.dave?.prepareEpoch(packet.d)
         } catch (error) {
           this.fail(error)
@@ -592,6 +642,7 @@ export class VoiceConnection extends EventEmitter {
     this.sequence = randomBytes(2).readUInt16BE(0)
     this.timestamp = randomBytes(4).readUInt32BE(0)
     this.nonce = 0
+    this.daveReady = false
     this.state = 'ready'
     this.logger?.info('voice: connected to #' + this.channelId + ' (DAVE v' + daveVersion + ')')
     // A session that reached SessionDescription is as healthy as this transport
@@ -868,6 +919,7 @@ export class VoiceConnection extends EventEmitter {
    */
   async play(file, options = {}) {
     if (this.state !== 'ready') throw new Error('voice: not connected')
+    if (!this.daveReady || !this.dave?.active) throw new Error('voice: DAVE MLS is not ready; encrypted playback is unavailable yet')
     const packets = await this.encode(file, options)
     return this.playPackets(packets, { ...options, label: file })
   }
@@ -883,6 +935,7 @@ export class VoiceConnection extends EventEmitter {
    */
   async playMix(tracks, options = {}) {
     if (this.state !== 'ready') throw new Error('voice: not connected')
+    if (!this.daveReady || !this.dave?.active) throw new Error('voice: DAVE MLS is not ready; encrypted playback is unavailable yet')
     const buffer = await mixToOgg(tracks, {
       ffmpeg: this.ffmpeg,
       ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
@@ -899,6 +952,7 @@ export class VoiceConnection extends EventEmitter {
    */
   async playPackets(packets, options = {}) {
     if (this.state !== 'ready') throw new Error('voice: not connected')
+    if (!this.daveReady || !this.dave?.active) throw new Error('voice: DAVE MLS is not ready; encrypted playback is unavailable yet')
     if (this.playing !== null) {
       if (options.interrupt === false) return
       this.stopPlayback()
@@ -1293,6 +1347,7 @@ export class VoiceConnection extends EventEmitter {
     if (this.recording !== null) await this.stopRecording().catch(() => {})
     this.dave?.destroy()
     this.dave = null
+    this.daveReady = false
     this.readyReject?.(new Error('voice: left the channel'))
     this.emitSafe('close', 1000)
   }
@@ -1303,6 +1358,7 @@ export class VoiceConnection extends EventEmitter {
     this.logger?.warn('voice: ' + String(reason.message ?? reason))
     this.state = 'failed'
     this.closed = true
+    this.daveReady = false
     this.stopPlayback()
     this.stopHeartbeat()
     try { this.udp?.close() } catch {}
@@ -1407,12 +1463,13 @@ export class VoiceManager {
     this.connections.set(key, connection)
     this.gateway.joinVoice(key, String(channelId))
     const timer = setTimeout(() => {
-      if (connection.state !== 'ready') {
-        connection.fail(new Error('voice: handshake timed out'))
+      if (!connection.daveReady) {
+        connection.fail(new Error('voice: DAVE MLS handshake timed out; no unencrypted audio was sent'))
       }
     }, 20_000)
     try {
       await connection.ready
+      await connection.waitForDAVE(20_000)
     } finally {
       clearTimeout(timer)
     }
@@ -1436,6 +1493,7 @@ export class VoiceManager {
       guildId: connection.guildId,
       channelId: connection.channelId,
       state: connection.state,
+      e2eeReady: connection.daveReady && connection.dave?.active === true,
       mode: connection.mode,
       playing: connection.playing !== null,
       recording: connection.recording !== null,
