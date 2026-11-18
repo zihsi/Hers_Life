@@ -307,6 +307,7 @@ export function apply(ctx, pluginConfig = {}) {
     }
     try {
       await ensureWorkspace(settings.resolve().workspace, { personaFiles: settings.get('personaFiles', []), diaryDir: settings.get('diaryDir', 'diary') })
+            await ensureCoreMemoryFile(settings)
       rest = new DiscordRest({ token: settings.token, logger })
       events = new DiscordEvents({ dataRoot: settings.resolve().dataRoot, logger })
       brain = new DiscordBrain({ workspace: settings.resolve().workspace, settings, logger })
@@ -338,6 +339,7 @@ export function apply(ctx, pluginConfig = {}) {
   const loadAndStart = async () => {
     await settings.load()
     await ensureWorkspace(settings.resolve().workspace, { personaFiles: settings.get('personaFiles', []), diaryDir: settings.get('diaryDir', 'diary') })
+            await ensureCoreMemoryFile(settings)
     await migrateLegacyBrowseSettings(settings)
     await ensurePrivacy()
     await syncMemorySettings(settings)
@@ -425,6 +427,7 @@ export function apply(ctx, pluginConfig = {}) {
             await syncGraphSettings(settings)
             await syncBrowseSettings(settings)
             await ensureWorkspace(nextWorkspace, { personaFiles: settings.get('personaFiles', []), diaryDir: settings.get('diaryDir', 'diary') })
+            await ensureCoreMemoryFile(settings)
             await ensurePrivacy()
             await startAdapter()
             const resolved = settings.resolve()
@@ -457,6 +460,7 @@ export function apply(ctx, pluginConfig = {}) {
           }
           if (req.method === 'POST' && route === 'initialize') {
             const result = await ensureWorkspace(settings.resolve().workspace, { personaFiles: settings.get('personaFiles', []), diaryDir: settings.get('diaryDir', 'diary') })
+            await ensureCoreMemoryFile(settings)
             const privacy = await ensurePrivacy()
             send(res, 200, { ok: true, ...result, privacy })
             return
@@ -472,6 +476,7 @@ export function apply(ctx, pluginConfig = {}) {
             await syncGraphSettings(settings)
             await syncBrowseSettings(settings)
             await ensureWorkspace(destination, { personaFiles: settings.get('personaFiles', []), diaryDir: settings.get('diaryDir', 'diary') })
+            await ensureCoreMemoryFile(settings)
             await ensurePrivacy()
             await startAdapter()
             send(res, 200, { ok: true, from: old, to: destination, ...result })
