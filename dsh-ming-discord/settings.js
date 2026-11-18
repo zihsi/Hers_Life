@@ -191,6 +191,23 @@ export class SettingsStore {
     this.secretsFile = path.join(this.home, 'hers-life-secrets.json')
     let saved = {}
     try { saved = JSON.parse(readFileSync(this.file, 'utf8')) } catch {}
+    // First-run migration: preserve the existing Memory plugin workspace and
+    // persona/diary choices instead of silently creating a fresh empty workspace.
+    this.migratedLegacySettings = false
+    try {
+      const legacy = JSON.parse(readFileSync(path.join(this.home, 'ming-memory.json'), 'utf8'))
+      const mappings = [
+        ['root', 'workspace'], ['personaFiles', 'personaFiles'],
+        ['diaryDir', 'diaryDir'], ['diaryCount', 'diaryCount'],
+        ['diaryChars', 'diaryChars'], ['maxChars', 'maxChars'],
+      ]
+      for (const [from, to] of mappings) {
+        if (saved[to] === undefined && legacy[from] !== undefined) {
+          saved[to] = legacy[from]
+          this.migratedLegacySettings = true
+        }
+      }
+    } catch {}
     // The workspace must be visible synchronously to dependent plugins during
     // their apply() phase; token loading remains asynchronous and secret-only.
     this.settings = normalizePluginSettings(merge(merge(DEFAULTS, config), saved))
@@ -219,7 +236,7 @@ export class SettingsStore {
     this.settings.ownerIds = cleanStringList(this.settings.ownerIds)
     this.settings.personaFiles = safeRelativeList(this.settings.personaFiles, DEFAULTS.personaFiles)
     this.settings.diaryDir = safeRelativePath(this.settings.diaryDir, DEFAULTS.diaryDir)
-    if (hadLegacySecret) await this.save()
+    if (hadLegacySecret || this.migratedLegacySettings) await this.save()
     return this
   }
   get(key, fallback) {
