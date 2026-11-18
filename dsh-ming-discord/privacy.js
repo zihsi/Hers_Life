@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readFile, readdir, rename, writeFile, realpath } from 'node:fs/promises'
 import path from 'node:path'
 
@@ -33,12 +33,14 @@ export function quarantinePrivateDmDiary(workspace, privateRoot, diaryRelative =
 async function runQuarantine(root, diaryDir, privateRoot, relativeDiary) {
   // Resolve the actual diary directory too: a symlink inside the workspace must
   // not redirect the migration to arbitrary files outside the workspace.
+  let realDiary
   try {
-    const [realRoot, realDiary] = await Promise.all([realpath(root), realpath(diaryDir)])
-    const actualRelative = path.relative(realRoot, realDiary)
+    const [realRoot, resolvedDiary] = await Promise.all([realpath(root), realpath(diaryDir)])
+    const actualRelative = path.relative(realRoot, resolvedDiary)
     if (actualRelative === '..' || actualRelative.startsWith('..' + path.sep) || path.isAbsolute(actualRelative)) {
       throw new Error('private diary directory resolves outside workspace')
     }
+    realDiary = resolvedDiary
   } catch (error) {
     if (error.code === 'ENOENT') return { filesChanged: 0, entriesMoved: 0, diaryMissing: true }
     throw error
@@ -50,19 +52,34 @@ async function runQuarantine(root, diaryDir, privateRoot, relativeDiary) {
   try {
     await readFile(marker, 'utf8')
     return { filesChanged: 0, entriesMoved: 0, alreadyDone: true }
-  } catch {}
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error
+  }
 
   let filesChanged = 0
   let entriesMoved = 0
   let names = []
   try {
     names = (await readdir(diaryDir)).filter((name) => /^\d{4}-\d{2}-\d{2}\.md$/i.test(name)).sort()
-  } catch {}
+  } catch (error) {
+    if (error.code === 'ENOENT') return { filesChanged, entriesMoved, diaryMissing: true }
+    throw error
+  }
 
   for (const name of names) {
     const file = path.join(diaryDir, name)
     let raw
-    try { raw = await readFile(file, 'utf8') } catch { continue }
+    try {
+      const resolvedFile = await realpath(file)
+      const relativeFile = path.relative(realDiary, resolvedFile)
+      if (relativeFile === '..' || relativeFile.startsWith('..' + path.sep) || path.isAbsolute(relativeFile)) {
+        throw new Error('private diary file resolves outside diary directory: ' + name)
+      }
+      raw = await readFile(resolvedFile, 'utf8')
+    } catch (error) {
+      if (error.code === 'ENOENT') continue
+      throw error
+    }
     const lines = raw.match(/[^\n]*\n|[^\n]+$/g) ?? []
     const kept = []
     const privateBlocks = []
@@ -95,7 +112,7 @@ async function runQuarantine(root, diaryDir, privateRoot, relativeDiary) {
       if (error.code !== 'EEXIST') throw error
     }
 
-    const temp = file + '.privacy-' + process.pid
+    const temp = file + '.privacy-' + randomUUID()
     await writeFile(temp, kept.join(''), 'utf8')
     await rename(temp, file)
     filesChanged += 1
