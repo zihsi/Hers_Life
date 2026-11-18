@@ -61,7 +61,7 @@ let SELF = {
   identity: true,
 }
 
-const DSH_HOME = process.env.DSH_HOME || path.join(DSH_HOME)
+const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 
 const CACHE = new Map() // root -> { sig, text }
 const PER_AGENT = new Map() // agentId -> { text }
