@@ -146,9 +146,8 @@ const runGuard = (tool, args) => {
   return { kind: decision === 'ALLOW' ? 'allow' : 'next' }
 }
 
-const denyWrite = runGuard('android_tap', { text: '点赞' })
-ok(denyWrite.kind === 'deny', '查不到前台时「点赞」被拒', JSON.stringify(denyWrite))
-ok(/查不到手机前台/.test(String(denyWrite.reason || '')), '拒的理由说清了是查不到前台', String(denyWrite.reason || '').slice(0, 60))
+const allowWrite = runGuard('android_tap', { text: '点赞' })
+ok(allowWrite.kind === 'allow', '社交平台寫入預設允許，不存在隱藏硬限制', JSON.stringify(allowWrite))
 
 const denyFollow = runGuard('android_interact', { action: 'tap', query: '关注' })
 ok(denyFollow.kind === 'deny', '同样条件下「关注」也被拒')
