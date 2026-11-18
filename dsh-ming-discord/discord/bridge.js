@@ -1033,8 +1033,42 @@ export class DiscordBridge {
         }
       }
     }
-    // Embeds, stickers and forwarded/replied content are part of what was said;
-    // a model that cannot see them answers the wrong question.
+    // Sticker items only contain metadata. Fetch supported raster formats so
+    // the model receives the actual sticker image, not just its name. Lottie is
+    // JSON animation and remains a text description until a safe renderer exists.
+    const stickers = Array.isArray(message.sticker_items) ? message.sticker_items.slice(0, 5) : []
+    for (const sticker of stickers) {
+      const id = String(sticker?.id ?? '')
+      const format = Number(sticker?.format_type ?? 0)
+      if (!/^\d+$/.test(id) || ![1, 2, 4].includes(format)) continue
+      const isGif = format === 4
+      const ext = isGif ? 'gif' : 'png'
+      const url = isGif
+        ? 'https://media.discordapp.net/stickers/' + id + '.gif'
+        : 'https://cdn.discordapp.com/stickers/' + id + '.png'
+      const name = String(sticker?.name ?? ('sticker-' + id)) + '.' + ext
+      try {
+        const file = await this.rest.download(url, maxBytes)
+        const mediaType = pickMediaType(file.mediaType, '.' + ext)
+        if (mediaType === null) {
+          saved.push('貼圖：' + name + '（平台回傳格式不支援）')
+          continue
+        }
+        const store = this.ctx.get('attachments')
+        if (store === undefined) {
+          saved.push('貼圖：' + name + '（目前環境不支援圖片輸入）')
+          continue
+        }
+        const stored = await storeImage(store, { data: file.buffer, mediaType, name })
+        blocks.push({ type: 'image', attachment: toImageRef(stored, name) })
+      } catch (error) {
+        this.logger?.warn('sticker download failed: ' + String(error?.message ?? error))
+        saved.push('貼圖：' + name + '（圖片讀取失敗）')
+      }
+    }
+
+    // Embeds, sticker names, forwarded/replied content and polls remain readable
+    // alongside image blocks, including when a sticker uses unsupported Lottie.
     const notes = describeRich(message)
     if (notes.length > 0) saved.push(...notes)
     if (saved.length > 0) {
