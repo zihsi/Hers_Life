@@ -63,7 +63,7 @@ async function loadDefineTool(toolsPath = '') {
   try {
     const mod = await import('@deepseek-ai/dsh-tools')
     if (mod?.defineTool) return mod.defineTool
-  } catch { /* 本地测试时走环境变量 */ }
+  } catch { /* 本地测试时走设置中心传入的工具路径 */ }
   const override = String(toolsPath || '').trim()
   if (override) {
     const { pathToFileURL } = await import('node:url')
