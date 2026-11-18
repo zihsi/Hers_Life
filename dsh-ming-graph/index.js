@@ -45,7 +45,7 @@ export const name = 'dsh-ming-graph'
 export const inject = ['hersLifeDiscord']
 const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 
-// 工作區優先讀 Hers Life 設定中心同步的 workspace；首次啟動時再回退 ming-memory.json 與 ming-graph.json。一般使用者不需要設定 MING_WORKSPACE 等環境變數。
+// 工作區優先讀 Hers Life 設定中心同步的 workspace；首次啟動時再回退舊版設定檔。一般使用者不需要設定任何環境變數。
 
 
 function resolveWorkspace() {
