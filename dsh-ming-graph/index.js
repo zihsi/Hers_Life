@@ -15,10 +15,10 @@ import fs from 'node:fs/promises'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import * as neuronStatic from '../dsh-ming-memory/lib/neuron.mjs'
+import * as neuronStatic from './lib/memory-neuron.mjs'
 import {
   readDsh, readDiscord, readPeople, readDiaries, build, parseFront, MEMORY_DEFAULTS,
-} from '../dsh-ming-memory/lib/model.mjs'
+} from './lib/memory-model.mjs'
 import { fileURLToPath } from 'node:url'
 import { mergePeople } from './people-merge.mjs'
 // 2026-11-08：top 栏那个 skill 开关的服务端逻辑（清单 + 写 skills-off.json）。
@@ -30,9 +30,9 @@ import { readCost } from './cost-lib.mjs'
 import { indexModels } from './price-index.mjs'
 import { fingerprint, singleFlight, sourceLoader, graphDependencies, neuronDependencies, unifiedDependencies } from './fingerprint-cache.mjs'
 
-// 热重载认的是 memory 里那份（两个仓并排放在 C:/dsh 下，按目录关系找；
-// 不走包名解析——profile 的 node_modules 是按真路径加载的，包名在这里解析不到）。
-const NEURON_URL = new URL('../dsh-ming-memory/lib/neuron.mjs', import.meta.url).href
+// Graph 是可独立安装的 DSH 插件，因此把 memory 的纯数据模块随包携带；
+// 由 package QA 校验它们与 dsh-ming-memory/lib 的源文件保持逐字一致。
+const NEURON_URL = new URL('./lib/memory-neuron.mjs', import.meta.url).href
 const NEURON_FILE = fileURLToPath(NEURON_URL)
 // 费用：读 sqlite 要扫七万多行，别每个请求都扫一遍
 let costCache = null
