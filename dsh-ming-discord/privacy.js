@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rename, writeFile, realpath } from 'node:fs/promises'
 import path from 'node:path'
 
 const PRIVATE_DIARY_START = /^-\s+\d{4}-\d{2}-\d{2}T[^\s]+\s+私聊\s+/u
@@ -11,12 +11,41 @@ const DIARY_ENTRY_START = /^-\s+\d{4}-\d{2}-\d{2}T[^\s]+\s+/u
  * entries (including multi-line continuations) outside the workspace diary.
  * The original private text is preserved under ~/.dsh, never in prompt input.
  */
-export async function quarantinePrivateDmDiary(workspace, privateRoot) {
+const inFlight = new Map()
+
+export function quarantinePrivateDmDiary(workspace, privateRoot, diaryRelative = 'diary') {
   const root = path.resolve(workspace)
-  const diaryDir = path.join(root, 'diary')
+  const rawDiary = String(diaryRelative || 'diary').replace(/[\\/]+/g, path.sep)
+  const diaryDir = path.resolve(root, rawDiary)
+  const relativeDiary = path.relative(root, diaryDir)
+  if (relativeDiary === '..' || relativeDiary.startsWith('..' + path.sep) || path.isAbsolute(relativeDiary)) {
+    return Promise.reject(new Error('private diary path escapes workspace'))
+  }
+  const key = root + '\0' + diaryDir + '\0' + path.resolve(privateRoot)
+  const current = inFlight.get(key)
+  if (current) return current
+  const pending = runQuarantine(root, diaryDir, privateRoot, relativeDiary)
+    .finally(() => inFlight.delete(key))
+  inFlight.set(key, pending)
+  return pending
+}
+
+async function runQuarantine(root, diaryDir, privateRoot, relativeDiary) {
+  // Resolve the actual diary directory too: a symlink inside the workspace must
+  // not redirect the migration to arbitrary files outside the workspace.
+  try {
+    const [realRoot, realDiary] = await Promise.all([realpath(root), realpath(diaryDir)])
+    const actualRelative = path.relative(realRoot, realDiary)
+    if (actualRelative === '..' || actualRelative.startsWith('..' + path.sep) || path.isAbsolute(actualRelative)) {
+      throw new Error('private diary directory resolves outside workspace')
+    }
+  } catch (error) {
+    if (error.code === 'ENOENT') return { filesChanged: 0, entriesMoved: 0, diaryMissing: true }
+    throw error
+  }
   const quarantineRoot = path.join(path.resolve(privateRoot), 'privacy-quarantine')
   const quarantineDir = path.join(quarantineRoot, 'private-dm-diary')
-  const workspaceKey = createHash('sha256').update(root).digest('hex').slice(0, 16)
+  const workspaceKey = createHash('sha256').update(root + '\0' + relativeDiary).digest('hex').slice(0, 16)
   const marker = path.join(quarantineRoot, 'private-dm-diary-v1-' + workspaceKey + '.done')
   try {
     await readFile(marker, 'utf8')
@@ -74,6 +103,10 @@ export async function quarantinePrivateDmDiary(workspace, privateRoot) {
   }
 
   await mkdir(quarantineRoot, { recursive: true, mode: 0o700 })
-  await writeFile(marker, JSON.stringify({ at: new Date().toISOString(), filesChanged, entriesMoved }) + '\n', { encoding: 'utf8', mode: 0o600 })
+  try {
+    await writeFile(marker, JSON.stringify({ at: new Date().toISOString(), filesChanged, entriesMoved }) + '\n', { encoding: 'utf8', mode: 0o600, flag: 'wx' })
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error
+  }
   return { filesChanged, entriesMoved, archiveDir: quarantineDir }
 }
