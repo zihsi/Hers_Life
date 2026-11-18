@@ -74,14 +74,15 @@ test('Owner DM, guild channel and non-Owner DM share the same persona and public
   await created({ agent: guildChannel })
   await created({ agent: otherDm })
 
-  const opening = agent => agent.sections.find(section => section.name === 'ming:opening')?.text() ?? ''
+  const opening = agent => agent.sections.find(section => section.name.startsWith('ming:opening'))?.text() ?? ''
   const ownerText = opening(ownerDm)
   const guildText = opening(guildChannel)
   const otherDmText = opening(otherDm)
   assert.ok(ownerText.includes('唯一人格核心：藍白色的小鯨魚。'))
   assert.ok(ownerText.includes('今天和爸爸討論了共享記憶。'))
-  assert.equal(guildText, ownerText, 'public guild sessions must receive the same persona and shared diary')
-  assert.equal(otherDmText, ownerText, 'non-Owner DMs must not become a different personality either')
+  assert.ok(guildText.includes('唯一人格核心：藍白色的小鯨魚。'))
+  assert.doesNotMatch(guildText, /今天和爸爸討論了共享記憶。/, 'guilds must not receive the private diary')
+  assert.equal(otherDmText, guildText, 'non-Owner DMs share the same persona core without the Owner diary')
 
   const publicLive = guildChannel.contexts[0]?.text?.() ?? ''
   assert.doesNotMatch(publicLive, /重啟接續|私人工作狀態/)
