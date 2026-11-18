@@ -550,6 +550,7 @@ window.__ModuleLoader__.load({
             check('啟用 Activities', 'activities.enabled', '活動排程與活動工具。'),
             check('啟用 Skill Isolate', 'skillIsolate.enabled', '技能隔離與狀態保存。'),
             check('啟用 Core Memory', 'coreMemory.enabled', '核心記憶、歸檔記憶與來源追溯工具。'),
+            input('核心記憶資料夾', 'coreMemory.directory', '相對於 DSH_HOME 或填絕對路徑；留空使用 DSH_HOME/memory。'),
             input('Skill Isolate 狀態檔路徑', 'skillIsolate.stateFile', '留空使用 DSH_HOME 預設位置。'),
             check('啟用 Graph', 'graph.enabled', '關閉後停止 Graph 同步與相關面板。'),
             h('div', { className: 'hl-grid' },
