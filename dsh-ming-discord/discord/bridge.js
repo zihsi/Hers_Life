@@ -767,7 +767,8 @@ export class DiscordBridge {
       this.brain?.feedAdd(sessionId, { label: target.label, who: 'me', text: text || '（附件）', kind: target.kind }, origin)
       const recalled = await this.brain?.recallContext(text, target, sessionId)
       if (recalled) content.unshift({ type: 'text', text: recalled })
-      this.learnFrom(text).catch(() => {})
+      // Private DM text must never train globally shared public interests.
+      if (target.kind !== 'dm') this.learnFrom(text).catch(() => {})
 
       const beforeSeq = entry.agent.session.seq
       const reply = await this.stream(entry, content, message, target)
@@ -782,7 +783,9 @@ export class DiscordBridge {
           participantId: String(origin.authorId ?? target.userId ?? ''),
           participantName: String(origin.authorName ?? target.userName ?? ''),
         })
-        if (this.settings.get('brain.journal', true)) {
+        // The diary is injected into every session by dsh-ming-memory. Never
+        // copy a private DM reply into that shared prompt source.
+        if (target.kind !== 'dm' && this.settings.get('brain.journal', true)) {
           void this.brain?.writeJournal(target.label + ' — ' + truncate(answer, 160))
         }
       }
