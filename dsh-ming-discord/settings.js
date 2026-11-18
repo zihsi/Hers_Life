@@ -79,7 +79,7 @@ const DEFAULTS = {
   bilibili: { enabled: true, credentialFile: '', searchMaxPageSize: 20, subtitleMaxChars: 16000, timeoutMs: 30000 },
   activities: { enabled: true },
   skillIsolate: { enabled: true, stateFile: '' },
-  coreMemory: { enabled: true, directory: '' },
+  coreMemory: { enabled: true, directory: '', embeddingEndpoint: 'http://127.0.0.1:18091/v1/embeddings', embeddingModel: 'bge-base-zh-v1.5-q8_0' },
   graph: { enabled: true, syncSeconds: 120, costPricesFile: '', costAutoFile: '' },
   advanced: { turnTimeoutMinutes: 15 },
 }
@@ -114,6 +114,12 @@ function normalizePluginSettings(settings) {
   settings.activities = { ...DEFAULTS.activities, ...(settings.activities || {}) }
   settings.skillIsolate = { ...DEFAULTS.skillIsolate, ...(settings.skillIsolate || {}) }
   settings.coreMemory = { ...DEFAULTS.coreMemory, ...(settings.coreMemory || {}) }
+  settings.coreMemory.embeddingEndpoint = String(settings.coreMemory.embeddingEndpoint || DEFAULTS.coreMemory.embeddingEndpoint).trim().slice(0, 2048)
+  try {
+    const endpoint = new URL(settings.coreMemory.embeddingEndpoint)
+    if (!['http:', 'https:'].includes(endpoint.protocol) || endpoint.username || endpoint.password) throw new Error('invalid embedding endpoint')
+  } catch { settings.coreMemory.embeddingEndpoint = DEFAULTS.coreMemory.embeddingEndpoint }
+  settings.coreMemory.embeddingModel = String(settings.coreMemory.embeddingModel || DEFAULTS.coreMemory.embeddingModel).trim().slice(0, 200) || DEFAULTS.coreMemory.embeddingModel
   settings.graph = { ...DEFAULTS.graph, ...(settings.graph || {}) }
   settings.browse.idleMinutes = clampNumber(settings.browse.idleMinutes, 1, 1440, DEFAULTS.browse.idleMinutes)
   settings.browse.minGapMinutes = clampNumber(settings.browse.minGapMinutes, 0, 1440, DEFAULTS.browse.minGapMinutes)
