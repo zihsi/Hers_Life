@@ -25,8 +25,28 @@ const DEFAULTS = {
     sharePrivateToOwner: true, allowPrivateContextInGuild: true, maxRecall: 6,
     maxEvents: 20000, maxAgeDays: 365,
   },
-  voice: { enabled: true, ffmpeg: 'ffmpeg', heartbeat: true, ttsVoice: 'zh-CN-XiaoxiaoNeural', ttsRate: '+0%' },
+  voice: { enabled: true, ffmpeg: 'ffmpeg', python: 'python', timeoutMs: 60000, heartbeat: true, ttsVoice: 'zh-CN-XiaoxiaoNeural', ttsRate: '+0%' },
   interest: { enabled: true, minChars: 6, contextLines: 4, groups: [], minGapMinutes: 20, maxPerHour: 3, quietHours: '01:00-08:00', channelGapMinutes: 45 },
+  browse: {
+    enabled: true, idleMinutes: 1, minGapMinutes: 30, dailyMax: 8, sessionRounds: 6,
+    quietHours: '08:00-18:30',
+    freeWindows: [{ start: '18:30', end: '08:00' }, { start: '13:50', end: '18:15', only: 'rest' }],
+    holidaysFile: 'live/holidays.json', maxItems: 2, maxShots: 2,
+    serial: '127.0.0.1:16448', adbPath: 'D:\\\\MuMuPlayer\\\\nx_device\\\\12.0\\\\shell\\\\adb.exe',
+    socialApps: ['com.xingin.xhs', 'com.tencent.weibo', 'com.sina.weibo', 'com.ss.android.ugc.aweme', 'com.smile.gifmaker', 'com.zhihu.android', 'com.baidu.tieba', 'com.tencent.mm'],
+    socialWriteWords: ['点赞', '关注', '评论', '收藏', '转发', '分享', '发布', '发送', '投币', '私信'],
+    targets: ['bilibili', 'xiaohongshu'],
+  },
+  resume: { enabled: true, adbPath: 'D:\\\\MuMuPlayer\\\\nx_device\\\\12.0\\\\shell\\\\adb.exe', serial: '127.0.0.1:7555', pauseMediaOnInterrupt: true },
+  wake: { enabled: true },
+  mousepet: {
+    enabled: true, cursorMode: 'companion', cursorHoldMs: 2600, cursorSize: 64, webpickDir: '',
+    companion: { enabled: true, tickMs: 0, provider: 'wb-proxy', model: 'hy4-preview', bubbleMs: 4200, workspace: '' },
+  },
+  bilibili: { enabled: true, credentialFile: '', searchMaxPageSize: 20, subtitleMaxChars: 16000, timeoutMs: 30000 },
+  activities: { enabled: true },
+  skillIsolate: { enabled: true, stateFile: '' },
+  graph: { enabled: true, syncSeconds: 120, costPricesFile: '', costAutoFile: '' },
   advanced: { turnTimeoutMinutes: 15 },
 }
 function merge(base, patch) {
@@ -36,6 +56,50 @@ function merge(base, patch) {
     else out[key] = value
   }
   return out
+}
+function clampNumber(value, min, max, fallback) {
+  const n = Number(value)
+  return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback
+}
+function cleanTimeWindows(value, fallback) {
+  const source = Array.isArray(value) ? value : fallback
+  return source.map((row) => {
+    if (!row || typeof row !== 'object') return null
+    const start = String(row.start || '')
+    const end = String(row.end || '')
+    if (!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(start) || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(end)) return null
+    return { start, end, ...(row.only === 'rest' ? { only: 'rest' } : {}) }
+  }).filter(Boolean)
+}
+function normalizePluginSettings(settings) {
+  settings.browse = { ...DEFAULTS.browse, ...(settings.browse || {}) }
+  settings.resume = { ...DEFAULTS.resume, ...(settings.resume || {}) }
+  settings.wake = { ...DEFAULTS.wake, ...(settings.wake || {}) }
+  settings.mousepet = { ...DEFAULTS.mousepet, ...(settings.mousepet || {}), companion: { ...DEFAULTS.mousepet.companion, ...(settings.mousepet?.companion || {}) } }
+  settings.bilibili = { ...DEFAULTS.bilibili, ...(settings.bilibili || {}) }
+  settings.activities = { ...DEFAULTS.activities, ...(settings.activities || {}) }
+  settings.skillIsolate = { ...DEFAULTS.skillIsolate, ...(settings.skillIsolate || {}) }
+  settings.graph = { ...DEFAULTS.graph, ...(settings.graph || {}) }
+  settings.browse.idleMinutes = clampNumber(settings.browse.idleMinutes, 0, 1440, DEFAULTS.browse.idleMinutes)
+  settings.browse.minGapMinutes = clampNumber(settings.browse.minGapMinutes, 0, 1440, DEFAULTS.browse.minGapMinutes)
+  settings.browse.dailyMax = clampNumber(settings.browse.dailyMax, 0, 500, DEFAULTS.browse.dailyMax)
+  settings.browse.sessionRounds = clampNumber(settings.browse.sessionRounds, 1, 100, DEFAULTS.browse.sessionRounds)
+  settings.browse.maxItems = clampNumber(settings.browse.maxItems, 0, 50, DEFAULTS.browse.maxItems)
+  settings.browse.maxShots = clampNumber(settings.browse.maxShots, 0, 50, DEFAULTS.browse.maxShots)
+  settings.browse.freeWindows = cleanTimeWindows(settings.browse.freeWindows, DEFAULTS.browse.freeWindows)
+  for (const key of ['socialApps', 'socialWriteWords', 'targets']) settings.browse[key] = cleanStringList(settings.browse[key])
+  settings.resume.pauseMediaOnInterrupt = settings.resume.pauseMediaOnInterrupt !== false
+  settings.voice.timeoutMs = clampNumber(settings.voice.timeoutMs, 1000, 600000, DEFAULTS.voice.timeoutMs)
+  settings.mousepet.cursorMode = ['companion', 'clean'].includes(settings.mousepet.cursorMode) ? settings.mousepet.cursorMode : DEFAULTS.mousepet.cursorMode
+  settings.mousepet.cursorHoldMs = clampNumber(settings.mousepet.cursorHoldMs, 0, 60000, DEFAULTS.mousepet.cursorHoldMs)
+  settings.mousepet.cursorSize = clampNumber(settings.mousepet.cursorSize, 24, 192, DEFAULTS.mousepet.cursorSize)
+  settings.mousepet.companion.tickMs = clampNumber(settings.mousepet.companion.tickMs, 0, 86400000, DEFAULTS.mousepet.companion.tickMs)
+  settings.mousepet.companion.bubbleMs = clampNumber(settings.mousepet.companion.bubbleMs, 500, 60000, DEFAULTS.mousepet.companion.bubbleMs)
+  settings.bilibili.searchMaxPageSize = clampNumber(settings.bilibili.searchMaxPageSize, 1, 50, DEFAULTS.bilibili.searchMaxPageSize)
+  settings.bilibili.subtitleMaxChars = clampNumber(settings.bilibili.subtitleMaxChars, 1000, 100000, DEFAULTS.bilibili.subtitleMaxChars)
+  settings.bilibili.timeoutMs = clampNumber(settings.bilibili.timeoutMs, 1000, 120000, DEFAULTS.bilibili.timeoutMs)
+  settings.graph.syncSeconds = clampNumber(settings.graph.syncSeconds, 15, 3600, DEFAULTS.graph.syncSeconds)
+  return settings
 }
 function cleanStringList(value) {
   if (!Array.isArray(value)) return []
@@ -79,7 +143,7 @@ export class SettingsStore {
     try { saved = JSON.parse(readFileSync(this.file, 'utf8')) } catch {}
     // The workspace must be visible synchronously to dependent plugins during
     // their apply() phase; token loading remains asynchronous and secret-only.
-    this.settings = merge(merge(DEFAULTS, config), saved)
+    this.settings = normalizePluginSettings(merge(merge(DEFAULTS, config), saved))
     this.settings.workspace = path.resolve(String(this.settings.workspace || DEFAULTS.workspace))
     this.settings.ownerIds = cleanStringList(this.settings.ownerIds)
     this.settings.personaFiles = safeRelativeList(this.settings.personaFiles, DEFAULTS.personaFiles)
@@ -147,7 +211,7 @@ export class SettingsStore {
     await rename(tmp, this.secretsFile)
   }
   async patch(patch = {}, token) {
-    const allowed = ['enabled', 'workspace', 'ownerIds', 'agentPreset', 'personaFiles', 'diaryDir', 'diaryCount', 'diaryChars', 'maxChars', 'discord', 'memory', 'voice', 'interest', 'advanced']
+    const allowed = ['enabled', 'workspace', 'ownerIds', 'agentPreset', 'personaFiles', 'diaryDir', 'diaryCount', 'diaryChars', 'maxChars', 'discord', 'memory', 'voice', 'interest', 'browse', 'resume', 'wake', 'mousepet', 'bilibili', 'activities', 'skillIsolate', 'graph', 'advanced']
     const picked = {}
     for (const key of allowed) if (patch[key] !== undefined) picked[key] = patch[key]
     if (picked.discord) {
@@ -156,7 +220,7 @@ export class SettingsStore {
       delete picked.discord.tokenInput
       delete picked.discord.tokenConfigured
     }
-    this.settings = merge(this.settings, picked)
+    this.settings = normalizePluginSettings(merge(this.settings, picked))
     this.settings.workspace = path.resolve(String(this.settings.workspace || DEFAULTS.workspace))
     this.settings.ownerIds = cleanStringList(this.settings.ownerIds)
     this.settings.personaFiles = safeRelativeList(this.settings.personaFiles, DEFAULTS.personaFiles)
