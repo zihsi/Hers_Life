@@ -45,9 +45,9 @@ export const name = 'dsh-ming-graph'
 export const inject = ['hersLifeDiscord']
 const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 
-// 工作区：环境变量优先；没有就从本机配置的 diaryDir（<ws>\diary）推，再退 workspace 键。
-// 2026-11-15 14:4x：面板第一版上线就撞上这件事——宿主进程里根本没有 MING_WORKSPACE，
-// 而本机配置只写了 diaryDir，于是 /acp 读不到账本。同一个坑也让 cost 页的价目表一直指着 '\live\...'。
+// 工作區優先讀 Hers Life 設定中心同步的 workspace；首次啟動時再回退 ming-memory.json 與 ming-graph.json。一般使用者不需要設定 MING_WORKSPACE 等環境變數。
+
+
 function resolveWorkspace() {
   try {
     const central = JSON.parse(readFileSync(path.join(DSH_HOME, 'hers-life.json'), 'utf8'))
@@ -87,7 +87,7 @@ const DEFAULTS = {
 
 // ---------- 本地配置 ----------
 // 路径、号码、群名这些跟某台机器绑在一起的值不进仓库。
-// 放 ~/.dsh/ming-graph.json（或用环境变量 MING_GRAPH_CONFIG 指一个文件），
+// 放 ~/.dsh/ming-graph.json；路徑與內容由 Hers Life 設定中心同步，
 // 仓库里只留通用默认。沒有這個檔案也能跑：只顯示 DSH 記憶與 Discord 事件。
 export function loadLocalConfig(file) {
   const f = file || path.join(DSH_HOME, 'ming-graph.json')
