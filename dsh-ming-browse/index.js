@@ -38,7 +38,7 @@ import { check as checkPermission, normalizePolicy } from './lib/permissions.mjs
 import { openMyBrowser } from './browser-launch.mjs'
 
 export const name = 'ming-browse'
-const DSH_HOME = process.env.DSH_HOME || path.join(DSH_HOME)
+const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 
 /** agents.create / resume 要 agents；ctx.interval 要 timer。其余服务按可选处理。 */
 export const inject = ['agents', 'timer', 'tools', 'hersLifeDiscord']
