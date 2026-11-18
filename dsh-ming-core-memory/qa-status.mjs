@@ -27,6 +27,7 @@ writeFileSync(join(notesDir, '20260101-000000-legacy.md'),
 const { apply } = await import('./lib/index.js')
 const tools = []
 const ctx = {
+  on: () => {},
   tools: { register: (d) => tools.push(d) },
   systemPrompt: { section: () => {} },
   inject: () => {},
