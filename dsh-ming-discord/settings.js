@@ -40,7 +40,8 @@ const DEFAULTS = {
   resume: { enabled: true, adbPath: 'D:\\MuMuPlayer\\nx_device\\12.0\\shell\\adb.exe', serial: '127.0.0.1:7555', pauseMediaOnInterrupt: true },
   wake: { enabled: true },
   mousepet: {
-    enabled: true, cursorMode: 'companion', cursorHoldMs: 2600, cursorSize: 64, webpickDir: '',
+    enabled: true, cursorMode: 'companion', cursorHoldMs: 2600, cursorSize: 64, cursorState: 'pointer', webpickDir: '',
+    shake: { on: true, level: 'medium' },
     companion: { enabled: true, tickMs: 0, provider: 'wb-proxy', model: 'hy4-preview', bubbleMs: 4200, workspace: '' },
   },
   bilibili: { enabled: true, credentialFile: '', searchMaxPageSize: 20, subtitleMaxChars: 16000, timeoutMs: 30000 },
@@ -75,7 +76,7 @@ function normalizePluginSettings(settings) {
   settings.browse = { ...DEFAULTS.browse, ...(settings.browse || {}) }
   settings.resume = { ...DEFAULTS.resume, ...(settings.resume || {}) }
   settings.wake = { ...DEFAULTS.wake, ...(settings.wake || {}) }
-  settings.mousepet = { ...DEFAULTS.mousepet, ...(settings.mousepet || {}), companion: { ...DEFAULTS.mousepet.companion, ...(settings.mousepet?.companion || {}) } }
+  settings.mousepet = { ...DEFAULTS.mousepet, ...(settings.mousepet || {}), shake: { ...DEFAULTS.mousepet.shake, ...(settings.mousepet?.shake || {}) }, companion: { ...DEFAULTS.mousepet.companion, ...(settings.mousepet?.companion || {}) } }
   settings.bilibili = { ...DEFAULTS.bilibili, ...(settings.bilibili || {}) }
   settings.activities = { ...DEFAULTS.activities, ...(settings.activities || {}) }
   settings.skillIsolate = { ...DEFAULTS.skillIsolate, ...(settings.skillIsolate || {}) }
