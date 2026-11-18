@@ -88,16 +88,17 @@ ${panel}
 })
 `
 
+const normalizedOut = out.replace(/\r\n/g, '\n')
 const OUT = path.join(here, 'client.js')
 if (process.argv.includes('--check')) {
   let current = ''
   try { current = (await fs.readFile(OUT, 'utf8')).replace(/\r\n/g, '\n') } catch { /* 缺少生成物也视为过期 */ }
-  if (current !== out) {
+  if (current !== normalizedOut) {
     console.error('✗ client.js 与 src／共用主题不一致；请执行 node build.mjs')
     process.exit(1)
   }
   console.log('✓ client.js 是最新的（' + out.length + ' bytes）')
 } else {
-  await fs.writeFile(OUT, out, 'utf8')
-  console.log('client.js', out.length, 'bytes')
+  await fs.writeFile(OUT, normalizedOut, 'utf8')
+  console.log('client.js', normalizedOut.length, 'bytes')
 }
