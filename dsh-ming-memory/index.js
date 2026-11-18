@@ -1069,7 +1069,16 @@ function readCwd(agent) {
 }
 
 export function apply(ctx, config) {
-  const cfg = normalize({ ...(config || {}), root: config?.root || ctx.hersLifeDiscord?.workspace || loadLocalConfig().root })
+  const central = ctx.hersLifeDiscord?.getSetting?.('memory', {}) || {}
+  const cfg = normalize({
+    ...(config || {}),
+    personaFiles: ctx.hersLifeDiscord?.getSetting?.('personaFiles', config?.personaFiles),
+    diaryDir: ctx.hersLifeDiscord?.getSetting?.('diaryDir', config?.diaryDir),
+    diaryCount: ctx.hersLifeDiscord?.getSetting?.('diaryCount', config?.diaryCount),
+    diaryChars: ctx.hersLifeDiscord?.getSetting?.('diaryChars', config?.diaryChars),
+    maxChars: ctx.hersLifeDiscord?.getSetting?.('maxChars', config?.maxChars),
+    root: config?.root || ctx.hersLifeDiscord?.workspace || loadLocalConfig().root,
+  })
   registerArchiveRoutes(ctx)
   loadShared(cfg).catch(() => {})
 
