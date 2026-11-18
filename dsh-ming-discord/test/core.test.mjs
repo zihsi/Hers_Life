@@ -392,19 +392,26 @@ test('Discord settings store follows the host-provided DSH_HOME directory', asyn
   }
 })
 
-test('DM, guild channel and thread get distinct durable session ids', async () => {
+test('DM, guild channels and threads keep separate sessions but mount the same DSH Agent preset', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-pool-'))
   try {
-    const settings = new SettingsStore({ workspace: root }, { home: root })
+    const settings = new SettingsStore({ workspace: root, agentPreset: 'shared-hers-life-preset' }, { home: root })
     await settings.load()
     const created = []
     const ctx = {
-      get() { return undefined },
+      get(name) {
+        if (name === 'agentPresets') return {
+          async mount(agentCtx, preset) { agentCtx.mountedPreset = preset },
+        }
+        return undefined
+      },
       agents: {
         get() { return undefined },
-        async create({ sessionId }) {
+        async create({ sessionId, meta, setup }) {
+          const agentCtx = {}
+          await setup?.(agentCtx)
           const agent = { id: sessionId, session: { id: sessionId }, status: 'idle' }
-          created.push(sessionId)
+          created.push({ sessionId, preset: agentCtx.mountedPreset, meta })
           return { agent }
         },
         async resume() { throw new Error('no stored session') },
@@ -413,14 +420,17 @@ test('DM, guild channel and thread get distinct durable session ids', async () =
     const pool = new DiscordSessionPool({ ctx, settings })
     await pool.load()
     const dm = { kind: 'dm', channelId: 'dm-100', userId: 'owner-1' }
-    const channel = { kind: 'channel', channelId: 'chan-1', guildId: 'guild-1' }
+    const channelOne = { kind: 'channel', channelId: 'chan-1', guildId: 'guild-1' }
+    const channelTwo = { kind: 'channel', channelId: 'chan-2', guildId: 'guild-1' }
     const thread = { kind: 'channel', channelId: 'thread-1', guildId: 'guild-1', thread: true }
-    assert.notEqual(pool.sessionIdFor(dm), pool.sessionIdFor(channel))
-    assert.notEqual(pool.sessionIdFor(channel), pool.sessionIdFor(thread))
-    assert.notEqual(pool.sessionIdFor(dm), pool.sessionIdFor(thread))
-    await Promise.all([pool.acquire(dm), pool.acquire(channel), pool.acquire(thread)])
-    assert.equal(new Set(created).size, 3)
-    assert.equal(pool.list().length, 3)
+    const targets = [dm, channelOne, channelTwo, thread]
+    const sessionIds = targets.map((target) => pool.sessionIdFor(target))
+    assert.equal(new Set(sessionIds).size, targets.length)
+    await Promise.all(targets.map((target) => pool.acquire(target)))
+    assert.equal(new Set(created.map((item) => item.sessionId)).size, targets.length)
+    assert.equal(pool.list().length, targets.length)
+    assert.ok(created.every((item) => item.preset === 'shared-hers-life-preset'), 'every independent session must mount the same Agent preset')
+    assert.ok(created.every((item) => item.meta.hersLife.platform === 'discord'))
   } finally {
     await rm(root, { recursive: true, force: true })
   }
