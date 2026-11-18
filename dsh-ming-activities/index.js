@@ -5,7 +5,9 @@ export const name = 'ming-activities'
 export const inject = ['hersLifeDiscord']
 
 export function apply(ctx, config = {}) {
-  const configured = config.root || ctx.hersLifeDiscord?.workspace || process.env.MING_WORKSPACE || ''
+  const central = ctx.hersLifeDiscord?.getSetting?.('activities', {}) || {}
+  if (central.enabled === false) return
+  const configured = central.root || config.root || ctx.hersLifeDiscord?.workspace || process.env.MING_WORKSPACE || ''
   const root = typeof configured === 'string' && configured.trim() ? resolve(configured.trim()) : ''
   const store = createActivityStore(root)
   ctx.inject(['connection', 'webServer'], c => {
