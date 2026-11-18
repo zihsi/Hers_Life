@@ -431,6 +431,24 @@ test('DM, guild channels and threads keep separate sessions but mount the same D
     assert.equal(pool.list().length, targets.length)
     assert.ok(created.every((item) => item.preset === 'shared-hers-life-preset'), 'every independent session must mount the same Agent preset')
     assert.ok(created.every((item) => item.meta.hersLife.platform === 'discord'))
+
+    const brokenCtx = {
+      get(name) {
+        if (name === 'agentPresets') return { async mount() { throw new Error('preset not found') } }
+        return undefined
+      },
+      agents: {
+        get() { return undefined },
+        async create({ setup }) { await setup?.({}); return { agent: { session: { id: 'should-not-exist' } } } },
+        async resume() { throw new Error('no stored session') },
+      },
+    }
+    const brokenPool = new DiscordSessionPool({ ctx: brokenCtx, settings })
+    await assert.rejects(
+      brokenPool.acquire({ kind: 'channel', channelId: 'bad-channel', guildId: 'guild-1' }),
+      /Agent Preset「shared-hers-life-preset」載入失敗/,
+      'a configured preset must never silently fall back to a different personality',
+    )
   } finally {
     await rm(root, { recursive: true, force: true })
   }
