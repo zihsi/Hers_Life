@@ -145,7 +145,7 @@ export function apply(ctx, pluginConfig = {}) {
   let status = { state: 'starting', error: '', connectedAt: null }
 
   const ensurePrivacy = async () => {
-    const result = await quarantinePrivateDmDiary(settings.resolve().workspace, settings.home)
+    const result = await quarantinePrivateDmDiary(settings.resolve().workspace, settings.home, settings.get('diaryDir', 'diary'))
     if (result.entriesMoved > 0) {
       logger?.warn('privacy: quarantined ' + result.entriesMoved + ' legacy private DM diary entries from ' + result.filesChanged + ' shared diary file(s)')
     }
