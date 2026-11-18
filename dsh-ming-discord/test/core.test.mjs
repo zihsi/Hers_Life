@@ -3,7 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import assert from 'node:assert/strict'
 import os from 'node:os'
 import path from 'node:path'
-import { mkdtemp, rm, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdtemp, rm, mkdir, readdir, readFile, writeFile, symlink } from 'node:fs/promises'
 import { readDiscord } from '../../dsh-ming-memory/lib/model.mjs'
 import { readDiscordEvents } from '../../dsh-ming-memory/lib/neuron.mjs'
 import { SettingsStore, isDiaryFilename, isDiaryPath } from '../settings.js'
@@ -113,6 +113,35 @@ test('workspace initialization creates custom persona files and diary folders au
     assert.equal(await readFile(customPersona, 'utf8'), '# Existing custom persona\\nDo not overwrite.\\n')
   } finally {
     await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('workspace initialization rejects persona paths that escape through directory symlinks', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-workspace-link-'))
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'hers-life-outside-'))
+  try {
+    const link = path.join(root, 'persona', 'external')
+    await mkdir(path.dirname(link), { recursive: true })
+    try {
+      await symlink(outside, link, process.platform === 'win32' ? 'junction' : 'dir')
+    } catch (error) {
+      if (['EPERM', 'EACCES', 'ENOTSUP'].includes(error?.code)) {
+        t.skip('this runner does not permit directory symlinks')
+        return
+      }
+      throw error
+    }
+    await assert.rejects(
+      ensureWorkspace(root, { personaFiles: ['persona/external/secret.md'] }),
+      /符號連結離開工作區/,
+    )
+    await assert.rejects(
+      readFile(path.join(outside, 'secret.md'), 'utf8'),
+      { code: 'ENOENT' },
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(outside, { recursive: true, force: true })
   }
 })
 
