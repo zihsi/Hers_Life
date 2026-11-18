@@ -20,7 +20,7 @@ import { createCard } from './lib/card.js'
 import { createWebpick } from './lib/webpick.mjs'
 
 export const name = 'ming-mousepet'
-export const inject = ['tools', 'attachments', 'webServer', 'hersLifeDiscord']
+export const inject = ['tools', 'attachments', 'webServer', 'connection', 'hersLifeDiscord']
 
 function resolveSharedWorkspace() {
   try {
@@ -320,6 +320,16 @@ function readBody(req) {
 }
 
 export async function apply(ctx, rawConfig = {}) {
+  const requireDiscordOwner = (exec, operation) => {
+    const meta = exec?.agent?.session?.header?.meta?.hersLife
+      ?? exec?.agent?.session?.header?.metadata?.hersLife ?? {}
+    if (meta.platform !== 'discord') return
+    const actor = ctx.hersLifeDiscord?.actorForExecution?.(exec)
+    if (!actor || actor.sessionId !== String(exec?.agent?.id ?? '') || !actor.userId
+      || !ctx.hersLifeDiscord?.isOwner?.(actor.userId)) {
+      throw new Error('桌面與網頁取文操作僅限 Discord Owner 使用（' + String(operation || 'pet') + '）。')
+    }
+  }
   const defineTool = await loadDefineTool()
   const log = (message) => { try { ctx?.logger?.info?.(`[ming-mousepet] ${message}`) } catch { /* ignore */ } }
   const saved = await loadSavedSettings(log)
@@ -551,7 +561,8 @@ export async function apply(ctx, rawConfig = {}) {
 
   const tool = {
     ...toolConfig,
-    async execute(args = {}) {
+    async execute(args = {}, exec) {
+      requireDiscordOwner(exec, 'pet_input')
       const action = String(args.action || 'status').toLowerCase()
       try {
         if (action === 'probe') {
@@ -796,7 +807,8 @@ export async function apply(ctx, rawConfig = {}) {
     isConcurrencySafe() {
       return false
     },
-    async execute(args = {}) {
+    async execute(args = {}, exec) {
+      requireDiscordOwner(exec, 'pet')
       const action = String(args.action || 'status').toLowerCase()
       const now = new Date()
       try {
@@ -1061,7 +1073,8 @@ export async function apply(ctx, rawConfig = {}) {
       },
       render(_args, value) { return [{ type: 'text', text: String(value?.text || '') }] },
     },
-    async execute(args) {
+    async execute(args, exec) {
+      requireDiscordOwner(exec, 'webpick')
       const action = String(args?.action || 'status')
       if (action === 'status') {
         const s = webpick.status()
@@ -1190,7 +1203,9 @@ export async function apply(ctx, rawConfig = {}) {
     // 别被下面那个裸 204 吃掉（它不带 CORS 头，扩展的预检会失败）。
     if (route === '/webpick' || route.startsWith('/webpick/')) {
       return webpick.handleRequest(req, res, route.slice('/webpick'.length))
-    }
+    }    const rejection = ctx.connection?.requestRejection?.(req)
+    if (rejection !== undefined) return json(res, rejection || 403, { ok: false, error: 'rejected' })
+
     if (req.method === 'OPTIONS') {
       res.statusCode = 204
       return res.end()

@@ -568,7 +568,15 @@ export function applyBilibiliSocialTools(ctx, options = {}) {
   /** 逐个注册；失败的单个工具只记一行日志（不带任何凭证）。 */
   const add = (tool) => {
     try {
-      ctx.tools.register({ ...tool, timeoutMs, output: textOutput })
+      const execute = tool.execute
+      const protectedTool = tool.name === 'bilibili_comments' ? tool : {
+        ...tool,
+        async execute(args, exec) {
+          if (typeof options.authorize === 'function') options.authorize(exec, tool.name)
+          return execute(args, exec)
+        },
+      }
+      ctx.tools.register({ ...protectedTool, timeoutMs, output: textOutput })
       registered.push(tool.name)
     } catch (error) {
       console.error('[ming-bilibili] ' + tool.name + ' 注册失败（其余工具不受影响）：' + String((error && error.message) || error))

@@ -119,7 +119,21 @@ export function apply(ctx, config) {
             const minutes = Number(args && args.minutes)
             const reason = String((args && args.reason) || '').trim()
             const agent = exec && exec.agent
-            const sid = String((args && args.sessionId) || agent?.session?.header?.id || agent?.session?.id || agent?.id || '').trim()
+            const currentSid = String(exec?.agent?.id ?? '').trim()
+            const requestedSid = String((args && args.sessionId) || '').trim()
+            const meta = exec?.agent?.session?.header?.meta?.hersLife
+              ?? exec?.agent?.session?.header?.metadata?.hersLife ?? {}
+            let sid = requestedSid || currentSid || String(agent?.session?.header?.id || agent?.session?.id || agent?.id || '').trim()
+            if (meta.platform === 'discord') {
+              const actor = ctx.hersLifeDiscord?.actorForExecution?.(exec)
+              if (!actor || !currentSid || actor.sessionId !== currentSid || !actor.userId) {
+                throw new Error('無法確認 Discord 呼叫者身分，提醒已拒絕。')
+              }
+              if (requestedSid && requestedSid !== currentSid && !ctx.hersLifeDiscord?.isOwner?.(actor.userId)) {
+                throw new Error('只有 Discord Owner 可以替其他會話排提醒。')
+              }
+              sid = requestedSid || currentSid
+            }
             if (!Number.isFinite(minutes) || minutes <= 0) return 'minutes 得是正数。'
             if (!reason) return 'reason 不能空。'
             if (!sid) return '拿不到当前会话，请显式提供 sessionId。'

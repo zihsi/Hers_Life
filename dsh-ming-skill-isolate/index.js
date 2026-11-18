@@ -20,7 +20,8 @@
  *   - 不改任何 SKILL.md，不写别人的目录；状态只写 root 下的 skills-off.json。
  *   - 任何异常都只让遮罩不生效，不影响会话。
  */
-import { readFile, writeFile, rename, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, rename, mkdir, unlink } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import os from 'node:os'
 import { readFileSync } from 'node:fs'
@@ -62,22 +63,31 @@ function insideRoot(cwd, root) {
 }
 
 async function readState(stateFile) {
-  try {
-    const raw = await readFile(stateFile, 'utf8')
-    const parsed = JSON.parse(raw)
-    const off = Array.isArray(parsed && parsed.off) ? parsed.off.filter((n) => typeof n === 'string') : []
-    const note = parsed && typeof parsed.note === 'string' ? parsed.note : ''
-    return { off, note }
-  } catch {
-    return { off: [], note: '' }
+  let raw
+  try { raw = await readFile(stateFile, 'utf8') }
+  catch (error) {
+    if (error?.code === 'ENOENT') return { off: [], note: '' }
+    throw error
   }
+  let parsed
+  try { parsed = JSON.parse(raw) }
+  catch { throw new Error('skills-off.json JSON 損壞；原檔已保留，沒有套用空狀態。') }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || !Array.isArray(parsed.off)
+    || parsed.off.some((n) => typeof n !== 'string' || !n.trim())) {
+    throw new Error('skills-off.json 格式不正確；原檔已保留。')
+  }
+  return { off: [...new Set(parsed.off.map((n) => n.trim()))], note: typeof parsed.note === 'string' ? parsed.note : '' }
 }
 
 async function writeState(stateFile, state) {
   await mkdir(path.dirname(stateFile), { recursive: true })
-  const tmp = stateFile + '.tmp'
-  await writeFile(tmp, JSON.stringify(state, null, 2) + '\n', 'utf8')
-  await rename(tmp, stateFile)
+  const tmp = stateFile + '.' + randomUUID() + '.tmp'
+  try {
+    await writeFile(tmp, JSON.stringify(state, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' })
+    await rename(tmp, stateFile)
+  } finally {
+    await unlink(tmp).catch(() => {})
+  }
 }
 
 export function apply(ctx, config) {
@@ -87,6 +97,8 @@ export function apply(ctx, config) {
     if (!config?.stateFile) cfg.stateFile = path.join(cfg.root, 'skills-off.json')
   }
   const controls = new Set()
+  let mutationQueue = Promise.resolve()
+  const mutate = (fn) => { const result = mutationQueue.then(fn); mutationQueue = result.catch(() => {}); return result }
   const retainControl = (control) => {
     if (control.signal?.aborted) return
     controls.add(control)
@@ -171,7 +183,16 @@ export function apply(ctx, config) {
       schema: { type: 'string' },
       render: (_args, value) => [{ type: 'text', text: String(value) }],
     },
-    async execute(args) {
+    async execute(args, exec) {
+      const meta = exec?.agent?.session?.header?.meta?.hersLife
+        ?? exec?.agent?.session?.header?.metadata?.hersLife ?? {}
+      if (meta.platform === 'discord') {
+        const actor = ctx.hersLifeDiscord?.actorForExecution?.(exec)
+        if (!actor || actor.sessionId !== String(exec?.agent?.id ?? '') || !actor.userId
+          || !ctx.hersLifeDiscord?.isOwner?.(actor.userId)) {
+          throw new Error('Discord 中的 skill 隔離設定僅限 Owner 使用。')
+        }
+      }
       const action = args && args.action
       const target = args && typeof args.name === 'string' ? args.name.trim() : ''
 
@@ -198,15 +219,19 @@ export function apply(ctx, config) {
       }
       if (!target) return action + ' 需要提供 name'
 
-      const state = await readState(cfg.stateFile)
-      const set = new Set(state.off)
-      if (action === 'off') set.add(target)
-      else set.delete(target)
-      const next = { ...state, off: [...set].sort() }
+      let next
       try {
-        await writeState(cfg.stateFile, next)
+        next = await mutate(async () => {
+          const state = await readState(cfg.stateFile)
+          const set = new Set(state.off)
+          if (action === 'off') set.add(target)
+          else set.delete(target)
+          const updated = { ...state, off: [...set].sort() }
+          await writeState(cfg.stateFile, updated)
+          return updated
+        })
       } catch (e) {
-        return '写状态文件失败：' + String((e && e.message) || e)
+        return '寫狀態檔失敗（損壞的原檔會保留，不會覆寫）：' + String((e && e.message) || e)
       }
       // 让注册表丢掉缓存，下一步就能看到变化
       for (const control of controls) {

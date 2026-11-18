@@ -16,7 +16,7 @@ export const name = 'ming-bilibili-account'
  * tools 必须有；systemPrompt / credentials 都声明上（宿主里都有），
  * 但下面每一处调用都另做了一次「服务在不在」的判断，缺哪个都不至于整个插件挂掉。
  */
-export const inject = ['tools', 'systemPrompt', 'credentials']
+export const inject = ['tools', 'systemPrompt', 'credentials', 'hersLifeDiscord']
 
 // —— B站取数：从 dsh-plugin-bilibili 搬过来的 provider 与五个工具（原样 vendored）——
 import { readFile, writeFile } from 'node:fs/promises'
@@ -190,6 +190,19 @@ async function api(pathname, init) {
 // rebuildProvider —— 名字不在作用域里，一进去就 ReferenceError，被 catch 吞掉：
 // 结果「显示已登录」，provider 没换、nav 也没校验。恢复流程现在在 apply 里面（见 restoreLogin）。
 
+function requireBilibiliOwner(ctx, exec, operation) {
+  const meta = exec?.agent?.session?.header?.meta?.hersLife
+    ?? exec?.agent?.session?.header?.metadata?.hersLife ?? {}
+  if (meta.platform !== 'discord') return
+  const actor = ctx.hersLifeDiscord?.actorForExecution?.(exec)
+  const agentId = String(exec?.agent?.id ?? '')
+  if (!actor || !agentId || actor.sessionId !== agentId || !actor.userId
+    || typeof ctx.hersLifeDiscord?.isOwner !== 'function'
+    || !ctx.hersLifeDiscord.isOwner(actor.userId)) {
+    throw new Error('B 站帳號與私人資料工具僅限 Discord Owner 使用（' + String(operation || 'account') + '）。')
+  }
+}
+
 export function apply(ctx, config) {
   // ——— B站取数（搜索 / 视频详情 / 字幕 / 直链 / 抽帧） ———
   // 配置走纯对象，不挂 schemastery：少一个依赖就少一处加载失败。
@@ -299,6 +312,7 @@ export function apply(ctx, config) {
       credentialFile: cfg.credentialFile || DEFAULT_CREDENTIAL_FILE,
       timeoutMs: toolTimeout,
       cookieProvider: () => session(),
+      authorize: (exec, name) => requireBilibiliOwner(ctx, exec, name),
     })
   } catch (e) {
     console.error('[ming-bilibili] 社交面工具整体注册失败（其余工具不受影响）：' + String((e && e.message) || e))
@@ -319,7 +333,8 @@ export function apply(ctx, config) {
       required: ['action'],
     },
     output: { schema: { type: 'string' }, render: (_a, v) => [{ type: 'text', text: String(v) }] },
-    async execute(args) {
+    async execute(args, exec) {
+      requireBilibiliOwner(ctx, exec, 'bili_login')
       const action = args && args.action
 
       if (action === 'status') {
@@ -419,7 +434,8 @@ export function apply(ctx, config) {
       required: ['action'],
     },
     output: { schema: { type: 'string' }, render: (_a, v) => [{ type: 'text', text: String(v) }] },
-    async execute(args) {
+    async execute(args, exec) {
+      requireBilibiliOwner(ctx, exec, 'bili_me')
       const action = args && args.action
       if (!session().loggedIn) return '还没登录。先 bili_login action=start。'
 
