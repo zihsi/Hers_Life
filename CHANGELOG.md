@@ -9,6 +9,7 @@
 - Slash 指令落實 DM 政策、Guild／Channel 白名單及 Owner-only 權限；跨頻道發檔案被限制到目前發起回合的頻道，並以真實路徑與使用者／Session 標籤限制檔案範圍。
 - PNG／APNG／GIF Discord 貼圖會下載並轉成模型影像區塊；Lottie 仍只提供文字描述。
 - 修正多人同頻道並行時的發起者身分競態，改用 AsyncLocalStorage 綁定每次工具執行；依 DSH 正式 ToolRunContext.agent.id 讀取 Session ID。
+- 私訊召回改為精確比對 Discord User ID；多 Owner 之間不再共享私人背景。關閉跨伺服器記憶時，DM 也不再成為可讀取所有伺服器的萬用範圍。
 - 事件預覽同步套用 Guild／Channel 白名單；補齊 Gateway 特權 Intent、DAVE 語音先決條件文件。
 
 ### 開場記憶 dsh-ming-memory@0.2.3
