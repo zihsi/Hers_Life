@@ -785,7 +785,7 @@ test('shared memory recalls across guilds and hides private source attribution',
     assert.match(ownerPrompt, /Server A \/ #hardware/)
     assert.match(ownerPrompt, /RTX 5080/)
     assert.match(ownerPrompt, /私人背景（來源隱去）/)
-    assert.doesNotMatch(ownerPrompt, /Discord 私訊/)
+    assert.match(ownerPrompt, /Owner 私訊背景（不得公開）/, 'the model can identify the source while being instructed not to disclose it')
     assert.doesNotMatch(ownerPrompt, /owner-secret/)
 
     const ownerDmPrompt = await brain.recallContext('RTX 5080', {
