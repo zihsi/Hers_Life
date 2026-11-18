@@ -179,6 +179,10 @@ export class DaveSession {
     if (!Number.isInteger(version) || version <= 0) {
       throw new Error('DAVE transition requested protocol version 0; refusing unencrypted voice fallback')
     }
+    const maximum = Number(this.native?.DAVE_PROTOCOL_VERSION ?? 0)
+    if (!Number.isInteger(maximum) || version > maximum) {
+      throw new Error('Discord requested DAVE transition v' + version + ', but this addon supports up to v' + maximum)
+    }
     this.pendingTransitions.set(id, version)
     this.logger?.debug('dave: prepare transition ' + id + ' (v' + version + ')')
     // The addon must be told about the transition before it will hand out keys.
@@ -298,7 +302,7 @@ export class DaveSession {
     }
   }
 
-  /** Run one Opus frame through the group cipher (no-op while inactive). */
+  /** Run one Opus frame through DAVE; return null until the MLS group is ready. */
   encrypt(opus) {
     // Never send raw Opus when the MLS group is not ready or encryption fails.
     // A null result tells VoiceConnection to drop this RTP frame.
