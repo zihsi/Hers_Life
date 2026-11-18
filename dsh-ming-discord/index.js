@@ -222,7 +222,16 @@ export function apply(ctx, pluginConfig = {}) {
 
           const route = url.pathname.slice(API.length).replace(/^\//, '')
           if (req.method === 'GET' && (route === 'settings' || route === 'state')) {
-            send(res, 200, { ok: true, settings: settings.publicConfig(), status, hasToken: settings.hasToken(),
+            const resolved = settings.resolve()
+            const paths = {
+              dshHome: settings.home,
+              workspace: resolved.workspace,
+              dataRoot: resolved.dataRoot,
+              diary: path.join(resolved.workspace, String(settings.get('diaryDir', 'diary') || 'diary')),
+              memoryEvents: path.join(resolved.dataRoot, 'discord-memory.jsonl'),
+              sessionIndex: path.join(resolved.dataRoot, 'discord-sessions.json'),
+            }
+            send(res, 200, { ok: true, settings: settings.publicConfig(), status: { ...status, paths }, paths, hasToken: settings.hasToken(),
               events: events?.list?.(30) ?? [], sessions: pool?.list?.() ?? [], interests: interests?.list?.(100) ?? [] })
             return
           }
@@ -417,6 +426,12 @@ export function apply(ctx, pluginConfig = {}) {
     actorForExecution: (exec) => bridge?.actorForExecution(exec) ?? null,
     sessionIdFor: (target) => pool?.sessionIdFor(target) ?? '',
     ownerIds: () => settings.ownerIds(),
+    get home() { return settings.home },
+    get dataRoot() { return settings.resolve().dataRoot },
+    get paths() {
+      const resolved = settings.resolve()
+      return { dshHome: settings.home, workspace: resolved.workspace, dataRoot: resolved.dataRoot }
+    },
     get workspace() { return settings.resolve().workspace },
     get status() { return status },
     get bridge() { return bridge },
