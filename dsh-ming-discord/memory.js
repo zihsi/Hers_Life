@@ -121,12 +121,12 @@ export class DiscordBrain {
   canRecall(event, target, sessionKey) {
     if (event.sessionId === sessionKey) return false
     if (event.scope === 'guild') {
-      if (!this.settings.get('memory.shareAcrossChannels', true)) return false
       const sameGuild = target.kind !== 'dm' && String(event.guildId) === String(target.guildId)
       // Cross-channel continuity belongs to the same Owner. Do not let a
       // member use the bot as a side door into staff-only/private channels.
       const userId = String(target.userId ?? '')
       if (sameGuild) {
+        if (!this.settings.get('memory.shareAcrossChannels', true)) return false
         if (!userId || !this.settings.isOwner(userId)) return false
         const participantId = String(event.participantId || event.authorId || '')
         return participantId === userId
@@ -175,9 +175,12 @@ export class DiscordBrain {
     const participantId = String(target.userId || '')
     if (participantId && selectedByKey.size < max) {
       const recent = this.events
-        .filter((event) => event.sessionId !== sessionKey &&
-          String(event.participantId || event.authorId || '') === participantId &&
-          this.canRecall(event, target, sessionKey))
+        .filter((event) => {
+          const at = Date.parse(event.at)
+          return event.sessionId !== sessionKey && Number.isFinite(at) && at >= cutoff &&
+            String(event.participantId || event.authorId || '') === participantId &&
+            this.canRecall(event, target, sessionKey)
+        })
         .sort((a, b) => String(b.at).localeCompare(String(a.at)))
       for (const event of recent) {
         const key = eventKey(event)
