@@ -10,7 +10,7 @@
 
 1. 在实际使用的 DSH profile 的 `package.json` 中增加依赖 `"dsh-ming-activities": "link:<源码目录>/dsh-ming-activities"`，把 `<源码目录>` 换成检出的真实目录；保留原有依赖。
 2. 把 `"dsh-ming-activities"` 加到同一 profile 的 `dsh.profile.bundles` 数组，保留原条目。使用 DSH 原有方式刷新该 profile 的依赖。
-3. 用已有 `MING_WORKSPACE` 指向伴侣资料目录；也可给 `ming-activities` 插件配置 `root`，显式 root 优先。没有配置时会提示，不会随便选一个目录保存。
+3. 工作區由 Hers Life 設定中心統一提供；獨立使用時也可在 `ming-activities` 插件配置 `root`。沒有配置時會提示，不會隨便選一個目錄保存。
 4. 重启 DSH 并刷新网页，设置里打开 **共同活动**。需要宿主网页的 slots 和 webServer 服务；纯命令行环境没有此页面。
 
 填写标题和进度后点“保存活动”。链接可留空；填写时仅接受 http/https。用“编辑”修改进度或状态，用状态筛选查找暂停或已完成的活动。
