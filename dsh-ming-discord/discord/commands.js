@@ -133,6 +133,7 @@ export class Interactions {
     this.handlers = new Map()
     this.onUnknown = options.onUnknown ?? null
     this.events = options.events ?? null
+    this.eventAllowed = options.eventAllowed ?? null
   }
 
   setApplicationId(id) {
@@ -170,7 +171,8 @@ export class Interactions {
           ? '表单 ' + String(interaction.data?.custom_id ?? '?')
           : '点了 ' + String(interaction.data?.custom_id ?? '?')
     // Private DM commands are not copied into the shared public event preview.
-    if (interaction.guild_id !== undefined && interaction.guild_id !== null) {
+    if (interaction.guild_id !== undefined && interaction.guild_id !== null &&
+      (!this.eventAllowed || this.eventAllowed(interaction))) {
       this.events?.push('INTERACTION_CREATE', summary, { id, userId: String(user.id ?? '') })
     }
 
