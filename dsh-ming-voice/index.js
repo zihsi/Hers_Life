@@ -19,10 +19,11 @@ import { mkdir, stat, readdir, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 export const name = 'ming-voice'
+const DSH_HOME = process.env.DSH_HOME || path.join(DSH_HOME)
 function resolveWorkspace() {
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
-    const file = path.join(os.homedir(), '.dsh', 'ming-memory.json')
+    const file = path.join(DSH_HOME, 'ming-memory.json')
     const data = JSON.parse(readFileSync(file, 'utf8'))
     if (typeof data.root === 'string' && data.root.trim()) return data.root
   } catch {}
