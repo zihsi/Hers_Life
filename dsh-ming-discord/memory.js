@@ -25,6 +25,7 @@ export class DiscordBrain {
     this.queue = Promise.resolve()
     this.loaded = false
     this.notes = []
+    this.privateNotes = []
   }
   async load() {
     await mkdir(this.live, { recursive: true })
@@ -59,6 +60,7 @@ export class DiscordBrain {
       this.logger?.warn?.('Discord memory load failed: ' + String(error?.message ?? error))
     }
     await this.loadNotes()
+    await this.loadPrivateNotes()
     this.loaded = true
   }
   async loadNotes() {
@@ -181,7 +183,15 @@ export class DiscordBrain {
       }
     }
     const selected = [...selectedByKey.values()]
-    if (!selected.length) return ''
+    const privateNoteMatches = target.kind === 'dm' && this.settings.isOwner(target.userId)
+      ? this.privateNotes
+        .filter((note) => note.ownerId === String(target.userId))
+        .map((note) => ({ note, score: words(note.title + ' ' + note.body).reduce((n, word) => n + Number(queryWords.has(word)), 0) }))
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 4)
+      : []
+    if (!selected.length && !privateNoteMatches.length) return ''
     const hasPrivate = selected.some(({ event }) => event.scope === 'private')
     const lines = selected.map(({ event }) => {
       const privateInGuild = event.scope === 'private' && target.kind !== 'dm'
@@ -190,6 +200,9 @@ export class DiscordBrain {
       const label = privateInGuild ? '私人背景（來源隱去）' : this.sourceLabel(event)
       return '- [' + label + ' · ' + time + '] ' + who + '：' + event.text.slice(0, 420)
     })
+    for (const { note } of privateNoteMatches) {
+      lines.push('- [Owner 私訊私人筆記] ' + note.title + '：' + String(note.body || '').slice(0, 420))
+    }
     const boundary = target.kind === 'dm'
       ? '私訊來源只供目前同一位主人辨識，不要混成別人的對話。'
       : '公開頻道事件可照來源引用；私人背景只可用來理解主人，不可在伺服器引用、復述、暗示來源或向其他成員透露任何私訊內容。'
@@ -203,19 +216,47 @@ export class DiscordBrain {
     ].join('\n')
   }
   async writeNote(input) {
-    const dir = path.join(this.settings.home, 'memory', 'notes')
-    await mkdir(dir, { recursive: true })
+    const isPrivate = input?.private === true
+    const ownerId = String(input?.ownerId ?? '')
+    if (isPrivate && (!/^\d{5,30}$/.test(ownerId) || !this.settings.isOwner(ownerId))) {
+      throw new Error('private notes require the exact configured Owner ID')
+    }
+    const dir = isPrivate
+      ? path.join(this.settings.home, 'privacy-quarantine', 'private-dm-notes', ownerId)
+      : path.join(this.settings.home, 'memory', 'notes')
+    await mkdir(dir, { recursive: true, mode: isPrivate ? 0o700 : 0o755 })
     const title = String(input?.title ?? 'Discord 記憶').slice(0, 120)
     const body = String(input?.body ?? '').slice(0, 12000)
     const id = new Date().toISOString().replace(/[:.]/g, '-') + '-' + newId().slice(0, 8)
     const file = path.join(dir, id + '.md')
-    const content = ['---', 'id: ' + id, 'title: ' + title.replace(/[\r\n]/g, ' '),
-      'created: ' + new Date().toISOString(), 'updated: ' + new Date().toISOString(),
+    const created = new Date().toISOString()
+    const fileContent = ['---', 'id: ' + id, 'title: ' + title.replace(/[\r\n]/g, ' '),
+      'created: ' + created, 'updated: ' + created,
       'status: active', 'source: ' + String(input?.source ?? 'user_statement'), '---', '', body, ''].join('\n')
-    await writeFile(file, content, 'utf8')
-    const note = { id, title, body }
-    this.notes.push(note)
+    await writeFile(file, fileContent, { encoding: 'utf8', mode: isPrivate ? 0o600 : 0o644, flag: 'wx' })
+    const note = { id, title, body, ...(isPrivate ? { ownerId } : {}) }
+    if (isPrivate) this.privateNotes.push(note)
+    else this.notes.push(note)
     return note
+  }
+  async loadPrivateNotes() {
+    this.privateNotes = []
+    const owners = this.settings.ownerIds?.() || []
+    for (const rawId of owners) {
+      const ownerId = String(rawId || '')
+      if (!/^\d{5,30}$/.test(ownerId)) continue
+      const dir = path.join(this.settings.home, 'privacy-quarantine', 'private-dm-notes', ownerId)
+      let files = []
+      try { files = (await readdir(dir)).filter((name) => name.endsWith('.md')).slice(-200) } catch { continue }
+      for (const file of files) {
+        try {
+          const raw = await readFile(path.join(dir, file), 'utf8')
+          const title = /^title:\s*(.+)$/m.exec(raw)?.[1] ?? file.replace(/\.md$/, '')
+          const body = raw.split(/^---\s*$/m).slice(2).join('\n---\n').trim()
+          this.privateNotes.push({ id: file.replace(/\.md$/, ''), title, body, ownerId })
+        } catch {}
+      }
+    }
   }
   search(query, limit = 8) {
     const q = new Set(words(query))
