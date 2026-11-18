@@ -47,6 +47,15 @@ for (const entry of packages) {
     if (!(await exists(path.join(packageRoot, 'client.js')))) failures.push(entry.name + ': 宣告 DSH client 但缺少 client.js')
     requireIncluded('client.js', 'dsh.client')
   }
+  const requiredAssets = {
+    'dsh-ming-discord': ['discord/dave/davey.node'],
+    'dsh-ming-mousepet': ['sidecar.ps1'],
+    'dsh-ming-voice': ['say.mjs'],
+  }
+  for (const asset of requiredAssets[entry.name] || []) {
+    if (!(await exists(path.join(packageRoot, asset)))) failures.push(entry.name + ': 執行期資產不存在：' + asset)
+    requireIncluded(asset, '執行期資產')
+  }
 
   const main = String(manifest.main || 'index.js').replace(/^\.\//, '')
   const mainFile = path.resolve(packageRoot, main)
