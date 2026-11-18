@@ -126,7 +126,11 @@ export class DaveSession {
     if (!Number.isInteger(version) || version <= 0) {
       throw new Error('DAVE protocol version 0 would disable end-to-end encryption; plaintext voice fallback is disabled (Stage transport is not implemented)')
     }
-    if (!this.available) return
+    if (!this.available) throw new Error('DAVE native addon is unavailable')
+    const maximum = Number(this.native?.DAVE_PROTOCOL_VERSION ?? 0)
+    if (!Number.isInteger(maximum) || maximum <= 0 || version > maximum) {
+      throw new Error('Discord requested DAVE protocol v' + version + ', but this addon supports up to v' + maximum)
+    }
     this.protocolVersion = version
     if (this.session === null) {
       this.session = new this.native.DAVESession(protocolVersion, this.userId, this.channelId)
@@ -192,12 +196,13 @@ export class DaveSession {
 
   /** Hand the transition to the addon without letting a throw break the socket. */
   prepareNative(id, version) {
-    if (this.session === null) return
+    if (this.session === null) throw new Error('DAVE session is not initialised')
     try {
       this.session.prepareTransition(id, version)
       this.logger?.debug('dave: native prepare ' + id + ' (v' + version + ')')
     } catch (error) {
       this.logger?.warn('dave: native prepare ' + id + ' failed — ' + String(error?.message ?? error))
+      throw new Error('DAVE native transition preparation failed', { cause: error })
     }
   }
 
@@ -213,18 +218,17 @@ export class DaveSession {
       this.pendingTransitions.delete(id)
       throw new Error('DAVE execute transition requested protocol version 0; refusing unencrypted voice fallback')
     }
+    if (this.session === null) throw new Error('DAVE session is not initialised')
     const previous = this.protocolVersion
-    this.protocolVersion = next
-    // The addon switches epochs here; its return value says whether a prepared
-    // transition existed. Without this call the keys never become usable.
     let moved = false
-    if (this.session !== null) {
-      try {
-        moved = this.session.executeTransition(id) === true
-      } catch (error) {
-        this.logger?.warn('dave: native execute ' + id + ' failed — ' + String(error?.message ?? error))
-      }
+    try {
+      moved = this.session.executeTransition(id) === true
+    } catch (error) {
+      this.logger?.warn('dave: native execute ' + id + ' failed — ' + String(error?.message ?? error))
+      throw new Error('DAVE native transition execution failed', { cause: error })
     }
+    if (!moved) throw new Error('DAVE native addon did not execute transition ' + id)
+    this.protocolVersion = next
     if (id > 0 && this.degraded) {
       this.degraded = false
       this.logger?.info('dave: end-to-end encryption restored')
@@ -254,6 +258,7 @@ export class DaveSession {
       this.logger?.debug('dave: commit sent (' + framed.length + ' bytes)')
     } catch (error) {
       this.logger?.warn('dave: proposals failed — ' + String(error?.message ?? error))
+      throw new Error('DAVE native proposal processing failed', { cause: error })
     }
   }
 
@@ -295,12 +300,14 @@ export class DaveSession {
 
   /** Run one Opus frame through the group cipher (no-op while inactive). */
   encrypt(opus) {
-    if (!this.active) return opus
+    // Never send raw Opus when the MLS group is not ready or encryption fails.
+    // A null result tells VoiceConnection to drop this RTP frame.
+    if (!this.active) return null
     try {
       return Buffer.from(this.session.encryptOpus(opus))
     } catch (error) {
-      this.logger?.warn('dave: encrypt failed — ' + String(error?.message ?? error))
-      return opus
+      this.logger?.warn('dave: encrypt failed; dropping frame — ' + String(error?.message ?? error))
+      return null
     }
   }
 
@@ -312,16 +319,13 @@ export class DaveSession {
    * feeding noise to the decoder.
    */
   decrypt(userId, opus) {
-    if (this.session === null) return opus
+    // Non-Stage Discord voice must remain E2EE from the first received frame.
+    // If DAVE is not ready yet, drop both sealed and unsealed audio rather than
+    // guessing that an unsealed frame is safe plaintext.
+    if (!this.active) return null
     // Discord's silence frame is not encrypted and must never be handed to the
     // group cipher (the reference client skips it for the same reason).
     if (opus.length <= 3 && opus[opus.length - 1] === 0xfe && opus[opus.length - 2] === 0xff) return opus
-    const sealed = isSealed(opus)
-    if (!this.active) {
-      // Keys are not usable yet. Ciphertext is unreadable, so dropping it is
-      // honest; plaintext only gets through when nobody encrypted it.
-      return sealed ? null : opus
-    }
     try {
       return Buffer.from(this.session.decrypt(String(userId), this.native.MediaType.AUDIO, opus))
     } catch (error) {
