@@ -340,6 +340,44 @@ test('private diary quarantine propagates directory scan errors instead of marki
 })
 
 
+test('SettingsStore migrates the old Memory workspace and persona/diary settings without overriding Hers Life choices', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-legacy-settings-'))
+  try {
+    const oldWorkspace = path.join(root, 'old-workspace')
+    const dshHome = path.join(root, '.dsh')
+    await mkdir(dshHome, { recursive: true })
+    await writeFile(path.join(dshHome, 'ming-memory.json'), JSON.stringify({
+      root: oldWorkspace,
+      personaFiles: ['persona/legacy-voice.md'],
+      diaryDir: 'records/old-diary',
+      diaryCount: 7,
+      diaryChars: 6500,
+      maxChars: 14000,
+    }), 'utf8')
+    const migrated = new SettingsStore({}, { home: dshHome })
+    assert.equal(migrated.resolve().workspace, oldWorkspace)
+    assert.deepEqual(migrated.get('personaFiles'), ['persona/legacy-voice.md'])
+    assert.equal(migrated.get('diaryDir'), 'records/old-diary')
+    assert.equal(migrated.get('diaryCount'), 7)
+    await migrated.load()
+    const persisted = JSON.parse(await readFile(path.join(dshHome, 'hers-life.json'), 'utf8'))
+    assert.equal(persisted.workspace, oldWorkspace)
+    assert.deepEqual(persisted.personaFiles, ['persona/legacy-voice.md'])
+    assert.equal(persisted.diaryDir, 'records/old-diary')
+
+    const selectedWorkspace = path.join(root, 'selected-workspace')
+    await writeFile(path.join(dshHome, 'hers-life.json'), JSON.stringify({
+      workspace: selectedWorkspace,
+      personaFiles: ['persona/selected.md'],
+    }), 'utf8')
+    const selected = new SettingsStore({}, { home: dshHome })
+    assert.equal(selected.resolve().workspace, selectedWorkspace)
+    assert.deepEqual(selected.get('personaFiles'), ['persona/selected.md'])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('Discord settings store follows the host-provided DSH_HOME directory', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-dsh-home-'))
   const previous = process.env.DSH_HOME
