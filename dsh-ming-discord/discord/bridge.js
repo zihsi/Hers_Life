@@ -7,6 +7,7 @@
  * chunked output when the reply is long, attachment download into the session,
  * and reply-linking so threads stay readable.
  */
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { basename, extname, join } from 'node:path'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { chunkText, tidyReply, truncate, sleep, newId, safe } from '../util.js'
@@ -66,7 +67,7 @@ export class DiscordBridge {
     // sessionId → the actual Discord actor whose message currently owns this turn.
     // ToolRunContext exposes the calling Agent session, allowing tools to enforce
     // the same identity/permissions as the message that triggered the turn.
-    this.activeActors = new Map()
+    this.actorStorage = new AsyncLocalStorage()
     /** `${guildId}:${userId}` → channelId, so /voice join can find you. */
     this.voiceStates = new Map()
     /**
@@ -813,8 +814,10 @@ export class DiscordBridge {
 
   actorForExecution(exec) {
     const sessionId = String(exec?.agent?.session?.id ?? '')
-    const actor = sessionId ? this.activeActors.get(sessionId) : null
-    if (!actor) throw new Error('此工具只能由目前正在處理 Discord 訊息的會話呼叫。')
+    const actor = this.actorStorage.getStore() ?? null
+    if (!actor || !sessionId || actor.sessionId !== sessionId) {
+      throw new Error('此工具只能由目前正在處理 Discord 訊息的會話呼叫。')
+    }
     return actor
   }
 
@@ -862,13 +865,10 @@ export class DiscordBridge {
         guildId: String(message.guild_id ?? target.guildId ?? ''),
         isDm: target.kind === 'dm',
       }
-      this.activeActors.set(sessionId, actor)
-      let reply
-      try {
-        reply = await this.stream(entry, content, message, target)
-      } finally {
-        if (this.activeActors.get(sessionId) === actor) this.activeActors.delete(sessionId)
-      }
+      // AsyncLocalStorage binds identity to this exact async turn. A plain
+      // sessionId -> actor map is unsafe because different members share a
+      // guild-channel session and may trigger overlapping turns.
+      const reply = await this.actorStorage.run(actor, () => this.stream(entry, content, message, target))
       replyMessageId = reply?.id ?? null
 
       const answer = tidyReply(reply?.text ?? lastAssistantText(entry.agent.session, beforeSeq))
