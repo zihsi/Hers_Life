@@ -476,17 +476,29 @@ export class VoiceConnection extends EventEmitter {
         return
       }
       case VOICE_OP.DAVE_PREPARE_TRANSITION: {
-        const sendReady = this.dave?.prepareTransition(packet.d) ?? false
-        if (sendReady) {
-          this.sendWs({ op: DAVE_OP.TRANSITION_READY, d: { transition_id: packet.d.transition_id } })
+        try {
+          const sendReady = this.dave?.prepareTransition(packet.d) ?? false
+          if (sendReady) {
+            this.sendWs({ op: DAVE_OP.TRANSITION_READY, d: { transition_id: packet.d.transition_id } })
+          }
+        } catch (error) {
+          this.fail(error)
         }
         return
       }
       case VOICE_OP.DAVE_EXECUTE_TRANSITION:
-        this.dave?.executeTransition(packet.d?.transition_id)
+        try {
+          this.dave?.executeTransition(packet.d?.transition_id)
+        } catch (error) {
+          this.fail(error)
+        }
         return
       case VOICE_OP.DAVE_PREPARE_EPOCH:
-        this.dave?.prepareEpoch(packet.d)
+        try {
+          this.dave?.prepareEpoch(packet.d)
+        } catch (error) {
+          this.fail(error)
+        }
         return
       default:
         return
@@ -1272,12 +1284,25 @@ export class VoiceConnection extends EventEmitter {
   }
 
   fail(error) {
-    this.logger?.warn('voice: ' + String(error?.message ?? error))
+    if (this.closed || this.state === 'failed') return
+    const reason = error instanceof Error ? error : new Error(String(error))
+    this.logger?.warn('voice: ' + String(reason.message ?? reason))
     this.state = 'failed'
+    this.closed = true
+    this.stopPlayback()
+    this.stopHeartbeat()
+    try { this.udp?.close() } catch {}
+    this.udp = null
+    const socket = this.ws
+    this.ws = null
+    try { socket?.close(4000) } catch {}
+    try { this.gateway?.leaveVoice(this.guildId) } catch {}
+    try { this.dave?.destroy() } catch {}
+    this.dave = null
     // Wake whoever is still awaiting the handshake instead of letting them sit
-    // until `VoiceManager.join()`'s 20 s timeout reports the wrong reason.
-    this.readyReject?.(error instanceof Error ? error : new Error(String(error)))
-    this.emitSafe('error', error)
+    // until VoiceManager.join()'s 20 s timeout reports the wrong reason.
+    this.readyReject?.(reason)
+    this.emitSafe('error', reason)
   }
 }
 
@@ -1347,10 +1372,10 @@ export class VoiceManager {
   async join(guildId, channelId) {
     const key = String(guildId)
     const existing = this.connections.get(key)
-    if (existing !== undefined && existing.channelId === String(channelId)) {
-      // A rejected promise here means the socket died; the connection redials on
-      // its own, so wait for the new handshake rather than handing the caller a
-      // stale failure.
+    if (existing !== undefined && existing.channelId === String(channelId) &&
+      existing.state !== 'failed' && existing.state !== 'closed') {
+      // A rejected promise here may be a transient reconnect; only reuse a
+      // connection that still owns a live transport state.
       await existing.ready.catch(() => existing.ready)
       return existing
     }
