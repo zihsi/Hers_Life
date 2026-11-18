@@ -387,7 +387,9 @@ export function apply(ctx, pluginConfig = {}) {
               browseRotation: path.join(resolved.workspace, 'live', 'browse-session.json'),
               browseSelfWake: path.join(resolved.workspace, 'live', 'self-wake', 'state.json'),
               browseUnlimited: path.join(resolved.workspace, 'live', 'browse-unlimited.json'),
+              resumeFile: path.join(resolved.workspace, 'live', 'resume.md'),
               resumeLog: path.join(resolved.workspace, 'live', 'resume-log.jsonl'),
+              holidaysFile: path.join(resolved.workspace, 'live', 'holidays.json'),
               mousepetSettings: path.join(settings.home, 'ming-mousepet', 'settings.json'),
               wakeQueue: path.join(resolved.workspace, 'live', 'wake-arm.json'),
               voiceOutput: path.join(resolved.workspace, 'live', 'voice'),
@@ -510,7 +512,7 @@ export function apply(ctx, pluginConfig = {}) {
           if (req.method === 'GET' && route === 'workspace/files') {
             const root = settings.resolve().workspace
             const diaryDir = String(settings.get('diaryDir', 'diary') || 'diary').replace(/\\/g, '/')
-            const paths = new Set(['AGENTS.md', ...settings.get('personaFiles', [])])
+            const paths = new Set(['AGENTS.md', 'live/resume.md', 'live/holidays.json', ...settings.get('personaFiles', [])])
             const diaryRoot = path.join(root, diaryDir)
             try {
               const names = (await readdir(diaryRoot)).filter((name) => /^\d{4}-\d{2}-\d{2}\.md$/i.test(name)).sort().reverse().slice(0, 12)
@@ -524,12 +526,13 @@ export function apply(ctx, pluginConfig = {}) {
               const normalized = String(relative).replace(/\\/g, '/')
               const isPersona = settings.get('personaFiles', []).includes(normalized)
               const isAllowedDiary = normalized.startsWith(diaryDir + '/') && isDiaryFilename(normalized)
-              if (normalized !== 'AGENTS.md' && !isPersona && !isAllowedDiary) continue
+              const isWorkspaceConfig = normalized === 'live/resume.md' || normalized === 'live/holidays.json'
+              if (normalized !== 'AGENTS.md' && !isPersona && !isAllowedDiary && !isWorkspaceConfig) continue
               let target
               try { target = await resolveWorkspaceFile(root, normalized) } catch { continue }
               let content = ''
               try { content = await readFile(target, 'utf8') } catch {}
-              files.push({ path: normalized, content, kind: isPersona ? 'persona' : isAllowedDiary ? 'diary' : 'rules' })
+              files.push({ path: normalized, content, kind: isPersona ? 'persona' : isAllowedDiary ? 'diary' : isWorkspaceConfig ? 'workspace-config' : 'rules' })
             }
             const coreFile = await ensureCoreMemoryFile(settings)
             let coreContent = ''
@@ -553,7 +556,23 @@ export function apply(ctx, pluginConfig = {}) {
             const isPersona = settings.get('personaFiles', []).includes(relative)
             const isRules = relative === 'AGENTS.md'
             const isDiary = isDiaryPath(relative, diaryDir)
-            if (!isPersona && !isRules && !isDiary) throw new Error('只能編輯已設定的人設檔、AGENTS.md 或日期格式日記')
+            const isWorkspaceConfig = relative === 'live/resume.md' || relative === 'live/holidays.json'
+            if (!isPersona && !isRules && !isDiary && !isWorkspaceConfig) {
+              throw new Error('只能編輯已設定的人設檔、AGENTS.md、日期格式日記、記憶接續摘要或假日設定')
+            }
+            if (relative === 'live/holidays.json') {
+              let holidays
+              try { holidays = JSON.parse(content) } catch { throw new Error('假日設定必須是有效 JSON') }
+              const validDate = (value) => {
+                if (typeof value !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false
+                const date = new Date(value + 'T00:00:00Z')
+                return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
+              }
+              if (!holidays || !Array.isArray(holidays.off) || !Array.isArray(holidays.work) ||
+                [...holidays.off, ...holidays.work].some((value) => !validDate(value))) {
+                throw new Error('假日設定格式必須為 { off: [YYYY-MM-DD], work: [YYYY-MM-DD] }')
+              }
+            }
             const root = settings.resolve().workspace
             const target = await resolveWorkspaceFile(root, relative, true)
             await writeFile(target, content, 'utf8')
