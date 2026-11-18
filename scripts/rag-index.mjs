@@ -186,6 +186,7 @@ if (cmd === 'plan') {
     try { st = fs.statSync(abs) } catch { return }
     if (st.isDirectory()) {
       // 与 doc-emb 的 listMd 保持同一口径：这几个目录不进 doc 层（它们由别的层覆盖）。
+      // Keep historical QQ chat archives out of generic document indexing; this is an exclusion only, not a QQ integration.
       const SKIP = new Set(['verbatim', 'backup', 'qqagent-chat', 'group-digest', 'qq-sources'])
       let entries = []
       try { entries = fs.readdirSync(abs, { withFileTypes: true }) } catch { return }
