@@ -1074,8 +1074,8 @@ export function apply(ctx, config) {
   })
 
   // -------------------------------------------------------- hard guardrail
-  // 刷手机那一轮：看和滑都行；点按只在 B站 里放，而且不碰花钱的按钮。
-  // 目的不是限制「我」，是替她兜住一个我事后没法解释的误触。
+  // 刷手机那一轮：看和滑都行；社交平台点赞/评论/关注按既有约定控制。
+  // 购买与支付不设隐藏硬限制；不关机、不重启、不刷机仍是硬边界。
   //
   // ★ 2026-10-29 审计第 2 条（这条是真漏）：原来查不到前台就返回 ''，
   //   而 '' 在上层的意思是「不是社交平台」⇒ **查不到 = 放行**。adb 没起来、
@@ -1165,7 +1165,7 @@ export function apply(ctx, config) {
       if (tool === 'android_interact' || tool.startsWith('android_tap')) {
         const action = args?.action
         // 2026-10-22 浔改：自由时间「干什么都可以」——翻页、按键、点按、输入都放开；
-        // 只保留两条兜底：花钱按钮不点、别把手机整个关掉/重启。
+        // 只保留系统安全兜底：不关机、不重启、不刷机；购买/支付不由隐藏代码拦截。
         if (tool === 'android_interact' && action !== 'tap') return next()
         const bad = checkTap(args)
         return bad === null ? next() : deny(bad)
