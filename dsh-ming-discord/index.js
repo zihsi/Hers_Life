@@ -259,7 +259,7 @@ export function apply(ctx, pluginConfig = {}) {
 
   const loadAndStart = async () => {
     await settings.load()
-    await ensureWorkspace(settings.resolve().workspace)
+    await ensureWorkspace(settings.resolve().workspace, { personaFiles: settings.get('personaFiles', []), diaryDir: settings.get('diaryDir', 'diary') })
     await migrateLegacyBrowseSettings(settings)
     await ensurePrivacy()
     await syncMemorySettings(settings)
