@@ -87,9 +87,7 @@ async function syncMemorySettings(settings) {
     maxChars: settings.get('maxChars', 12000),
   }
   await mkdir(settings.home, { recursive: true })
-  const temp = file + '.tmp-' + process.pid
-  await writeFile(temp, JSON.stringify(next, null, 2) + '\n', 'utf8')
-  await rename(temp, file)
+  await settings.writeFile(file, JSON.stringify(next, null, 2) + '\n', 'utf8')
 }
 
 async function migrateLegacyBrowseSettings(settings) {
@@ -143,9 +141,7 @@ async function syncBrowseSettings(settings) {
     hbMax: browse.hbMax,
     at: new Date().toISOString(),
   }
-  const temp = file + '.tmp-' + process.pid
-  await writeFile(temp, JSON.stringify(next, null, 2) + '\n', 'utf8')
-  await rename(temp, file)
+  await settings.writeFile(file, JSON.stringify(next, null, 2) + '\n', 'utf8')
 }
 
 async function syncGraphSettings(settings) {
@@ -162,9 +158,7 @@ async function syncGraphSettings(settings) {
     ownerName: String(settings.get('userName', '主人') || '主人'),
   }
   await mkdir(settings.home, { recursive: true })
-  const temp = file + '.tmp-' + process.pid
-  await writeFile(temp, JSON.stringify(next, null, 2) + '\n', 'utf8')
-  await rename(temp, file)
+  await settings.writeFile(file, JSON.stringify(next, null, 2) + '\n', 'utf8')
 }
 
 async function copyMissing(source, destination) {
