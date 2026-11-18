@@ -363,10 +363,12 @@ export function apply(ctx, pluginConfig = {}) {
     if (!settings.isOwner(actor.userId)) {
       const rel = relative.split(path.sep).join('/')
       const sessionFolder = String(actor.sessionId).replace(/[^a-zA-Z0-9_-]/g, '_')
+      const userFolder = String(actor.userId).replace(/[^a-zA-Z0-9_-]/g, '_')
+      const ownOutbox = 'outbox/' + sessionFolder + '/' + userFolder + '/'
       const inVoice = rel.startsWith('live/voice/')
-      const inOwnOutbox = rel.startsWith('outbox/' + sessionFolder + '/')
+      const inOwnOutbox = rel.startsWith(ownOutbox)
       if (!inVoice && !inOwnOutbox) {
-        throw new Error('公開會話只能傳送本次會話的 live/voice/ 檔案或 outbox/' + sessionFolder + '/ 內的檔案')
+        throw new Error('公開會話只能傳送本次使用者的 live/voice/ 檔案或 ' + ownOutbox + ' 內的檔案')
       }
       if (inVoice) {
         let tag = null
