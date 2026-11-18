@@ -29,6 +29,7 @@ window.__ModuleLoader__.load({
       bilibili: { enabled: true, credentialFile: '', searchMaxPageSize: 20, subtitleMaxChars: 16000, timeoutMs: 30000 },
       activities: { enabled: true },
       skillIsolate: { enabled: true, stateFile: '' },
+      coreMemory: { enabled: true },
       graph: { enabled: true, syncSeconds: 120, costPricesFile: '', costAutoFile: '' },
     }
 
@@ -46,6 +47,7 @@ window.__ModuleLoader__.load({
         bilibili: { ...base.bilibili, ...(value.bilibili || {}) },
         activities: { ...base.activities, ...(value.activities || {}) },
         skillIsolate: { ...base.skillIsolate, ...(value.skillIsolate || {}) },
+        coreMemory: { ...base.coreMemory, ...(value.coreMemory || {}) },
         graph: { ...base.graph, ...(value.graph || {}) },
       }
     }
@@ -523,6 +525,7 @@ window.__ModuleLoader__.load({
           h(React.Fragment, null,
             check('啟用 Activities', 'activities.enabled', '活動排程與活動工具。'),
             check('啟用 Skill Isolate', 'skillIsolate.enabled', '技能隔離與狀態保存。'),
+            check('啟用 Core Memory', 'coreMemory.enabled', '核心記憶、歸檔記憶與來源追溯工具。'),
             input('Skill Isolate 狀態檔路徑', 'skillIsolate.stateFile', '留空使用 DSH_HOME 預設位置。'),
             check('啟用 Graph', 'graph.enabled', '關閉後停止 Graph 同步與相關面板。'),
             h('div', { className: 'hl-grid' },
