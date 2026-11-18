@@ -22,8 +22,8 @@ ok('bilibili_search → read', classify('bilibili_search') === KIND.READ)
 ok('android_tap → android_action', classify('android_tap') === KIND.ANDROID_ACTION)
 ok('android_shutdown → desktop', classify('android_shutdown') === KIND.DESKTOP)
 ok('ops_bash → shell', classify('ops_bash') === KIND.SHELL)
-ok('qq_send → send', classify('qq_send') === KIND.SEND)
-ok('qzone_post → publish', classify('qzone_post') === KIND.PUBLISH)
+ok('discord_send_file → send', classify('discord_send_file') === KIND.SEND)
+ok('bilibili_comment_post → publish', classify('bilibili_comment_post') === KIND.PUBLISH)
 ok('pay_checkout → pay', classify('pay_checkout') === KIND.PAY)
 ok('认不出的工具 → unknown', classify('some_plugin_tool') === KIND.UNKNOWN)
 ok('空工具名 → unknown', classify('') === KIND.UNKNOWN)
@@ -43,8 +43,8 @@ const TOOLS = [
   'bilibili_search', 'read_image', 'memory_search',      // read
   'android_tap', 'android_screenshot',                    // android_action
   'ops_bash', 'ops_load_sdk',                             // shell
-  'qq_send', 'qq_send_voice', 'live_speak',               // send
-  'qzone_post',                                           // publish
+  'discord_send_file', 'live_speak', 'voice_say',         // send
+  'bilibili_comment_post',                                // publish
   'pay_checkout', 'purchase_vip',                         // pay ← 也说放开了
   'some_plugin_tool', '',                                 // unknown
   'run_code',                                             // 容器
