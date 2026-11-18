@@ -111,7 +111,12 @@ export function apply(ctx, config) {
     async list(options) {
       const cwd = options && options.cwd
       if (!insideRoot(cwd, cfg.root)) return []
-      const state = await readState(cfg.stateFile)
+      let state
+      try { state = await readState(cfg.stateFile) }
+      catch (error) {
+        try { console.warn('[ming-skill-isolate] 狀態檔不可讀，遮罩暫停且原檔保留：' + String(error?.message || error)) } catch { /* ignore */ }
+        return []
+      }
       return state.off.map((skillName) => ({
         name: skillName,
         description: '（本工作区已隔离——溟关掉的，模型不可见）',
