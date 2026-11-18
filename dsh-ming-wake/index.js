@@ -44,7 +44,9 @@ function norm(cfg) {
 }
 
 export function apply(ctx, config) {
-  const cfg = norm(config)
+  const central = ctx.hersLifeDiscord?.getSetting?.('wake', {}) || {}
+  if (central.enabled === false) return
+  const cfg = norm({ ...(config || {}), ...central })
   if (ctx.hersLifeDiscord?.workspace) cfg.root = path.resolve(ctx.hersLifeDiscord.workspace)
   const armPath = path.join(cfg.root, 'live', 'wake-arm.json')
   const logPath = path.join(cfg.root, 'live', 'wake-log.jsonl')
