@@ -44,8 +44,9 @@ import { createAccount } from './lib/account.mjs'
 // 社交面（评论/发评/历史/关注/收藏夹/动态/私信会话）：实现都在 social.js，这里只接线。
 import { applyBilibiliSocialTools } from './lib/social.js'
 
-/** 凭证文件默认位置。配置项 credentialFile 覆盖它。 */
-const DEFAULT_CREDENTIAL_FILE = join(homedir(), '.dsh', 'bili-duty', 'bili_credential.json')
+/** 凭证文件默认位置。配置项 credentialFile 覆盖它；DSH_HOME 由宿主提供。 */
+const DSH_HOME = process.env.DSH_HOME || join(homedir(), '.dsh')
+const DEFAULT_CREDENTIAL_FILE = join(DSH_HOME, 'bili-duty', 'bili_credential.json')
 const SEARCH_MAX_PAGE_SIZE = 20
 const TOOL_TIMEOUT_MS = 30_000
 
