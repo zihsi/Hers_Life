@@ -41,6 +41,7 @@ export class DiscordBridge {
       logger: options.logger,
       applicationId: options.applicationId ?? '',
       events: this.events,
+      eventAllowed: (interaction) => this.eventAllowed(interaction),
     })
     this.selfId = null
     this.recent = new Map()
@@ -163,6 +164,18 @@ export class DiscordBridge {
     }
   }
 
+  eventAllowed(data) {
+    if (!this.settings?.get('discord.enabled', false)) return false
+    const guildId = String(data?.guild_id ?? '')
+    const channelId = String(data?.channel_id ?? '')
+    if (!guildId) return false
+    const guilds = this.settings.get('discord.guildIds', [])
+    const channels = this.settings.get('discord.channelIds', [])
+    if (Array.isArray(guilds) && guilds.length > 0 && !guilds.map(String).includes(guildId)) return false
+    if (Array.isArray(channels) && channels.length > 0 && (!channelId || !channels.map(String).includes(channelId))) return false
+    return true
+  }
+
   /**
    * Turn one dispatch into a readable log line.
    *
@@ -172,17 +185,17 @@ export class DiscordBridge {
   recordEvent(type, data) {
     try {
       if (data === null || data === undefined) return
-      // Direct/group DMs have no guild_id. Do not copy their content, message
-      // IDs, reactions, typing state or command metadata into the shared event
-      // preview/log shown in the common settings page.
-      const privateOnlyEvents = new Set([
-        'MESSAGE_CREATE', 'MESSAGE_UPDATE', 'MESSAGE_DELETE',
-        'MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE',
-        'TYPING_START', 'INTERACTION_CREATE',
-      ])
-      if (data.guild_id === undefined || data.guild_id === null) {
-        if (privateOnlyEvents.has(type)) return
+      // The shared activity file must obey the same guild/channel allowlists as
+      // message ingestion. Never archive messages from a channel the bot has
+      // been configured not to handle.
+      const eventData = { ...data }
+      if (!eventData.channel_id && ['CHANNEL_CREATE', 'CHANNEL_UPDATE', 'CHANNEL_DELETE', 'THREAD_CREATE', 'THREAD_UPDATE'].includes(type)) {
+        eventData.channel_id = eventData.id
       }
+      if (!eventData.guild_id && ['GUILD_CREATE', 'GUILD_UPDATE'].includes(type)) {
+        eventData.guild_id = eventData.id
+      }
+      if (!this.eventAllowed(eventData)) return
       const labels = {
         MESSAGE_CREATE: '新消息', MESSAGE_UPDATE: '消息被编辑', MESSAGE_DELETE: '消息被删除',
         MESSAGE_REACTION_ADD: '有人加了表情', MESSAGE_REACTION_REMOVE: '有人收回表情',
