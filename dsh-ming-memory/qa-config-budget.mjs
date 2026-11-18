@@ -6,11 +6,13 @@ import { join } from 'node:path'
 
 test('explicit diary budget controls real prompt without shortening persona', async t => {
   const root = await mkdtemp(join(tmpdir(), 'ming-budget-'))
-  const before = process.env.MING_MEMORY_CONFIG
-  process.env.MING_MEMORY_CONFIG = join(root, 'config.json')
-  await writeFile(process.env.MING_MEMORY_CONFIG, JSON.stringify({ diaryChars: 2000 }))
+  const before = process.env.DSH_HOME
+  const dshHome = join(root, '.dsh')
+  process.env.DSH_HOME = dshHome
+  await mkdir(dshHome, { recursive: true })
+  await writeFile(join(dshHome, 'ming-memory.json'), JSON.stringify({ diaryChars: 2000 }))
   t.after(async () => {
-    if (before === undefined) delete process.env.MING_MEMORY_CONFIG; else process.env.MING_MEMORY_CONFIG = before
+    if (before === undefined) delete process.env.DSH_HOME; else process.env.DSH_HOME = before
     await rm(root, { recursive: true, force: true })
   })
   await mkdir(join(root, 'diary'))
