@@ -34,6 +34,7 @@ const filesBefore = readdirSync(notesDir).sort().join(',')
 const { apply } = await import('./lib/index.js')
 const tools = []
 const ctx = {
+  on: () => {},
   tools: { register: (d) => tools.push(d) },
   systemPrompt: { section: () => {} },
   inject: () => {},
