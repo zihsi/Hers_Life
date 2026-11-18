@@ -146,7 +146,6 @@ export class DiscordBrain {
   async recallContext(query, target, sessionKey) {
     if (!this.loaded || !this.settings.get('memory.enabled', true)) return ''
     const queryWords = new Set(words(query))
-    if (!queryWords.size) return ''
     const max = Math.max(1, Math.min(12, Number(this.settings.get('memory.maxRecall', 6)) || 6))
     const maxAgeDays = Math.max(1, Number(this.settings.get('memory.maxAgeDays', 365)) || 365)
     const cutoff = Date.now() - maxAgeDays * 86_400_000
@@ -160,7 +159,28 @@ export class DiscordBrain {
       if (score > 0) ranked.push({ event, score })
     }
     ranked.sort((a, b) => b.score - a.score || String(b.event.at).localeCompare(String(a.event.at)))
-    const selected = ranked.slice(0, max)
+    const selectedByKey = new Map()
+    const eventKey = (event) => String(event.id || [event.sessionId, event.messageId, event.role, event.at].join(':'))
+    for (const item of ranked.slice(0, max)) selectedByKey.set(eventKey(item.event), item)
+
+    // Short follow-ups ("那件事呢？") often have no lexical overlap with the
+    // original topic. Add a tiny recent window from this same participant's
+    // other sessions, but never import another member's private context.
+    const participantId = String(target.userId || '')
+    if (participantId && selectedByKey.size < max) {
+      const recent = this.events
+        .filter((event) => event.sessionId !== sessionKey &&
+          String(event.participantId || event.authorId || '') === participantId &&
+          this.canRecall(event, target, sessionKey))
+        .sort((a, b) => String(b.at).localeCompare(String(a.at)))
+      for (const event of recent) {
+        const key = eventKey(event)
+        if (selectedByKey.has(key)) continue
+        selectedByKey.set(key, { event, score: 0 })
+        if (selectedByKey.size >= max) break
+      }
+    }
+    const selected = [...selectedByKey.values()]
     if (!selected.length) return ''
     const hasPrivate = selected.some(({ event }) => event.scope === 'private')
     const lines = selected.map(({ event }) => {
