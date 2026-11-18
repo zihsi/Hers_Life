@@ -6,7 +6,8 @@
  * 物理输入是显式回退，主人一碰鼠标键盘就暂停并还原光标。
  */
 
-import { readFile, writeFile, mkdir, readdir, unlink } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, readdir, unlink, rename, rm } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -284,9 +285,39 @@ async function loadSavedSettings(log = () => {}) {
   }
 }
 
+let settingsWriteQueue = Promise.resolve()
 async function persistSettings(settings) {
-  await mkdir(dirname(SETTINGS_FILE), { recursive: true })
-  await writeFile(SETTINGS_FILE, `${JSON.stringify(settings, null, 2)}\n`, 'utf8')
+  const write = async () => {
+    await mkdir(dirname(SETTINGS_FILE), { recursive: true })
+    const temp = SETTINGS_FILE + '.tmp-' + randomUUID()
+    try {
+      await writeFile(temp, `${JSON.stringify(settings, null, 2)}\\n`, 'utf8')
+      try { await rename(temp, SETTINGS_FILE) }
+      catch (error) {
+        if (process.platform !== 'win32' || !['EPERM', 'EEXIST', 'ENOTEMPTY'].includes(error?.code)) throw error
+        const backup = SETTINGS_FILE + '.bak-' + randomUUID()
+        let moved = false
+        try {
+          await rename(SETTINGS_FILE, backup)
+          moved = true
+          await rename(temp, SETTINGS_FILE)
+          await rm(backup, { force: true }).catch(() => {})
+        } catch (replaceError) {
+          if (moved) {
+            try { await rename(backup, SETTINGS_FILE) } catch {}
+          } else if (replaceError?.code === 'ENOENT') {
+            await rename(temp, SETTINGS_FILE)
+          } else {
+            throw replaceError
+          }
+        }
+      }
+    } finally {
+      await rm(temp, { force: true }).catch(() => {})
+    }
+  }
+  settingsWriteQueue = settingsWriteQueue.then(write, write)
+  return settingsWriteQueue
 }
 
 function json(res, status, value) {
