@@ -1450,6 +1450,7 @@ export class VoiceManager {
       // A rejected promise here may be a transient reconnect; only reuse a
       // connection that still owns a live transport state.
       await existing.ready.catch(() => existing.ready)
+      await existing.waitForDAVE(20_000)
       return existing
     }
     if (existing !== undefined) await this.leave(guildId)
