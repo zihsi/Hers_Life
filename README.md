@@ -14,22 +14,30 @@
 
 此分支只支持 **Discord Bot + DSH**。QQ、OneBot、QQ-Agent、AstrBot 以及旧平台桥接均已退役，不保留兼容层。
 
-Discord 原生适配器负责 Gateway、频道／私讯／Thread 会话、附件、语音、兴趣唤醒与统一设置页。Bot Token 存在 `$DSH_HOME/hers-life-secrets.json`；设置页只显示是否已配置，不回传密钥。
+Discord 原生適配器負責 Gateway、頻道／私訊／Thread 獨立 Session、跨會話來源可追溯記憶、附件、語音、興趣喚醒與統一設定中心。Bot Token 存在 `$DSH_HOME/hers-life-secrets.json`；設定頁只顯示是否已配置，不回傳密鑰。
 
 首次設定 Bot 時，請在 Developer Portal → Bot → Privileged Gateway Intents 開啟 **Message Content Intent** 與 **Server Members Intent**；本程式兩項都會送入 Gateway Identify，未啟用時可能收到 `4014 Disallowed Intents`。語音另需 FFmpeg 與可載入的 DAVE 原生模組，詳見 [Discord 適配器說明](dsh-ming-discord/README.md)。
+
+## 統一設定與資料初始化
+
+所有常用插件參數集中在 Hers Life 的「設定」頁：Discord、人格、日記、跨會話記憶、Browse／ADB、Resume、Wake、Voice／TTS、Mousepet、Bilibili、Activities、Skill Isolate、Core Memory 與 Graph。必要資料夾及預設檔案由插件啟動時自動建立；設定頁同時顯示 DSH_HOME、工作區、日記、核心記憶、Browse、語音及憑證等實際路徑。
+
+一般使用者不需要手動建立設定檔或設定 Windows 環境變數。DSH_HOME 由 DSH 宿主提供。部分插件參數修改後需要重新啟動 DSH 才會生效。
+
+**常駐 Discord Bot 必須使用 DSH Desktop 或長駐 Web Profile；headless 是一次性任務執行環境，不適合承載常駐 Gateway 與設定 UI。**
 
 ## 这里面有什么
 
 | 包 | 干什么 |
 |---|---|
 | `dsh-ming-discord` | **唯一聊天入口**：Discord 私訊／伺服器／頻道／Thread 各自獨立 session；所有會話共享可追溯事件記憶；整合興趣喚醒、附件、語音與設定中心 |
-| `dsh-ming-core-memory` | [只读记忆查看](dsh-ming-core-memory/INSPECTOR.md)；核心记忆 + 归档记忆。核心常驻注入，归档按意思检索；写入政策只收机器/环境/项目事实，不写关于人的判断 |
-| `dsh-ming-memory` | 开场记忆：把人设文件与最近几篇日记拼进系统提示词，只读不回写 |
+| `dsh-ming-core-memory` | 核心記憶 + 歸檔記憶；Discord 公開頻道不注入 Owner 私人核心記憶，Owner 私訊才會注入；來源可追溯 |
+| `dsh-ming-memory` | 共用人格核心：所有 Discord Session 使用同一套人設檔；Owner 私訊另注入私人日記與工作狀態，公開會話不注入私人日記 |
 | `dsh-ming-graph` | 记忆神经元与星图。每条真记忆一个点，每条边都带「凭什么连」的理由 |
 | `dsh-ming-mousepet` | 桌宠：**AI 光标**、截图、连拍、常驻看屏（常态识别，画面动了才留帧）、气泡说话（不抢焦点）、UIA/窗口消息动手。原来的轻量版 `dsh-ming-cursor` 2026-11-10 起并进这里，不再单列 |
 | `dsh-ming-voice` | 文字转语音，落成 mp3 |
 | `dsh-ming-bilibili-account` | B 站：扫码登录、搜视频、字幕、评论、私信、历史、收藏 |
-| `dsh-ming-browse` | 「自己玩」：工作区闲够久时自己醒一轮。**不是全局只读**：只有部分 Android 点按和关机/重启走硬拦（`index.js` 的 `tools/pre-execute`），其余工具放行；B 站互动等写操作由配置和个人约定分别授权。面板上有个「打开我的浏览器」，开的是带登录态的真窗口（投稿、投稿件最后要选文件，只能在那个窗口里点）。控制指令只接受 Discord Owner 私訊；完成摘要由 Discord DM 回報 |
+| `dsh-ming-browse` | 「自己玩」：工作區閒夠久時自己醒一輪。購買／支付不設隱藏硬攔截；關機、重啟、刷機保留安全限制；社交平台寫操作依 UI 中的互動詞規則控制。面板上有個「打開我的瀏覽器」，開的是帶登入態的真窗口。控制指令只接受 Discord Owner 私訊；完成摘要由 Discord DM 回報 |
 
 | `dsh-ming-wake` | 定时提醒：到点取得/恢复会话并实际投递事项；结果不确定时不盲目重发 |
 | `dsh-ming-resume` | 普通插话可接续；明确停止、暂停或换任务时遵守最新要求 |
