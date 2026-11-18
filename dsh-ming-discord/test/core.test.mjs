@@ -24,24 +24,20 @@ test('Core Memory embedding endpoint and model come from the Hers Life settings 
   const previous = process.env.DSH_HOME
   try {
     process.env.DSH_HOME = root
-    await writeFile(path.join(root, 'hers-life.json'), JSON.stringify({
-      workspace: path.join(root, 'workspace'),
-      coreMemory: {
-        embeddingEndpoint: 'http://127.0.0.1:19091/v1/embeddings',
-        embeddingModel: 'bge-custom-v2',
-      },
-    }), 'utf8')
+    const settings = new SettingsStore({ workspace: path.join(root, 'workspace') }, { home: root })
+    await settings.patch({ coreMemory: {
+      embeddingEndpoint: 'http://127.0.0.1:19091/v1/embeddings',
+      embeddingModel: 'bge-custom-v2',
+    } })
     assert.deepEqual(getEmbeddingConfig(), {
       endpoint: 'http://127.0.0.1:19091/v1/embeddings',
       model: 'bge-custom-v2',
     })
 
-    await writeFile(path.join(root, 'hers-life.json'), JSON.stringify({
-      coreMemory: {
-        embeddingEndpoint: 'file:///etc/passwd',
-        embeddingModel: 'bge-custom-v2',
-      },
-    }), 'utf8')
+    await settings.patch({ coreMemory: {
+      embeddingEndpoint: 'file:///etc/passwd',
+      embeddingModel: 'bge-custom-v2',
+    } })
     assert.deepEqual(getEmbeddingConfig(), {
       endpoint: 'http://127.0.0.1:18091/v1/embeddings',
       model: 'bge-custom-v2',
