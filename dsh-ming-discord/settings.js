@@ -29,7 +29,7 @@ const DEFAULTS = {
   interest: { enabled: true, minChars: 6, contextLines: 4, groups: [], minGapMinutes: 20, maxPerHour: 3, quietHours: '01:00-08:00', channelGapMinutes: 45 },
   browse: {
     enabled: true, idleMinutes: 1, minGapMinutes: 30, dailyMax: 8, sessionRounds: 6,
-    quietHours: '08:00-18:30',
+    quietHours: '08:00-18:30', gapMode: 'fixed', hbMin: 5, hbCenter: 30, hbMax: 240,
     freeWindows: [{ start: '18:30', end: '08:00' }, { start: '13:50', end: '18:15', only: 'rest' }],
     holidaysFile: 'live/holidays.json', maxItems: 2, maxShots: 2,
     serial: '127.0.0.1:16448', adbPath: 'D:\\MuMuPlayer\\nx_device\\12.0\\shell\\adb.exe',
@@ -87,6 +87,15 @@ function normalizePluginSettings(settings) {
   settings.browse.sessionRounds = clampNumber(settings.browse.sessionRounds, 1, 100, DEFAULTS.browse.sessionRounds)
   settings.browse.maxItems = clampNumber(settings.browse.maxItems, 0, 50, DEFAULTS.browse.maxItems)
   settings.browse.maxShots = clampNumber(settings.browse.maxShots, 0, 50, DEFAULTS.browse.maxShots)
+  settings.browse.gapMode = ['fixed', 'random', 'heartbeat'].includes(settings.browse.gapMode) ? settings.browse.gapMode : DEFAULTS.browse.gapMode
+  settings.browse.hbMin = clampNumber(settings.browse.hbMin, 1, 1438, DEFAULTS.browse.hbMin)
+  settings.browse.hbCenter = clampNumber(settings.browse.hbCenter, 2, 1439, DEFAULTS.browse.hbCenter)
+  settings.browse.hbMax = clampNumber(settings.browse.hbMax, 3, 1440, DEFAULTS.browse.hbMax)
+  if (!(settings.browse.hbMin < settings.browse.hbCenter && settings.browse.hbCenter < settings.browse.hbMax)) {
+    settings.browse.hbMin = DEFAULTS.browse.hbMin
+    settings.browse.hbCenter = DEFAULTS.browse.hbCenter
+    settings.browse.hbMax = DEFAULTS.browse.hbMax
+  }
   settings.browse.freeWindows = cleanTimeWindows(settings.browse.freeWindows, DEFAULTS.browse.freeWindows)
   for (const key of ['socialApps', 'socialWriteWords', 'targets']) settings.browse[key] = cleanStringList(settings.browse[key])
   settings.resume.pauseMediaOnInterrupt = settings.resume.pauseMediaOnInterrupt !== false
