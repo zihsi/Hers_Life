@@ -20,7 +20,7 @@
 |---|---|---|---|
 | 跨會話事件記憶 | Discord 事件寫入 `live/discord-memory.jsonl`，保留 message、author、guild、channel、thread、session 等來源欄位 | 這是可追溯事件索引，不是把每個頻道所有訊息無限制塞入每次提示 | `dsh-ming-discord/memory.js`, `dsh-ming-discord/discord/events.js` |
 | 跨頻道／伺服器召回 | 可設定同伺服器跨頻道、跨伺服器召回 | 關閉相應設定後，不應把該範圍的事件提供給其他會話 | `dsh-ming-discord/memory.js`, 設定頁 |
-| 私訊背景 | Owner 私訊可依設定在 Owner 的其他私訊會話共享；也可選擇在 Owner 本人於公開頻道發言時作為隱去來源的背景 | 不會把 Owner 私訊背景提供給其他成員；需要最嚴格隔離時，關閉「允許 Owner 私訊作為公開頻道背景」 | `dsh-ming-discord/memory.js` |
+| 私訊背景 | Owner 私訊可在同一個 Discord User ID 的其他私訊會話共享；也可選擇在該 Owner 本人於公開頻道發言時作為隱去來源的背景 | 多 Owner 設定時仍按精確 User ID 隔離；其他成員與其他 Owner 都不會取得該私訊。關閉「允許 Owner 私訊作為公開頻道背景」可再收緊 | `dsh-ming-discord/memory.js` |
 | 人格／日記開場 | `dsh-ming-memory` 從工作區人格檔與最近日記組成開場注入 | 該插件本身是讀取／注入，不應描述成它會自行改寫人格檔 | `dsh-ming-memory/` |
 | 興趣學習／喚醒 | 從公開頻道訊息被動累積詞頻；達到門檻後可成為主題；再經靜默時段、冷卻、每小時上限與模型判斷後才可能接話 | 學到詞不代表必然發言；Owner 可在設定頁管理主題、忽略詞及暫停開關 | `dsh-ming-discord/interests.js`, `discord/bridge.js` |
 
@@ -32,7 +32,7 @@
 | 文字轉語音 | `dsh-ming-voice` 的 `voice_say` 產生 MP3；可再用 `discord_send_file` 將檔案送到目前會話頻道；預設音色、語速與 FFmpeg 可在 Discord 設定頁調整 | 這和即時語音連線是兩條不同路徑；需可用的 Edge TTS 或 Windows SAPI。非 Owner 只能傳送自己在該會話產生、具 session/user 標籤的音訊 | `dsh-ming-voice/index.js`, `dsh-ming-discord/index.js` |
 | 自主瀏覽 | `dsh-ming-browse` 可在設定條件下執行背景瀏覽／活動；Owner 控制入口走 Discord 私訊 | **不是全域唯讀沙盒**。部分高風險 Android／關機類工具有硬性攔截；其他寫入能力仍依工具、設定與行為規則，不能把它宣稱為全面防寫入 | `dsh-ming-browse/index.js`, `lib/permissions.mjs` |
 | 桌面陪伴 | `dsh-ming-mousepet` 提供螢幕觀察、氣泡、UIA／視窗訊息操作；物理輸入是明確回退模式 | Windows PowerShell 5.1／WinForms；UIA 取決於目標應用是否暴露可操作元素；物理輸入會影響真實桌面，不能視為無副作用 | `dsh-ming-mousepet/` |
-| Bilibili 帳號 | 獨立插件提供登入、帳號狀態與已註冊的 B 站工具 | 登入態目前以進程記憶體為準；重啟後須依插件流程確認登入狀態，不可假設憑證已持久化 | `dsh-ming-bilibili-account/` |
+| Bilibili 帳號 | 獨立插件提供掃碼登入、帳號狀態與已註冊的 B 站工具 | 登入態會同步寫入 DSH credentials service 與 `~/.dsh/bili-duty/bili_credential.json`；退出會寫 tombstone 防止舊 Cookie 復活。登入／恢復依賴宿主憑證服務與 B 站可用性 | `dsh-ming-bilibili-account/` |
 | 其他 DSH 輔助 | 提醒、插話接續、Skill 隔離、共同活動等均為獨立可選插件 | 各自仍須在 DSH profile 中安裝並啟用；共同活動插件是手動記錄，不會自動代替使用者推進 | `dsh-ming-wake/`, `dsh-ming-resume/`, `dsh-ming-skill-isolate/`, `dsh-ming-activities/` |
 
 ## 安全與安裝前提
