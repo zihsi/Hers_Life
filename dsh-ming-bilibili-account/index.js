@@ -235,6 +235,15 @@ export function apply(ctx, config) {
     serviceKey: CRED_REF,
   })
   accountRef = account
+  ctx.hersLifeDiscord?.registerStatusProvider?.('bilibili', () => {
+    const current = account.current()
+    return {
+      loggedIn: Boolean(current?.cookie),
+      userName: String(profile.uname || ''),
+      userId: String(profile.uid || ''),
+      credentialFile,
+    }
+  })
 
   // 2026-11-17（G.5 第二轮）：provider 构造时会把 cookie 抄成自己的字段，之后改 options 它不看。
   // 所以这里留一个可替换的真身 + 一个代理：工具闭包里拿到的永远是代理，
