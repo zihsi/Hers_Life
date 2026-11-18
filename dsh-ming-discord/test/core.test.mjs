@@ -830,6 +830,10 @@ test('shared memory recalls across guilds and hides private source attribution',
     }, 'discord-channel-guild-a-chan-c')
     assert.doesNotMatch(channelIsolated, /Server A \/ #hardware|伺服器 A 曾討論/, 'disabling cross-channel sharing blocks public channel events')
     assert.match(channelIsolated, /私人背景（來源隱去）/, 'the independent Owner-private-context toggle remains effective')
+    const crossGuildStillShared = await brain.recallContext('RTX 5080', {
+      kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'owner-1',
+    }, 'discord-channel-guild-b-independent')
+    assert.match(crossGuildStillShared, /Server A \/ #hardware/, 'cross-guild sharing remains independent of same-guild channel sharing')
     config.memory.shareAcrossChannels = true
 
     config.memory.allowPrivateContextInGuild = false
