@@ -43,7 +43,7 @@ let costIndexing = null
 
 export const name = 'dsh-ming-graph'
 export const inject = ['hersLifeDiscord']
-const DSH_HOME = process.env.DSH_HOME || path.join(DSH_HOME)
+const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 
 // 工作区：环境变量优先；没有就从本机配置的 diaryDir（<ws>\diary）推，再退 workspace 键。
 // 2026-11-15 14:4x：面板第一版上线就撞上这件事——宿主进程里根本没有 MING_WORKSPACE，
