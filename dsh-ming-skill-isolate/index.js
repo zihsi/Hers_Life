@@ -27,6 +27,7 @@ import os from 'node:os'
 import { readFileSync } from 'node:fs'
 
 export const name = 'ming-skill-isolate'
+const DSH_HOME = process.env.DSH_HOME || path.join(DSH_HOME)
 export const inject = ['skills', 'tools', 'hersLifeDiscord']
 
 /** 遮罩条目的 rank：必须小于 BUNDLED_SKILL_RANK(600)，否则在同一个 layer 里排不到前面 */
@@ -36,7 +37,7 @@ const PROVIDER = 'ming-skill-isolate'
 function resolveWorkspace() {
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
-    const data = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    const data = JSON.parse(readFileSync(path.join(DSH_HOME, 'ming-memory.json'), 'utf8'))
     if (typeof data.root === 'string' && data.root.trim()) return data.root
   } catch {}
   return path.join(os.homedir(), 'hers-life-workspace')
