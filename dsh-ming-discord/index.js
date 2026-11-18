@@ -267,6 +267,13 @@ export function apply(ctx, pluginConfig = {}) {
               diary: path.join(resolved.workspace, String(settings.get('diaryDir', 'diary') || 'diary')),
               memoryEvents: path.join(resolved.dataRoot, 'discord-memory.jsonl'),
               sessionIndex: path.join(resolved.dataRoot, 'discord-sessions.json'),
+              coreMemory: path.join(settings.home, 'memory', 'MEMORY.md'),
+              coreNotes: path.join(settings.home, 'memory', 'notes'),
+              browseConfig: path.join(resolved.workspace, 'live', 'browse-config.json'),
+              wakeQueue: path.join(resolved.workspace, 'live', 'wake-arm.json'),
+              voiceOutput: path.join(resolved.workspace, 'live', 'voice'),
+              bilibiliCredentials: path.join(settings.home, 'bili-duty', 'bili_credential.json'),
+              skillIsolationState: settings.get('skillIsolate.stateFile') || path.join(resolved.workspace, 'skills-off.json'),
             }
             send(res, 200, { ok: true, settings: settings.publicConfig(), status: { ...status, paths }, paths, hasToken: settings.hasToken(),
               events: events?.list?.(30) ?? [], sessions: pool?.list?.() ?? [], interests: interests?.list?.(100) ?? [] })
@@ -294,6 +301,13 @@ export function apply(ctx, pluginConfig = {}) {
               diary: path.join(resolved.workspace, String(settings.get('diaryDir', 'diary') || 'diary')),
               memoryEvents: path.join(resolved.dataRoot, 'discord-memory.jsonl'),
               sessionIndex: path.join(resolved.dataRoot, 'discord-sessions.json'),
+              coreMemory: path.join(settings.home, 'memory', 'MEMORY.md'),
+              coreNotes: path.join(settings.home, 'memory', 'notes'),
+              browseConfig: path.join(resolved.workspace, 'live', 'browse-config.json'),
+              wakeQueue: path.join(resolved.workspace, 'live', 'wake-arm.json'),
+              voiceOutput: path.join(resolved.workspace, 'live', 'voice'),
+              bilibiliCredentials: path.join(settings.home, 'bili-duty', 'bili_credential.json'),
+              skillIsolationState: settings.get('skillIsolate.stateFile') || path.join(resolved.workspace, 'skills-off.json'),
             }
             send(res, 200, { ok: true, settings: settings.publicConfig(), status: { ...status, paths }, paths, migration, restartRequired: nextWorkspace !== previousWorkspace })
             return
