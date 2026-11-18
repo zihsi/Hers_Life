@@ -211,6 +211,28 @@ function nextNineAM(from = new Date()) {
   return t.toISOString()
 }
 
+async function replaceFile(temp, target) {
+  try { await rename(temp, target); return }
+  catch (error) {
+    if (process.platform !== 'win32' || !['EPERM', 'EEXIST', 'ENOTEMPTY'].includes(error?.code)) throw error
+    const backup = target + '.bak-' + randomUUID()
+    let moved = false
+    try {
+      await rename(target, backup)
+      moved = true
+      await rename(temp, target)
+      await rm(backup, { force: true }).catch(() => {})
+    } catch (replaceError) {
+      if (moved) {
+        try { await rename(backup, target) } catch {}
+      } else if (replaceError?.code === 'ENOENT') {
+        await rename(temp, target)
+      } else {
+        throw replaceError
+      }
+    }
+  }
+}
 export function apply(ctx, config) {
   const central = ctx.hersLifeDiscord?.getSetting?.('browse', {}) || {}
   if (central.enabled === false) return
@@ -1296,7 +1318,7 @@ export function apply(ctx, config) {
       const temp = rotationFile + '.tmp-' + process.pid + '-' + (++rotationWriteSeq)
       try {
         await writeFile(temp, JSON.stringify(snapshot, null, 2) + '\n', 'utf8')
-        await rename(temp, rotationFile)
+        await replaceFile(temp, rotationFile)
       } finally {
         await rm(temp, { force: true }).catch(() => {})
       }
