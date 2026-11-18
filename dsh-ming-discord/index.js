@@ -20,6 +20,21 @@ function isWithinPath(root, candidate) {
   const relative = path.relative(root, candidate)
   return relative === '' || (relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative))
 }
+export function validateHolidayConfig(value) {
+  let holidays
+  try { holidays = typeof value === 'string' ? JSON.parse(value) : value }
+  catch { throw new Error('假日設定必須是有效 JSON') }
+  const validDate = (dateValue) => {
+    if (typeof dateValue !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return false
+    const date = new Date(dateValue + 'T00:00:00Z')
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === dateValue
+  }
+  if (!holidays || !Array.isArray(holidays.off) || !Array.isArray(holidays.work) ||
+    [...holidays.off, ...holidays.work].some((dateValue) => !validDate(dateValue))) {
+    throw new Error('假日設定格式必須為 { off: [YYYY-MM-DD], work: [YYYY-MM-DD] }')
+  }
+  return { off: [...holidays.off], work: [...holidays.work] }
+}
 
 /**
  * Resolve a workspace-relative file and reject symlinks that escape the
@@ -562,19 +577,7 @@ export function apply(ctx, pluginConfig = {}) {
             if (!isPersona && !isRules && !isDiary && !isWorkspaceConfig) {
               throw new Error('只能編輯已設定的人設檔、AGENTS.md、日期格式日記、記憶接續摘要或假日設定')
             }
-            if (relative === 'live/holidays.json') {
-              let holidays
-              try { holidays = JSON.parse(content) } catch { throw new Error('假日設定必須是有效 JSON') }
-              const validDate = (value) => {
-                if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-                const date = new Date(value + 'T00:00:00Z')
-                return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
-              }
-              if (!holidays || !Array.isArray(holidays.off) || !Array.isArray(holidays.work) ||
-                [...holidays.off, ...holidays.work].some((value) => !validDate(value))) {
-                throw new Error('假日設定格式必須為 { off: [YYYY-MM-DD], work: [YYYY-MM-DD] }')
-              }
-            }
+            if (relative === 'live/holidays.json') validateHolidayConfig(content)
             const root = settings.resolve().workspace
             const target = await resolveWorkspaceFile(root, relative, true)
             await writeFile(target, content, 'utf8')
