@@ -10,7 +10,8 @@ import { randomUUID } from 'node:crypto'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-export const STATE_FILE = join(homedir(), '.dsh', 'ming-mousepet', 'pet-state.json')
+const DSH_HOME = process.env.DSH_HOME || join(homedir(), '.dsh')
+export const STATE_FILE = join(DSH_HOME, 'ming-mousepet', 'pet-state.json')
 
 const DEFAULTS = {
   lastSpokeAt: 0,
