@@ -47,6 +47,7 @@ const DEFAULTS = {
   bilibili: { enabled: true, credentialFile: '', searchMaxPageSize: 20, subtitleMaxChars: 16000, timeoutMs: 30000 },
   activities: { enabled: true },
   skillIsolate: { enabled: true, stateFile: '' },
+  coreMemory: { enabled: true },
   graph: { enabled: true, syncSeconds: 120, costPricesFile: '', costAutoFile: '' },
   advanced: { turnTimeoutMinutes: 15 },
 }
@@ -80,6 +81,7 @@ function normalizePluginSettings(settings) {
   settings.bilibili = { ...DEFAULTS.bilibili, ...(settings.bilibili || {}) }
   settings.activities = { ...DEFAULTS.activities, ...(settings.activities || {}) }
   settings.skillIsolate = { ...DEFAULTS.skillIsolate, ...(settings.skillIsolate || {}) }
+  settings.coreMemory = { ...DEFAULTS.coreMemory, ...(settings.coreMemory || {}) }
   settings.graph = { ...DEFAULTS.graph, ...(settings.graph || {}) }
   settings.browse.idleMinutes = clampNumber(settings.browse.idleMinutes, 1, 1440, DEFAULTS.browse.idleMinutes)
   settings.browse.minGapMinutes = clampNumber(settings.browse.minGapMinutes, 0, 1440, DEFAULTS.browse.minGapMinutes)
@@ -221,7 +223,7 @@ export class SettingsStore {
     await rename(tmp, this.secretsFile)
   }
   async patch(patch = {}, token) {
-    const allowed = ['enabled', 'workspace', 'ownerIds', 'agentPreset', 'personaFiles', 'diaryDir', 'diaryCount', 'diaryChars', 'maxChars', 'discord', 'memory', 'voice', 'interest', 'browse', 'resume', 'wake', 'mousepet', 'bilibili', 'activities', 'skillIsolate', 'graph', 'advanced']
+    const allowed = ['enabled', 'workspace', 'ownerIds', 'agentPreset', 'personaFiles', 'diaryDir', 'diaryCount', 'diaryChars', 'maxChars', 'discord', 'memory', 'voice', 'interest', 'browse', 'resume', 'wake', 'mousepet', 'bilibili', 'activities', 'skillIsolate', 'coreMemory', 'graph', 'advanced']
     const picked = {}
     for (const key of allowed) if (patch[key] !== undefined) picked[key] = patch[key]
     if (picked.discord) {
