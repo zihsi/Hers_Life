@@ -9,7 +9,9 @@
     "index.js",
     "cordis.patch.yml",
     "heartbeat.mjs",
-    "src/panel.js"
+    "src/panel.js",
+    "browser-launch.mjs",
+    "lib"
   ],
   "dsh": {
     "bundle": {
