@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { newId } from './util.js'
 
 function sessionIdentity(target) {
@@ -18,6 +18,7 @@ export class DiscordSessionPool {
     this.entries = new Map()
     this.creating = new Map()
     this.index = {}
+    this.persistQueue = Promise.resolve()
   }
   async load() {
     try {
@@ -101,10 +102,36 @@ export class DiscordSessionPool {
     await this.persist()
   }
   async persist() {
-    await mkdir(path.dirname(this.file), { recursive: true })
-    const temp = this.file + '.tmp-' + newId()
-    await writeFile(temp, JSON.stringify(this.index, null, 2) + '\n', 'utf8')
-    await rename(temp, this.file)
+    const write = async () => {
+      await mkdir(path.dirname(this.file), { recursive: true })
+      const temp = this.file + '.tmp-' + newId()
+      await writeFile(temp, JSON.stringify(this.index, null, 2) + '\n', 'utf8')
+      try {
+        await rename(temp, this.file)
+      } catch (error) {
+        // Windows does not consistently replace an existing destination with
+        // rename(). Move the old file aside, install the new snapshot, then
+        // remove the backup; restore the backup if installation fails.
+        if (process.platform !== 'win32' || !['EPERM', 'EEXIST', 'ENOTEMPTY'].includes(error?.code)) throw error
+        const backup = this.file + '.bak-' + newId()
+        let moved = false
+        try {
+          await rename(this.file, backup)
+          moved = true
+          await rename(temp, this.file)
+          await rm(backup, { force: true })
+        } catch (replaceError) {
+          if (moved) {
+            try { await rename(backup, this.file) } catch {}
+          }
+          throw replaceError
+        }
+      } finally {
+        await rm(temp, { force: true }).catch(() => {})
+      }
+    }
+    this.persistQueue = this.persistQueue.then(write, write)
+    return this.persistQueue
   }
   list() { return Object.entries(this.index).map(([channelId, data]) => ({ channelId, ...data })) }
 }
