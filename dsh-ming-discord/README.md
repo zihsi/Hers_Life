@@ -7,7 +7,7 @@
 - Discord Gateway v10、REST v10、訊息串流、斜線指令、按鈕／互動、圖片與附件、PNG／APNG／GIF 貼圖圖像輸入、Thread、語音。Lottie 貼圖目前只提供文字描述。
 - 每個 DM / Guild Channel / Thread 以 Discord channel id 建立獨立持久 DSH session。
 - live/discord-memory.jsonl 是跨會話事件記憶帳本；每筆包含伺服器、頻道、Thread、作者、訊息 id、session 與時間。
-- 跨會話召回只選相關事件，不把所有頻道歷史塞進 prompt。同一 Guild 可按設定跨頻道召回公開事件；跨 Guild 僅允許同一 Owner 的訊息及對該 Owner 的回覆跨越，其他成員不跨 Guild。
+- 跨會話召回只選相關事件，不把所有頻道歷史塞進 prompt。同一 Guild 與跨 Guild 的跨會話召回都只允許同一 Owner 本人的訊息，以及 AI 對該 Owner 的回覆；其他成員不能透過 Bot 讀取其他頻道或伺服器的對話。
 - DM 記憶預設只在同一個 Discord User ID 的 Owner 私訊會話之間共享。多 Owner 設定時，各 Owner 的私人記憶仍彼此隔離。公開頻道只有該 Owner 本人發言時，才可按「允許 Owner 私訊作為背景」開關召回私人背景；其他成員與其他 Owner 不會取得該背景，且提示中隱去私訊來源標籤。
 - 私訊政策可選「僅 Owner／白名單／任何人」；白名單模式的 Discord User ID 可直接在同一設定頁維護。
 - 舊工作區缺少目錄或模板時會自動建立，不覆蓋既有檔案。
