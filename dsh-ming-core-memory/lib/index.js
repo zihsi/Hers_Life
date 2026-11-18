@@ -33,7 +33,7 @@ import {
 } from './persona.js';
 
 export const name = 'dsh-core-memory';
-export const inject = ['tools', 'systemPrompt'];
+export const inject = ['tools', 'hersLifeDiscord'];
 
 function dshHome() {
   return process.env.DSH_HOME || join(homedir(), '.dsh');
@@ -1193,10 +1193,11 @@ export function apply(ctx) {
 
   // 设置页读写接口：风格页（client.js）经同源 fetch 调用。
   // webServer 是可选依赖——缺席时插件照常工作，只是设置页不可用。
-  ctx.inject(['webServer'], (c) => {
+  ctx.inject(['connection', 'webServer'], (c) => {
     c.effect(() => c.webServer.register(createInspectorRoute({
       directory: notesDir,
-      parseNote: parseNoteFile,
+      parseNote: parseNoteFile,      requestRejection: (req) => c.connection?.requestRejection?.(req),
+
       describe(meta, id) {
         return {
           title: meta.title || id,
@@ -1225,7 +1226,9 @@ export function apply(ctx) {
           } catch { /* 响应已发出时忽略 */ }
         };
         try {
-          if (req.method === 'POST') {
+          if (req.method === 'POST') {          const rejection = c.connection?.requestRejection?.(req)
+          if (rejection !== undefined) { sendJson(rejection || 403, { error: 'rejected' }); return }
+
             const body = await readBody(req);
             const patch = JSON.parse(body || '{}');
             if (!patch || typeof patch !== 'object') throw new Error('请求体必须是对象');

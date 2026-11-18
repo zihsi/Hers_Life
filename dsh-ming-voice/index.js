@@ -128,7 +128,9 @@ export function apply(ctx, config) {
           res.end(JSON.stringify(body))
         }
         try {
-          const url = new URL(req.url || '/', 'http://localhost')
+          const url = new URL(req.url || '/', 'http://localhost')          const rejection = webCtx.connection?.requestRejection?.(req)
+          if (rejection !== undefined) { send(rejection || 403, { error: 'rejected' }); return }
+
           const what = url.pathname.replace('/_dsh/dsh-ming-voice', '').replace(/^\//, '')
           // 2026-11-07 18:3x：面板只能看见文件名、听不了。加一条只读的音频口，
           // 只放 live/voice 下的 .mp3，名字取 basename，挡掉路径穿越。

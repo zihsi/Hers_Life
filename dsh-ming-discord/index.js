@@ -216,7 +216,9 @@ export function apply(ctx, pluginConfig = {}) {
       path: API,
       handler: async (req, res) => {
         try {
-          const url = new URL(req.url || '/', 'http://localhost')
+          const url = new URL(req.url || '/', 'http://localhost')          const rejection = webCtx.connection?.requestRejection?.(req)
+          if (rejection !== undefined) { send(res, rejection || 403, { ok: false, error: 'rejected' }); return }
+
           const route = url.pathname.slice(API.length).replace(/^\//, '')
           if (req.method === 'GET' && (route === 'settings' || route === 'state')) {
             send(res, 200, { ok: true, settings: settings.publicConfig(), status, hasToken: settings.hasToken(),

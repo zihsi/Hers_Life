@@ -2,7 +2,7 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-export function createInspectorRoute({ directory, parseNote, describe }) {
+export function createInspectorRoute({ directory, parseNote, describe, requestRejection }) {
   return {
     kind: 'exact', path: '/dsh-core-memory/inspector',
     async handler(req, res) {
@@ -12,7 +12,9 @@ export function createInspectorRoute({ directory, parseNote, describe }) {
         res.setHeader('cache-control', 'no-store')
         res.end(JSON.stringify(data))
       }
-      if (req.method !== 'GET') { res.setHeader('allow', 'GET'); send(405, { error: '这里只提供查看，不修改记忆。' }); return }
+      if (req.method !== 'GET') { res.setHeader('allow', 'GET'); send(405, { error: '这里只提供查看，不修改记忆。' }); return }      const rejection = typeof requestRejection === 'function' ? requestRejection(req) : undefined
+      if (rejection !== undefined) { send(rejection || 403, { error: 'rejected' }); return }
+
       try {
         const url = new URL(req.url, 'http://localhost')
         const id = url.searchParams.get('id')

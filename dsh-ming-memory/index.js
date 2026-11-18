@@ -1162,7 +1162,9 @@ export function registerArchiveRoutes(ctx) {
           res.end(JSON.stringify(body))
         }
         try {
-          const url = new URL(req.url || '/', 'http://localhost')
+          const url = new URL(req.url || '/', 'http://localhost')          const rejection = webCtx.connection?.requestRejection?.(req)
+          if (rejection !== undefined) { respond(rejection || 403, { ok: false, error: 'rejected' }); return }
+
           const what = url.pathname.slice(ARCHIVE_ROUTE.length).replace(/^\//, '')
           const dir = path.join(os.homedir(), '.dsh', 'memory', 'notes')
 
