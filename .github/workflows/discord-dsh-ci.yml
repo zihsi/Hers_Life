@@ -29,6 +29,7 @@ jobs:
         run: |
           node --test \
             dsh-ming-discord/test/core.test.mjs \
+            dsh-ming-memory/persona-consistency.test.mjs \
             dsh-ming-browse/reliability.test.mjs \
             dsh-ming-resume/reliability.test.mjs \
             dsh-ming-skill-isolate/reliability.test.mjs \
