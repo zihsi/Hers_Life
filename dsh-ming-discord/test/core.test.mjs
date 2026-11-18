@@ -13,7 +13,7 @@ import { DiscordInterestStore } from '../interests.js'
 import { quarantinePrivateDmDiary } from '../privacy.js'
 import { DiscordBridge } from '../discord/bridge.js'
 import { DaveSession } from '../discord/dave.js'
-import { VoiceConnection } from '../discord/voice.js'
+import { VoiceConnection, VoiceManager } from '../discord/voice.js'
 import { apply as applyDiscord } from '../index.js'
 import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
 import { apply as applyVoice } from '../../dsh-ming-voice/index.js'
@@ -265,6 +265,15 @@ test('voice join waits for DAVE readiness and playback refuses inactive E2EE', a
   }, 5)
   assert.equal(await waiting, connection)
   assert.equal(connection.daveReady, true)
+
+  let repeatedJoinWaitedForDAVE = false
+  const manager = Object.create(VoiceManager.prototype)
+  manager.connections = new Map([['guild-ready', {
+    channelId: 'voice-ready', state: 'ready', ready: Promise.resolve(),
+    async waitForDAVE() { repeatedJoinWaitedForDAVE = true },
+  }]])
+  assert.equal(await manager.join('guild-ready', 'voice-ready'), manager.connections.get('guild-ready'))
+  assert.equal(repeatedJoinWaitedForDAVE, true, 'a second caller must not bypass the first caller’s MLS wait')
 
   const notReady = new VoiceConnection({
     gateway: { leaveVoice() {} }, rest: {}, logger: null,
