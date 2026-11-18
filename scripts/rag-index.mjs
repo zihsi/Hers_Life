@@ -13,7 +13,6 @@
 //     generations/<generation>/
 //       doc/{manifest.json,vectors.f32,ids.json}
 //       web/{manifest.json,vectors.f32,ids.json,corpus.jsonl}
-//       qq/{...}
 //
 // 用法：
 //   node scripts/rag-index.mjs list
