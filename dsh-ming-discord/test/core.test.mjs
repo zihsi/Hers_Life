@@ -14,6 +14,66 @@ import { quarantinePrivateDmDiary } from '../privacy.js'
 import { DiscordBridge } from '../discord/bridge.js'
 import { apply as applyDiscord } from '../index.js'
 import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
+import { apply as applyVoice } from '../../dsh-ming-voice/index.js'
+
+test('Discord journal writes respect the configured diary folder', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-journal-'))
+  try {
+    const settings = { get(key, fallback) { return key === 'diaryDir' ? 'custom-notes/daily' : fallback } }
+    const brain = new DiscordBrain({ workspace: root, settings, logger: null })
+    await brain.writeJournal('public reply')
+    const date = new Date().toISOString().slice(0, 10)
+    const written = await readFile(path.join(root, 'custom-notes', 'daily', date + '.md'), 'utf8')
+    assert.match(written, /public reply/)
+    await assert.rejects(readFile(path.join(root, 'diary', date + '.md'), 'utf8'), /ENOENT/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('voice plugin uses official DSH Agent id and the latest shared workspace/TTS settings', async () => {
+  let currentWorkspace = path.join(os.tmpdir(), 'hers-life-voice-old')
+  let route
+  let registeredTool
+  const cfg = { root: path.join(os.tmpdir(), 'hers-life-voice-default') }
+  const ctx = {
+    hersLifeDiscord: {
+      get workspace() { return currentWorkspace },
+      actorForExecution(exec) {
+        return { userId: 'owner-1', sessionId: exec.agent.id, channelId: 'channel-1' }
+      },
+      getSetting(key, fallback) {
+        if (key === 'voice.ttsVoice') return 'zh-TW-HsiaoChenNeural'
+        if (key === 'voice.ttsRate') return '+12%'
+        if (key === 'voice.ffmpeg') return 'C:/tools/ffmpeg.exe'
+        return fallback
+      },
+    },
+    tools: { register(tool) { registeredTool = tool } },
+    inject(_deps, callback) {
+      callback({
+        effect(fn) { fn() },
+        webServer: { register(value) { route = value } },
+      })
+    },
+  }
+  applyVoice(ctx, cfg)
+  assert.ok(registeredTool)
+  assert.equal(await registeredTool.execute({ text: '   ' }, { agent: { id: 'session-voice' } }), 'text 是空的，没东西可合成。')
+
+  currentWorkspace = path.join(os.tmpdir(), 'hers-life-voice-new')
+  const response = {
+    status: 0, headers: null, body: '',
+    writeHead(status, headers) { this.status = status; this.headers = headers },
+    end(body) { this.body = body },
+  }
+  await route.handler({ url: '/_dsh/dsh-ming-voice/state' }, response)
+  assert.equal(response.status, 200)
+  const payload = JSON.parse(response.body)
+  assert.equal(payload.dir, path.join(currentWorkspace, 'live', 'voice'))
+  assert.equal(payload.voice, 'zh-TW-HsiaoChenNeural')
+  assert.equal(payload.rate, '+12%')
+})
 
 test('legacy private DM diary entries are quarantined before shared memory reads them', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-privacy-'))
@@ -220,7 +280,7 @@ test('slash commands and model tools inherit Discord actor and Owner permissions
   const [ownerResult, memberResult] = await Promise.all([
     bridge.actorStorage.run(ownerActor, async () => {
       await delay(20)
-      return bridge.actorForExecution({ agent: { session: { id: 'session-1' } } }).userId
+      return bridge.actorForExecution({ agent: { id: 'session-1' } }).userId
     }),
     bridge.actorStorage.run(memberActor, async () => {
       await delay(5)
@@ -231,7 +291,7 @@ test('slash commands and model tools inherit Discord actor and Owner permissions
   assert.equal(memberResult, 'member-2')
   assert.throws(() => bridge.actorForExecution({ agent: { session: { id: 'session-1' } } }), /目前正在處理 Discord 訊息/)
   assert.throws(() => bridge.actorStorage.run(ownerActor, () =>
-    bridge.actorForExecution({ agent: { session: { id: 'another-session' } } })), /目前正在處理 Discord 訊息/)
+    bridge.actorForExecution({ agent: { id: 'another-session' } })), /目前正在處理 Discord 訊息/)
 })
 
 test('slash command dispatcher excludes private DMs from shared interaction events', async () => {
