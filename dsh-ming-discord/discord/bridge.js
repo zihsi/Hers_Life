@@ -283,6 +283,8 @@ export class DiscordBridge {
    */
   installCommands() {
     this.interactions.handle('ask', async ({ interaction, option, user, defer, reply }) => {
+      const denied = this.authorizeInteraction(interaction)
+      if (denied) return { content: denied, flags: 64 }
       const text = String(option('text') ?? '').trim()
       if (text === '') return '要问她什么呢？'
       // Answering takes far longer than the three-second interaction deadline,
@@ -309,16 +311,21 @@ export class DiscordBridge {
       return null
     })
     this.interactions.handle('say', async ({ interaction, option }) => {
+      const denied = this.authorizeInteraction(interaction, { ownerOnly: true })
+      if (denied) return { content: denied, flags: 64 }
       const text = String(option('text') ?? '')
       // The channel option is optional in the command payload; without it the
       // sentence goes wherever the command was used.
       const channelId = String(option('channel') ?? interaction.channel_id ?? '')
       if (text === '') return '要说什么？'
       if (channelId === '') return '要给个频道。'
+      if (!await this.allowedTargetChannel(channelId)) return { content: '目標頻道不在允許清單內，或 Bot 無法讀取。', flags: 64 }
       const sent = await this.say(channelId, text)
       return '说了（消息 id ' + sent.filter(Boolean).join(', ') + '）'
     })
-    this.interactions.handle('memory', async ({ option }) => {
+    this.interactions.handle('memory', async ({ interaction, option }) => {
+      const denied = this.authorizeInteraction(interaction, { ownerOnly: true })
+      if (denied) return { content: denied, flags: 64 }
       if (this.brain === null) return '记忆模块没开。'
       const query = String(option('query') ?? '').trim()
       const notes = query === '' ? this.brain.listNotes({}).slice(-8) : this.brain.search(query, 8)
@@ -331,7 +338,9 @@ export class DiscordBridge {
         }],
       }
     })
-    this.interactions.handle('status', async () => {
+    this.interactions.handle('status', async ({ interaction }) => {
+      const denied = this.authorizeInteraction(interaction, { ownerOnly: true })
+      if (denied) return { content: denied, flags: 64 }
       const modules = []
       modules.push('Discord：' + (this.gateway?.ready ? '在线' : '离线'))
       modules.push('记忆：' + (this.brain === null ? '关' : this.brain.notes.length + ' 条'))
@@ -339,6 +348,8 @@ export class DiscordBridge {
       return { embeds: [{ title: '她的状态', description: modules.join('\n'), color: 0x30a46c }] }
     })
     this.interactions.handle('voice', async ({ interaction, option, user }) => {
+      const denied = this.authorizeInteraction(interaction, { ownerOnly: true })
+      if (denied) return { content: denied, flags: 64 }
       if (this.voice === null) return '语音模块没开。'
       const action = String(option('action') ?? '')
       const guildId = String(interaction.guild_id ?? '')
@@ -374,6 +385,8 @@ export class DiscordBridge {
      * feature is that you should not have to copy text to ask about it.
      */
     this.interactions.handle('peek', async ({ interaction, user, defer }) => {
+      const denied = this.authorizeInteraction(interaction)
+      if (denied) return { content: denied, flags: 64 }
       const data = interaction.data ?? {}
       const targetId = String(data.target_id ?? '')
       const channelId = String(interaction.channel_id ?? '')
@@ -420,6 +433,8 @@ export class DiscordBridge {
      * point of a one-tap menu is that it finishes in one tap.
      */
     this.interactions.handle('remember', async ({ interaction }) => {
+      const denied = this.authorizeInteraction(interaction, { ownerOnly: true })
+      if (denied) return { content: denied, flags: 64 }
       if (!this.brain) return '记忆模块没开。'
       const data = interaction.data ?? {}
       const targetId = String(data.target_id ?? '')
