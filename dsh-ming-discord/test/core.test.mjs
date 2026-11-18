@@ -10,9 +10,51 @@ import { SettingsStore, isDiaryFilename, isDiaryPath } from '../settings.js'
 import { DiscordSessionPool } from '../pool.js'
 import { DiscordBrain } from '../memory.js'
 import { DiscordInterestStore } from '../interests.js'
+import { quarantinePrivateDmDiary } from '../privacy.js'
 import { DiscordBridge } from '../discord/bridge.js'
 import { apply as applyDiscord } from '../index.js'
 import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
+
+test('legacy private DM diary entries are quarantined before shared memory reads them', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-privacy-'))
+  const workspace = path.join(root, 'workspace')
+  const privateHome = path.join(root, '.dsh')
+  const diary = path.join(workspace, 'diary')
+  await mkdir(diary, { recursive: true })
+  try {
+    const file = path.join(diary, '2026-11-18.md')
+    await writeFile(file, [
+      '- 2026-11-18T01:00:00.000Z 私聊 Alice — private secret line',
+      'private continuation that must move with the DM entry',
+      '- 2026-11-18T02:00:00.000Z #general @ Server — public journal line',
+      '- 2026-11-18T03:00:00.000Z 私聊 Bob — another private secret',
+      'second private continuation',
+      '',
+    ].join('\n'), 'utf8')
+
+    const result = await quarantinePrivateDmDiary(workspace, privateHome)
+    assert.equal(result.filesChanged, 1)
+    assert.equal(result.entriesMoved, 2)
+
+    const cleaned = await readFile(file, 'utf8')
+    assert.match(cleaned, /public journal line/)
+    assert.doesNotMatch(cleaned, /private secret|private continuation|another private/)
+
+    const archiveFiles = await (await import('node:fs/promises')).readdir(result.archiveDir)
+    assert.equal(archiveFiles.length, 1)
+    const archive = await readFile(path.join(result.archiveDir, archiveFiles[0]), 'utf8')
+    assert.match(archive, /private secret line/)
+    assert.match(archive, /private continuation that must move/)
+    assert.match(archive, /another private secret/)
+    assert.match(archive, /second private continuation/)
+
+    const repeated = await quarantinePrivateDmDiary(workspace, privateHome)
+    assert.equal(repeated.entriesMoved, 0)
+    assert.equal(repeated.alreadyDone, true)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
 
 test('DM, guild channel and thread get distinct durable session ids', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-pool-'))
