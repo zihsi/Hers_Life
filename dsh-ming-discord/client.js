@@ -12,7 +12,7 @@ window.__ModuleLoader__.load({
       diaryDir: 'diary', diaryCount: 3, diaryChars: 8000, maxChars: 12000,
       discord: { enabled: false, mode: 'mention', allowDm: true, dmPolicy: 'owner', guildIds: [], channelIds: [], typing: true, streamEdits: true, replyToMessage: true, reactions: true, shareImages: true, chunkLimit: 1900, maxAttachmentMb: 24, progressInDm: true, showTools: false, learnInterests: true },
       memory: { enabled: true, shareAcrossChannels: true, shareAcrossGuilds: true, sharePrivateToOwner: true, allowPrivateContextInGuild: true, maxRecall: 6, maxAgeDays: 365 },
-      voice: { enabled: true, ffmpeg: 'ffmpeg', heartbeat: true },
+      voice: { enabled: true, ffmpeg: 'ffmpeg', heartbeat: true, ttsVoice: 'zh-CN-XiaoxiaoNeural', ttsRate: '+0%' },
       interest: { enabled: true, minChars: 6, contextLines: 4, minGapMinutes: 20, maxPerHour: 3, quietHours: '01:00-08:00', channelGapMinutes: 45 },
     }
 
@@ -376,6 +376,8 @@ window.__ModuleLoader__.load({
             check('啟用 Discord 語音', 'voice.enabled', '語音需要 FFmpeg 與目前可用的 DAVE 原生模組。'),
             h('div', { className: 'hl-grid' },
               input('FFmpeg 執行檔路徑', 'voice.ffmpeg', '可填 ffmpeg 或絕對路徑。'),
+              input('TTS 預設音色', 'voice.ttsVoice', '例如 zh-CN-XiaoxiaoNeural、zh-CN-YunxiNeural 或 zh-CN-XiaoyiNeural。'),
+              input('TTS 預設語速', 'voice.ttsRate', '例如 +0%、+10% 或 -10%。'),
               input('最低訊息字數', 'interest.minChars', '', 'number'),
               input('上下文行數', 'interest.contextLines', '', 'number'),
               input('全域冷卻（分鐘）', 'interest.minGapMinutes', '', 'number'),
