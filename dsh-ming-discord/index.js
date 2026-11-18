@@ -434,13 +434,13 @@ export function apply(ctx, pluginConfig = {}) {
     description: '把工作區內的音訊、圖片或檔案發送到目前發起這輪對話的 Discord 頻道／私訊；不可指定其他頻道。Owner 可傳工作區內檔案，其他成員只能傳本次自己的 voice 或 outbox 檔案。',
     parameters: {
       type: 'object', properties: {
-        channelId: { type: 'string' }, path: { type: 'string' }, caption: { type: 'string' },
-      }, required: ['channelId', 'path'], additionalProperties: false,
+        path: { type: 'string' }, caption: { type: 'string' },
+      }, required: ['path'], additionalProperties: false,
     },
     output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: String(value) }] },
     async execute(args, exec) {
       const actor = bridge?.actorForExecution(exec)
-      return JSON.stringify(await sendFile(args.channelId, args.path, args.caption ?? '', actor))
+      return JSON.stringify(await sendFile(actor.channelId, args.path, args.caption ?? '', actor))
     },
   })
 }
