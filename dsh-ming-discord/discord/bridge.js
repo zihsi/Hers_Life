@@ -991,8 +991,8 @@ export class DiscordBridge {
     const blocks = []
     const attachments = message.attachments ?? []
     const saved = []
+    const maxBytes = Number(this.settings.get('discord.maxAttachmentMb', 24)) * 1024 * 1024
     if (attachments.length > 0) {
-      const maxBytes = Number(this.settings.get('discord.maxAttachmentMb', 24)) * 1024 * 1024
       const downloadDir = join(this.settings.resolve().dataRoot, 'downloads', String(message.id ?? newId()))
       for (const attachment of attachments.slice(0, 10)) {
         const name = String(attachment.filename ?? 'file')
