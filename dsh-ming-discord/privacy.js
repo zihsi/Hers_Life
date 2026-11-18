@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, readFile, readdir, rename, writeFile, realpath } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rename, rm, writeFile, realpath } from 'node:fs/promises'
 import path from 'node:path'
 
 const PRIVATE_DIARY_START = /^-\s+\d{4}-\d{2}-\d{2}T[^\s]+\s+私聊\s+/u
@@ -28,6 +28,31 @@ export function quarantinePrivateDmDiary(workspace, privateRoot, diaryRelative =
     .finally(() => inFlight.delete(key))
   inFlight.set(key, pending)
   return pending
+}
+
+async function replaceFile(temp, target) {
+  try { await rename(temp, target); return }
+  catch (error) {
+    if (process.platform !== 'win32' || !['EPERM', 'EEXIST', 'ENOTEMPTY'].includes(error?.code)) throw error
+    const backup = target + '.bak-' + randomUUID()
+    let moved = false
+    try {
+      await rename(target, backup)
+      moved = true
+      await rename(temp, target)
+      await rm(backup, { force: true }).catch(() => {})
+    } catch (replaceError) {
+      if (moved) {
+        try { await rename(backup, target) } catch {}
+      } else if (replaceError?.code === 'ENOENT') {
+        await rename(temp, target)
+      } else {
+        throw replaceError
+      }
+    }
+  } finally {
+    await rm(temp, { force: true }).catch(() => {})
+  }
 }
 
 async function runQuarantine(root, diaryDir, privateRoot, relativeDiary) {
@@ -114,7 +139,7 @@ async function runQuarantine(root, diaryDir, privateRoot, relativeDiary) {
 
     const temp = file + '.privacy-' + randomUUID()
     await writeFile(temp, kept.join(''), 'utf8')
-    await rename(temp, file)
+    await replaceFile(temp, file)
     filesChanged += 1
     entriesMoved += privateBlocks.length
   }
