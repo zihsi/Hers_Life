@@ -8,7 +8,7 @@
 - 每個 DM / Guild Channel / Thread 以 Discord channel id 建立獨立持久 DSH session。
 - live/discord-memory.jsonl 是跨會話事件記憶帳本；每筆包含伺服器、頻道、Thread、作者、訊息 id、session 與時間。
 - 跨會話召回只選相關事件，不把所有頻道歷史塞進 prompt。
-- DM 記憶預設只在已設定 Owner 的私訊會話之間共享。公開頻道只有 Owner 本人發言時，才可按「允許 Owner 私訊作為背景」開關召回私人背景；其他成員不會取得該背景，且提示中隱去私訊來源標籤。
+- DM 記憶預設只在同一個 Discord User ID 的 Owner 私訊會話之間共享。多 Owner 設定時，各 Owner 的私人記憶仍彼此隔離。公開頻道只有該 Owner 本人發言時，才可按「允許 Owner 私訊作為背景」開關召回私人背景；其他成員與其他 Owner 不會取得該背景，且提示中隱去私訊來源標籤。
 - 私訊政策可選「僅 Owner／白名單／任何人」；白名單模式的 Discord User ID 可直接在同一設定頁維護。
 - 舊工作區缺少目錄或模板時會自動建立，不覆蓋既有檔案。
 - 指令權限沿用伺服器／頻道白名單與 DM 政策；`/memory`、`/status`、`/say`、`/voice`、右鍵「記下來」僅限 Owner。記憶與狀態回覆使用 ephemeral，不公開顯示。
@@ -34,6 +34,6 @@
 - 需要 Node 22+（建議 DSH 自帶的 Node 24）。
 - `/ask` 依 DM 政策／Guild／Channel 白名單；`/memory`、`/status`、`/say`、`/voice`、右鍵「記下來」僅限 Owner。TTS 預設音色與語速可在同一設定頁調整。
 - Token 不會出現在設定 API 回傳內容；一般設定檔中若有舊版明碼 Token，啟動遷移時會搬到獨立密鑰檔。
-- 請先理解 Owner 私訊背景只會在 Owner 自己發言的公開回合中召回；需要最嚴格的隔離時，關閉「允許 Owner 本人發言時使用私訊作為背景」。
+- 請先理解 Owner 私訊背景只會在 Owner 自己發言的公開回合中召回；需要最嚴格的隔離時，關閉「允許 Owner 本人發言時使用自己的私訊作為背景」。
 - 切換工作區會保全式複製缺少的檔案；請重啟 DSH，讓所有配套插件一起切換到新工作區。
 - Discord 語音需要 FFmpeg 以及可載入的 `discord/dave/davey.node`。非 Stage 語音連線自 2026-03 起必須支援 DAVE E2EE；原生模組缺失或載入失敗時，語音會明確拒絕連線，文字聊天不受影響。Stage 是 Discord 官方列出的例外，但目前適配器尚未提供 Stage 專用的無 DAVE 模式。
