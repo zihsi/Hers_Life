@@ -903,6 +903,54 @@ test('settings never return legacy plaintext tokens and reject paths outside wor
   }
 })
 
+test('SettingsStore safely replaces settings and secrets repeatedly on Windows', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-settings-replace-'))
+  try {
+    const settings = new SettingsStore({ workspace: root }, { home: root })
+    await settings.save()
+    await settings.patch({ diaryCount: 4 })
+    await settings.save()
+    await settings.patch({ diaryCount: 5 })
+    await settings.save()
+    await settings.saveToken('first-token')
+    await settings.saveToken('second-token')
+    const saved = JSON.parse(await readFile(settings.file, 'utf8'))
+    const secrets = JSON.parse(await readFile(settings.secretsFile, 'utf8'))
+    assert.equal(saved.diaryCount, 5)
+    assert.equal(secrets.discordBotToken, 'second-token')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('Discord memory compaction safely replaces an existing JSONL file on Windows', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-memory-compact-'))
+  try {
+    const file = path.join(root, 'live', 'discord-memory.jsonl')
+    await mkdir(path.dirname(file), { recursive: true })
+    const event = {
+      id: 'duplicate-event', at: new Date().toISOString(), platform: 'discord',
+      botId: 'bot-1', messageId: 'same-message', channelId: 'channel-1',
+      sessionId: 'discord-channel-channel-1', role: 'user', text: 'Windows compaction test',
+      scope: 'guild', guildId: 'guild-1', authorId: 'owner-1',
+    }
+    await writeFile(file, JSON.stringify(event) + '\\n' + JSON.stringify({ ...event, id: 'duplicate-event-copy' }) + '\\n', 'utf8')
+    const settings = {
+      home: root,
+      ownerIds() { return [] },
+      isOwner() { return false },
+      get(_key, fallback) { return fallback },
+    }
+    const brain = new DiscordBrain({ workspace: root, settings })
+    await brain.load()
+    const rows = (await readFile(file, 'utf8')).trim().split(/\\r?\\n/)
+    assert.equal(rows.length, 1)
+    assert.equal(brain.events.length, 1)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('Discord memory model and graph retain guild, channel, thread and author provenance', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-provenance-'))
   try {
