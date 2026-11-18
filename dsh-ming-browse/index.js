@@ -13,11 +13,11 @@
  * 它做的事很少：
  *   1. 盯着这个工作区的活动。所有会话都 idle 超过 N 分钟，就 wake。
  *   2. wake = 在自己那个固定会话（ming-browse）里塞一条 prompt，让我自己挑一件事做。
- *   3. 保留两条硬边界：花钱按钮不点、别把手机整个关掉；另外社交平台写操作照旧只读。
+ *   3. 保留硬边界：不关机、不重启、不刷机；花钱操作允许，社交平台互动仍按既有约定控制。
  *
  * 三条硬边界（不靠自觉，靠代码）：
  *   · 只作用于配置的工作区；别的目录的会话一概不算活动、也不会被驱动。
- *   · 自由时间内不关/不重启/不刷机；点按里的花钱按钮拒绝。
+ *   · 自由时间内不关/不重启/不刷机；购买与支付不再由隐藏代码拦截。
  *   · 上限：间隔、每日次数、静默时段，三样都卡。
  *
  * 为什么不用现成的东西：DSH 的 schedule 是「提醒我」，goal 是「继续做那件事」，
@@ -122,8 +122,6 @@ const DEFAULTS = {
   ],
   /** 在前台是社交平台时，碰到这些字样就拒掉——写操作，不是浏览。 */
   socialWriteWords: ['点赞', '关注', '评论', '收藏', '转发', '分享', '发布', '发送', '投币', '私信', '赞'],
-  /** 无论在哪个 App，碰到这些字样都不点——花钱的那一类，替她兜住。 */
-  tapTextDeny: ['充电', '大会员', '购买', '支付', '充值', '打赏', '送礼', '开通', '续费', '礼包', '支付宝', '微信支付', '结算', '确认付款'],
 }
 
 function normalize(config) {
@@ -167,9 +165,6 @@ function normalize(config) {
     socialWriteWords: Array.isArray(c.socialWriteWords) && c.socialWriteWords.length
       ? c.socialWriteWords.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim())
       : DEFAULTS.socialWriteWords,
-    tapTextDeny: Array.isArray(c.tapTextDeny) && c.tapTextDeny.length
-      ? c.tapTextDeny.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim())
-      : DEFAULTS.tapTextDeny,
   }
 }
 
@@ -1135,10 +1130,6 @@ export function apply(ctx, config) {
    */
   const checkTap = (args) => {
     const text = [args?.label, args?.query, args?.text].filter((x) => typeof x === 'string').join(' ')
-    const money = cfg.tapTextDeny.find((k) => text.includes(k))
-    if (money) {
-      return '这个按钮带「' + money + '」，属于花钱/续费那一类，不点。'
-    }
     const word = cfg.socialWriteWords.find((k) => text.includes(k))
     if (!word) return null
     const fg = socialApp()
