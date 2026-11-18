@@ -62,6 +62,8 @@ let SELF = {
 }
 
 const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
+let CORE_MEMORY_DIR = path.join(DSH_HOME, 'memory')
+const coreMemoryPath = (...parts) => path.join(CORE_MEMORY_DIR, ...parts)
 
 const CACHE = new Map() // root -> { sig, text }
 const PER_AGENT = new Map() // agentId -> { text }
@@ -335,7 +337,7 @@ function fileChars(p) {
 function indexChars() {
   // 归档索引：core-memory 取最新 12 条，这里按 mtime 数同样 12 个文件（近似，报的时候标「约」）
   try {
-    const dir = path.join(DSH_HOME, 'memory', 'notes')
+    const dir = coreMemoryPath('notes')
     const files = readdirSync(dir)
       .filter((f) => f.endsWith('.md'))
       .map((f) => ({ f, t: statSync(path.join(dir, f)).mtimeMs }))
@@ -384,7 +386,7 @@ export function lastAccountSnapshot() {
 function accountBlock(cfg, personaChars, diaryChars) {
   const total = Number.isInteger(cfg.totalChars) ? cfg.totalChars : DEFAULTS.totalChars
   const agents = fileChars(path.join(cfg.root, 'AGENTS.md'))
-  const core = fileChars(path.join(DSH_HOME, 'memory', 'MEMORY.md'))
+  const core = fileChars(coreMemoryPath('MEMORY.md'))
   const idx = indexChars()
   const sum = personaChars + diaryChars + agents + core + idx
   const over = sum > total
@@ -1069,6 +1071,11 @@ function readCwd(agent) {
 }
 
 export function apply(ctx, config) {
+  const coreMemory = ctx.hersLifeDiscord?.getSetting?.('coreMemory', {}) || {}
+  const configuredMemoryDir = String(coreMemory.directory || '').trim()
+  CORE_MEMORY_DIR = configuredMemoryDir
+    ? path.resolve(DSH_HOME, configuredMemoryDir)
+    : path.join(DSH_HOME, 'memory')
   const mergedConfig = { ...(config || {}) }
   for (const key of ['personaFiles', 'diaryDir', 'diaryCount', 'diaryChars', 'maxChars']) {
     const hasPluginValue = Object.prototype.hasOwnProperty.call(config || {}, key)
