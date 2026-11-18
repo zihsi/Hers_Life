@@ -1325,7 +1325,7 @@ export function apply(ctx) {
     }), 'dsh-core-memory: persona settings route');
   });
 
-  console.log('dsh-core-memory: 已激活，记忆库 ' + join(dshHome(), 'memory'));
+  console.log('dsh-core-memory: 已激活，记忆库 ' + memoryRoot());
 }
 
 // 只给手动/脚本调试用（bench、自测）：插件运行时不会碰它。
