@@ -291,7 +291,7 @@ async function persistSettings(settings) {
     await mkdir(dirname(SETTINGS_FILE), { recursive: true })
     const temp = SETTINGS_FILE + '.tmp-' + randomUUID()
     try {
-      await writeFile(temp, `${JSON.stringify(settings, null, 2)}\\n`, 'utf8')
+      await writeFile(temp, `${JSON.stringify(settings, null, 2)}\n`, 'utf8')
       try { await rename(temp, SETTINGS_FILE) }
       catch (error) {
         if (process.platform !== 'win32' || !['EPERM', 'EEXIST', 'ENOTEMPTY'].includes(error?.code)) throw error
