@@ -18,7 +18,7 @@ async function fixture(t) {
   }
   const boot = async () => {
     const tools = {}
-    apply({ tools: { register(d) { tools[d.name] = d } }, systemPrompt: { section() {} }, inject() {} })
+    apply({ on() {}, tools: { register(d) { tools[d.name] = d } }, systemPrompt: { section() {} }, inject() {} })
     // 此写操作排在启动恢复之后，仅修改合成的核心记忆，用来等待串行初始化完成。
     const result = await tools.memory_core.execute({ action: 'append', section: 'test', text: 'barrier' })
     assert.ok(!result.startsWith('错误'), result)
