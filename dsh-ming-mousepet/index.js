@@ -29,7 +29,6 @@ function resolveSharedWorkspace() {
     const data = JSON.parse(readFileSync(join(DSH_HOME, 'hers-life.json'), 'utf8'))
     if (typeof data.workspace === 'string' && data.workspace.trim()) return data.workspace
   } catch { /* legacy config fallback */ }
-  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
     const data = JSON.parse(readFileSync(join(DSH_HOME, 'ming-memory.json'), 'utf8'))
     if (typeof data.root === 'string' && data.root.trim()) return data.root
@@ -65,7 +64,7 @@ async function loadDefineTool(toolsPath = '') {
     const mod = await import('@deepseek-ai/dsh-tools')
     if (mod?.defineTool) return mod.defineTool
   } catch { /* 本地测试时走环境变量 */ }
-  const override = String(toolsPath || process.env.DSH_TOOLS_PATH || '').trim()
+  const override = String(toolsPath || '').trim()
   if (override) {
     const { pathToFileURL } = await import('node:url')
     const mod = await import(pathToFileURL(override).href)
