@@ -43,7 +43,7 @@ Discord 原生适配器负责 Gateway、频道／私讯／Thread 会话、附件
 
 每个 DM、伺服器频道与 Thread 都有自己的 DSH session 和独立历史。跨会话记忆不是把所有历史拼在一起，而是把重要事件写入 `live/discord-memory.jsonl`，附上 Discord message ID、作者、服务器、频道、Thread 与时间；其他会话按相关性召回，并保留来源标签。
 
-公开频道事件可按设置跨频道／跨服务器共享。Owner 私訊可在 Owner 的私訊会话之间共享；私人背景进入公开频道时，只在 Owner 本人发言的回合召回，并要求 AI 不复述或泄露私人原文。权限与范围可在 Discord 设置中心调整。
+公开频道事件可按设置跨频道／跨服务器共享。Owner 私訊只在同一個 Discord User ID 的 Owner 私訊會話之間共享；設定多位 Owner 時彼此仍隔離。私人背景進入公開頻道時，只在該 Owner 本人發言的回合召回，並要求 AI 不復述或洩露私人原文。权限与范围可在 Discord 设置中心调整。
 
 ## 装法
 
