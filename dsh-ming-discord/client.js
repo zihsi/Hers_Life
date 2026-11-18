@@ -398,7 +398,9 @@ window.__ModuleLoader__.load({
               + 'Browse 自主喚醒狀態：' + (status.paths?.browseSelfWake || '尚未取得') + '\n'
               + 'Browse 不限量旗標：' + (status.paths?.browseUnlimited || '尚未取得') + '\n'
               + 'Resume 摘要：' + (status.paths?.resumeFile || '尚未取得') + '\n'
+              + 'Resume 摘要：' + (status.paths?.resumeFile || '尚未取得') + '\n'
               + 'Resume 紀錄：' + (status.paths?.resumeLog || '尚未取得') + '\n'
+              + '假日設定：' + (status.paths?.holidaysFile || '尚未取得') + '\n'
               + '假日設定：' + (status.paths?.holidaysFile || '尚未取得') + '\n'
               + 'Mousepet 設定：' + (status.paths?.mousepetSettings || '尚未取得') + '\n'
               + 'Wake 佇列：' + (status.paths?.wakeQueue || '尚未取得') + '\n'
@@ -424,7 +426,7 @@ window.__ModuleLoader__.load({
               ),
               h('div', { className: 'hl-muted' }, '可編輯 ' + workspaceFiles.length + ' 個檔案；日記列表保留最近 12 篇，並包含今天的日記檔。')),
             h('label', { className: 'hl-field' },
-              h('span', { className: 'hl-label' }, 'Markdown 內容'),
+              h('span', { className: 'hl-label' }, '檔案內容（Markdown／JSON）'),
               h('textarea', {
                 className: 'hl-input hl-area',
                 rows: 14,
