@@ -120,17 +120,23 @@ export class DiscordBrain {
     if (event.sessionId === sessionKey) return false
     if (event.scope === 'guild') {
       if (!this.settings.get('memory.shareAcrossChannels', true)) return false
-      if (!this.settings.get('memory.shareAcrossGuilds', true) && target.kind !== 'dm') return String(event.guildId) === String(target.guildId)
+      if (!this.settings.get('memory.shareAcrossGuilds', true)) {
+        // A DM has no guild of its own to match; when cross-guild sharing is
+        // disabled, do not treat it as a wildcard that can see every server.
+        if (target.kind === 'dm') return false
+        return String(event.guildId) === String(target.guildId)
+      }
       return true
     }
     if (!this.settings.get('memory.sharePrivateToOwner', true)) return false
-    const ownerId = String(event.participantId || event.authorId || '')
-    if (target.kind === 'dm') return this.settings.isOwner(target.userId) && this.settings.isOwner(ownerId)
+    const participantId = String(event.participantId || event.authorId || '')
+    // Owner membership is not enough when multiple Owners are configured:
+    // private context belongs only to the exact same Discord User ID.
+    if (!this.settings.isOwner(target.userId) || participantId !== String(target.userId)) return false
+    if (target.kind === 'dm') return true
     // A private Owner memory is retrieved in a public channel only on a turn
-    // written by the Owner; other members never get private context injected.
-    return this.settings.isOwner(target.userId) &&
-      this.settings.get('memory.allowPrivateContextInGuild', true) === true &&
-      this.settings.isOwner(ownerId)
+    // written by that exact Owner; other members and other Owners never see it.
+    return this.settings.get('memory.allowPrivateContextInGuild', true) === true
   }
   async recallContext(query, target, sessionKey) {
     if (!this.loaded || !this.settings.get('memory.enabled', true)) return ''
