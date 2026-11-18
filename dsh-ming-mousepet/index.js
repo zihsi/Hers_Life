@@ -323,7 +323,13 @@ function readBody(req) {
 export async function apply(ctx, rawConfig = {}) {
   const central = ctx.hersLifeDiscord?.getSetting?.('mousepet', {}) || {}
   if (central.enabled === false) return
-  const mergedConfig = { ...rawConfig, ...central, companion: { ...(rawConfig.companion || {}), ...(central.companion || {}) } }
+  const mergedConfig = {
+    ...rawConfig,
+    ...central,
+    talkProvider: central.companion?.provider ?? rawConfig.talkProvider,
+    talkModel: central.companion?.model ?? rawConfig.talkModel,
+    companion: { ...(rawConfig.companion || {}), ...(central.companion || {}) },
+  }
   const requireDiscordOwner = (exec, operation) => {
     const meta = exec?.agent?.session?.header?.meta?.hersLife
       ?? exec?.agent?.session?.header?.metadata?.hersLife ?? {}
@@ -395,7 +401,7 @@ export async function apply(ctx, rawConfig = {}) {
       // 2026-11-17（核查 R07）：这是**旧** 47322 收文口的入口，它不配对 token。
       // 新的 /webpick/pick 已经要 token 了；这一条默认关掉，别让两条路并存还宣称"都配对"。
       // 真要接老用户：config.legacyWebPick = true，并自己承担"本机任何进程都能塞一段"。
-      if (rawConfig?.legacyWebPick !== true && current?.legacyWebPick !== true) {
+      if (mergedConfig?.legacyWebPick !== true && current?.legacyWebPick !== true) {
         log('旧网页取文入口收到一次事件，但 legacyWebPick 没开，已忽略')
         return
       }
@@ -531,7 +537,7 @@ export async function apply(ctx, rawConfig = {}) {
   const cardCtl = createCard({
     llm: () => llmRef,
     engine,
-    cardPath: resolveCardPath(String(rawConfig?.companion?.workspace || '') || process.cwd()),
+    cardPath: resolveCardPath(String(mergedConfig?.companion?.workspace || '') || process.cwd()),
     // 2026-11-09 17:0x：卡片这一档也得说清用哪条模型线——
     // 宿主 GenerateOptions.provider/model 必填，不传就选不到适配器（症状是「模型给的空话」）。
     // 读的是同一个 talkerOptions，所以页面上换模型，卡片下一次开口就跟着换。
@@ -1164,7 +1170,7 @@ export async function apply(ctx, rawConfig = {}) {
   // 原来单独起一个 47323 的服务；现在挂到本插件的 webServer 上，少一个常驻进程。
   // 落盘目录默认 <工作区>/live/webpick；没有工作区就落到 ~/.dsh/ming-mousepet/webpick。
   const sharedWorkspace = resolveSharedWorkspace()
-  const webpickDir = String(rawConfig?.webpickDir || current?.webpickDir || '')
+  const webpickDir = String(mergedConfig?.webpickDir || current?.webpickDir || '')
     || (sharedWorkspace
       ? join(sharedWorkspace, 'live', 'webpick')
       : join(DSH_HOME, 'ming-mousepet', 'webpick'))
@@ -1463,12 +1469,12 @@ export async function apply(ctx, rawConfig = {}) {
   // 2026-11-08 她要的：一个开关，开了就有个会说话的桌宠，不用另开会话、不用另给 key。
   // 走宿主自己的模型通道（ctx.llm），模型名写在插件 config 里。
   const companionCfg = {
-    enabled: Boolean(rawConfig?.companion?.enabled),
-    tickMs: Number(rawConfig?.companion?.tickMs) || 90000,
-    provider: String(rawConfig?.companion?.provider || 'wb-proxy'),
-    model: String(rawConfig?.companion?.model || ''),
-    bubbleMs: Number(rawConfig?.companion?.bubbleMs) || 4200,
-    workspace: String(rawConfig?.companion?.workspace || '') || ctx.hersLifeDiscord?.workspace || resolveSharedWorkspace() || process.cwd(),
+    enabled: Boolean(mergedConfig?.companion?.enabled),
+    tickMs: Number(mergedConfig?.companion?.tickMs) || 90000,
+    provider: String(mergedConfig?.companion?.provider || 'wb-proxy'),
+    model: String(mergedConfig?.companion?.model || ''),
+    bubbleMs: Number(mergedConfig?.companion?.bubbleMs) || 4200,
+    workspace: String(mergedConfig?.companion?.workspace || '') || ctx.hersLifeDiscord?.workspace || resolveSharedWorkspace() || process.cwd(),
   }
   let stopTalker = null
   let sessionRef = null
