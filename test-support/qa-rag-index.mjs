@@ -43,14 +43,13 @@ function writeLayer(name, files, rowCount = 1, dim = DIM) {
 const L = {
   doc: { emb: 'doc-emb.f32', ids: 'doc-emb-ids.json', manifest: 'doc-emb.manifest.json' },
   web: { emb: 'chat-emb.f32', ids: 'chat-emb-ids.json', corpus: 'chat-corpus.jsonl', manifest: 'chat-emb.manifest.json' },
-  qq: { emb: 'qq-emb.f32', ids: 'qq-emb-ids.json', corpus: 'qq-corpus.jsonl', manifest: 'qq-emb.manifest.json' },
 }
 for (const [n, f] of Object.entries(L)) writeLayer(n, f)
 
 // 1) 完整 → verify 通过
 let r = run(['verify'])
 ok('完整索引 verify 退出 0', r.status === 0, r.stdout.slice(-200) + r.stderr.slice(-200))
-ok('verify 报三层都完整', /三层都完整/.test(r.stdout))
+ok('verify 报两层都完整', /两层都完整/.test(r.stdout))
 
 // 2) 坏索引不许发布：维度对不上
 {
@@ -69,7 +68,7 @@ r = run(['snapshot'])
 ok('发布第一代成功', r.status === 0, r.stderr.slice(-200))
 const cur1 = JSON.parse(readFileSync(join(LIVE, 'rag-index', 'current.json'), 'utf8'))
 ok('current.json 有 generation', !!cur1.generation)
-ok('快照里三层目录都在', ['doc', 'web', 'qq'].every((n) => existsSync(join(LIVE, 'rag-index', 'generations', cur1.generation, n, 'vectors.f32'))))
+ok('快照里两层目录都在', ['doc', 'web'].every((n) => existsSync(join(LIVE, 'rag-index', 'generations', cur1.generation, n, 'vectors.f32'))))
 ok('快照里带了 manifest', existsSync(join(LIVE, 'rag-index', 'generations', cur1.generation, 'doc', 'manifest.json')))
 
 // 4) 改内容再发一代
