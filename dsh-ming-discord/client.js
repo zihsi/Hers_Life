@@ -458,6 +458,7 @@ window.__ModuleLoader__.load({
               input('每輪最多 Session 數', 'browse.sessionRounds', '', 'number'),
               input('每輪最多開啟項目', 'browse.maxItems', '', 'number'),
               input('每輪最多截圖數', 'browse.maxShots', '', 'number'),
+              input('Browse Agent 預設（留空用 DSH 預設）', 'browse.agentPreset', ''),
               input('靜默時段', 'browse.quietHours', '例如 08:00-18:30'),
               input('間隔模式（fixed／random／heartbeat）', 'browse.gapMode', 'fixed'),
               input('心跳最短（分鐘）', 'browse.hbMin', '', 'number'),
