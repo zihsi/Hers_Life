@@ -1,6 +1,27 @@
-import { appendFile, mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { newId } from './util.js'
+async function replaceFile(temp, target) {
+  try { await rename(temp, target); return }
+  catch (error) {
+    if (process.platform !== 'win32' || !['EPERM', 'EEXIST', 'ENOTEMPTY'].includes(error?.code)) throw error
+    const backup = target + '.bak-' + newId()
+    let moved = false
+    try {
+      await rename(target, backup)
+      moved = true
+      await rename(temp, target)
+      await rm(backup, { force: true })
+    } catch (replaceError) {
+      if (moved) {
+        try { await rename(backup, target) } catch {}
+      }
+      throw replaceError
+    }
+  } finally {
+    await rm(temp, { force: true }).catch(() => {})
+  }
+}
 function words(value) {
   const text = String(value ?? '').toLowerCase()
   const out = text.match(/[\p{L}\p{N}_-]{2,}/gu) ?? []
@@ -54,7 +75,7 @@ export class DiscordBrain {
       if (rows.length !== rawLineCount) {
         const temp = this.file + '.compact-' + process.pid
         await writeFile(temp, rows.map((item) => JSON.stringify(item)).join('\n') + (rows.length ? '\n' : ''), 'utf8')
-        await rename(temp, this.file)
+        await replaceFile(temp, this.file)
       }
     } catch (error) {
       this.logger?.warn?.('Discord memory load failed: ' + String(error?.message ?? error))
