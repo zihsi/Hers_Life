@@ -19,9 +19,9 @@ export function apply(ctx, config = {}) {
           res.end(JSON.stringify(data))
         }
         try {
-          if (req.method === 'GET')          const rejection = c.connection?.requestRejection?.(req)
+          const rejection = c.connection?.requestRejection?.(req)
           if (rejection !== undefined) { send(rejection || 403, { error: 'rejected' }); return }
- { send(200, await store.read()); return }
+          if (req.method === 'GET') { send(200, await store.read()); return }
           if (req.method !== 'POST') { res.setHeader('allow', 'GET, POST'); send(405, { error: '只支持查看和保存活动。' }); return }
           if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] || '')) throw fault(415, '请使用 JSON 请求。')
           const chunks = []; let size = 0
