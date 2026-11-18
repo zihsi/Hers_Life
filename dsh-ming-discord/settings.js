@@ -79,7 +79,7 @@ const DEFAULTS = {
   bilibili: { enabled: true, credentialFile: '', searchMaxPageSize: 20, subtitleMaxChars: 16000, timeoutMs: 30000 },
   activities: { enabled: true },
   skillIsolate: { enabled: true, stateFile: '' },
-  coreMemory: { enabled: true },
+  coreMemory: { enabled: true, directory: '' },
   graph: { enabled: true, syncSeconds: 120, costPricesFile: '', costAutoFile: '' },
   advanced: { turnTimeoutMinutes: 15 },
 }
@@ -222,7 +222,11 @@ export class SettingsStore {
   }
   resolve() {
     const workspace = path.resolve(String(this.settings.workspace || DEFAULTS.workspace))
-    return { workspace, dataRoot: path.join(workspace, 'live'), ffmpeg: String(this.get('voice.ffmpeg', 'ffmpeg') || 'ffmpeg') }
+    const configuredCoreMemory = String(this.get('coreMemory.directory', '') || '').trim()
+    const coreMemoryDir = configuredCoreMemory
+      ? path.resolve(this.home, configuredCoreMemory)
+      : path.join(this.home, 'memory')
+    return { workspace, dataRoot: path.join(workspace, 'live'), coreMemoryDir, ffmpeg: String(this.get('voice.ffmpeg', 'ffmpeg') || 'ffmpeg') }
   }
   ownerIds() { return cleanStringList(this.settings.ownerIds) }
   isOwner(id) { return this.ownerIds().includes(String(id ?? '')) }
