@@ -208,7 +208,8 @@ apply(ctx2, {
   maxShots: 0,
 })
 await ctx2.__tick()
-// adoptSession 和 wake 各写一次账本，都是异步落盘；等它们都写完再读。
+// tick 会异步触发 wake；先等假 Agent 真正收到 followup，再检查落盘结果。
+for (let attempt = 0; attempt < 200 && created2.length === 0; attempt += 1) await sleep(10)
 ok(created2[0] !== 'ming-browse-12', '账本那段被归档 → 不回头捡跑过的旧段', String(created2[0]))
 ok(created2[0] === 'ming-browse-14', '账本那段被归档 → 开一段全新的（-14）', String(created2[0]))
 const ledger3 = await readLedger(ws2, { id: 'ming-browse-14', rounds: 1 })
