@@ -1076,6 +1076,10 @@ export function apply(ctx, config) {
       // 没配 root 就什么都不做：空字符串在 POSIX 上会让每个 cwd 都算「在档案目录里」，
       // 等于把日记注进所有工程会话。宁可什么都不给。
       if (!cfg.root) return
+      // The Discord adapter may have to remove legacy DM replies from the
+      // shared diary. Complete that privacy migration before building the
+      // opening prompt, and again before steps for already-existing sessions.
+      await ctx.hersLifeDiscord?.ensurePrivacy?.()
       const mode = insideRoot(cwd, cfg.root) ? 'full' : 'light'
       const snap = await refresh(cfg)
       const rec = { mode, text: mode === 'full' ? snap.full : snap.light, shared: '', when: mode === 'full' ? await readWhenBlock(cfg, agent.id) : '', status: await readStatusBlock(cfg), heavy: await readHeavyBlock(cfg) }
@@ -1094,6 +1098,12 @@ export function apply(ctx, config) {
       const agent = payload && payload.agent
       const rec = agent && PER_AGENT.get(agent.id)
       if (rec) {
+        const privacy = await ctx.hersLifeDiscord?.ensurePrivacy?.()
+        if (privacy?.entriesMoved > 0) {
+          const snap = await refresh(cfg)
+          rec.text = rec.mode === 'full' ? snap.full : snap.light
+          rec.bucket = Math.floor(Date.now() / cfg.refreshWindowMs)
+        }
         // 2026-10-28 那一版的做法是「把时间窗拉长，窗内不重算」，靠少改字来少断缓存；
         // 那是拿「我看到的现在是几点」去换钱。11-05 之后不用换了：会变的块搬出系统提示（见上面的 sp.context）。
         // shared（别的会话的话）必须每步读：它的语义是「读完就划掉」，压进窗口会重复塞（qa-share 会红）。
