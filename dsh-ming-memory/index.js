@@ -1069,7 +1069,6 @@ function readCwd(agent) {
 }
 
 export function apply(ctx, config) {
-  const central = ctx.hersLifeDiscord?.getSetting?.('memory', {}) || {}
   const cfg = normalize({
     ...(config || {}),
     personaFiles: ctx.hersLifeDiscord?.getSetting?.('personaFiles', config?.personaFiles),
