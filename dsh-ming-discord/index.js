@@ -248,7 +248,16 @@ export function apply(ctx, pluginConfig = {}) {
             await ensureWorkspace(nextWorkspace)
             await ensurePrivacy()
             await startAdapter()
-            send(res, 200, { ok: true, settings: settings.publicConfig(), status, migration, restartRequired: nextWorkspace !== previousWorkspace })
+            const resolved = settings.resolve()
+            const paths = {
+              dshHome: settings.home,
+              workspace: resolved.workspace,
+              dataRoot: resolved.dataRoot,
+              diary: path.join(resolved.workspace, String(settings.get('diaryDir', 'diary') || 'diary')),
+              memoryEvents: path.join(resolved.dataRoot, 'discord-memory.jsonl'),
+              sessionIndex: path.join(resolved.dataRoot, 'discord-sessions.json'),
+            }
+            send(res, 200, { ok: true, settings: settings.publicConfig(), status: { ...status, paths }, paths, migration, restartRequired: nextWorkspace !== previousWorkspace })
             return
           }
           if (req.method === 'POST' && route === 'initialize') {
