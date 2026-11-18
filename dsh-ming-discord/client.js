@@ -16,7 +16,7 @@ window.__ModuleLoader__.load({
       interest: { enabled: true, minChars: 6, contextLines: 4, minGapMinutes: 20, maxPerHour: 3, quietHours: '01:00-08:00', channelGapMinutes: 45 },
       browse: {
         enabled: true, idleMinutes: 20, minGapMinutes: 30, dailyMax: 8, sessionRounds: 15,
-        quietHours: '08:00-18:30', gapMode: 'fixed', hbMin: 5, hbCenter: 30, hbMax: 240, freeWindows: [{ start: '18:30', end: '08:00' }, { start: '13:50', end: '18:15', only: 'rest' }],
+        quietHours: '08:00-18:30', gapMode: 'fixed', hbMin: 5, hbCenter: 30, hbMax: 240, allowSocialWrites: true, freeWindows: [{ start: '18:30', end: '08:00' }, { start: '13:50', end: '18:15', only: 'rest' }],
         holidaysFile: 'live/holidays.json', agentPreset: '', maxItems: 2, maxShots: 2, serial: '127.0.0.1:16448',
         adbPath: 'D:\\MuMuPlayer\\nx_device\\12.0\\shell\\adb.exe',
         socialApps: ['com.xingin.xhs', 'com.tencent.weibo', 'com.sina.weibo', 'com.ss.android.ugc.aweme', 'com.smile.gifmaker', 'com.zhihu.android', 'com.baidu.tieba', 'com.tencent.mm'],
