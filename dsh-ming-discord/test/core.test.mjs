@@ -17,6 +17,41 @@ import { VoiceConnection, VoiceManager } from '../discord/voice.js'
 import { apply as applyDiscord, ensureWorkspace, syncBrowseSettings, syncMemorySettings } from '../index.js'
 import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
 import { apply as applyVoice } from '../../dsh-ming-voice/index.js'
+import { getEmbeddingConfig } from '../../dsh-ming-core-memory/lib/rag.js'
+
+test('Core Memory embedding endpoint and model come from the Hers Life settings UI', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-embedding-settings-'))
+  const previous = process.env.DSH_HOME
+  try {
+    process.env.DSH_HOME = root
+    await writeFile(path.join(root, 'hers-life.json'), JSON.stringify({
+      workspace: path.join(root, 'workspace'),
+      coreMemory: {
+        embeddingEndpoint: 'http://127.0.0.1:19091/v1/embeddings',
+        embeddingModel: 'bge-custom-v2',
+      },
+    }), 'utf8')
+    assert.deepEqual(getEmbeddingConfig(), {
+      endpoint: 'http://127.0.0.1:19091/v1/embeddings',
+      model: 'bge-custom-v2',
+    })
+
+    await writeFile(path.join(root, 'hers-life.json'), JSON.stringify({
+      coreMemory: {
+        embeddingEndpoint: 'file:///etc/passwd',
+        embeddingModel: 'bge-custom-v2',
+      },
+    }), 'utf8')
+    assert.deepEqual(getEmbeddingConfig(), {
+      endpoint: 'http://127.0.0.1:18091/v1/embeddings',
+      model: 'bge-custom-v2',
+    })
+  } finally {
+    if (previous === undefined) delete process.env.DSH_HOME
+    else process.env.DSH_HOME = previous
+    await rm(root, { recursive: true, force: true })
+  }
+})
 
 test('Persona and diary UI paths are synchronized to the Memory plugin config', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-memory-settings-'))
