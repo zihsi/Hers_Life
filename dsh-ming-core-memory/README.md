@@ -25,19 +25,14 @@
 - **归档记忆按需检索**：长尾事实一条一个 markdown 文件（`notes/<id>.md`，带 YAML front-matter），索引只把**最近 12 条**的标题与标签注入提示词，正文留给 `memory_search` / `memory_read` 按需拉取——核心记忆保持精炼，历史却不丢。
 - **纯本地检索，无依赖**：打分完全在本地算（标题命中 +3 / 标签命中 +3 / 正文每次出现 +1 / 多词整串命中 +2），命中处自动截取上下文片段返回。**没有向量库、没有 embedding 服务、没有 sidecar 进程**，离线可用。
 - **七个模型工具**：`memory_write`（写归档）、`memory_core`（按 `##` 分节增删改核心记忆）、`memory_search`、`memory_read`、`memory_list`（可按标签过滤）、`memory_delete`（删除并留墓碑占位）、`persona`（读写回复风格）。
-- **使用政策自动注入**：提示词里带一段「什么时候该主动记」的规则（用户表达长期偏好、纠正做法、给出环境事实时立即落盘），把记忆沉淀从"靠自觉"变成有明文约定。
+- **事实型使用政策自动注入**：提示词明确只允许保存机器、环境、项目、工具与做法等事实；禁止保存关于人的判断、身份、偏好画像、情绪、健康、关系、私人生活、未经同意的对话转述，以及密码、凭据和 Token。它不是自动收集用户画像的记忆插件。
 - **AI 回复风格设置页**：在 DSH 设置页注册「AI 回复风格」区块——总开关 + 11 个内置风格预设（`default` / `warm` / `concise` / `rigorous` / `humorous` / `gentle` / `socratic` / `tsundere` / `storyteller` / `roast` / `minimalist`）点选即生效，另有「自定义」卡片可写入最多 4000 字符的自定义风格。风格文本与核心记忆并列注入系统提示。
 - **零构建、零运行时依赖**：纯 ESM JavaScript，Node 原生 `fs` 直读直写，`dsh plugin add` 即用，无需编译。
 - **写入原子化**：所有落盘走「临时文件 + rename」，索引与笔记不会因中断而写坏；`index.json` 损坏时会自动从 `notes/` 重建。
 
 ## 安装
 
-```bash
-# 装进 web profile（Harness 的插件管理命令会转发给该 profile 的 pnpm）
-dsh plugin --profile web add dsh-core-memory
-```
-
-装完后重启 Harness，或在设置页确认插件已激活。
+此仓库版本名为 `dsh-ming-core-memory`，是私有 Git 工作区插件，尚未发布 npm。请依照仓库根目录 [安装说明](../docs/install.md)，将 `dsh-ming-core-memory` 作为 `link:` 依赖加入实际使用的 DSH Profile，并放入 `dsh.profile.bundles`。不要安装原始的 `dsh-core-memory` npm 包来替代此 fork。
 
 ## 存储布局
 
@@ -74,7 +69,7 @@ memory/
 ## 兼容性
 
 - **Node.js** ≥ 22
-- **DeepSeek Harness** 0.1.x（依赖 `tools` 与 `systemPrompt` 服务；设置页依赖 `webServer`，后者缺席时插件照常工作，只是设置页不可用）
+- **DeepSeek Harness** ≥ 0.2.0（本仓库 package manifest 的最低声明；需要 `tools` 与 `systemPrompt` 服务；设置页依赖 `webServer`，后者缺席时插件照常工作，只是设置页不可用）
 - 宿主半与浏览器半都是**可选**依赖：`@deepseek-ai/cordis` 由 Harness 提供；`react` 仅在设置页（浏览器半）使用，Harness 环境已内置。
 
 ## 已知限制
