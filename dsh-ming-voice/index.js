@@ -181,7 +181,7 @@ export function apply(ctx, config) {
   ctx.tools.register({
     name: 'voice_say',
     description:
-      '把一段文字合成語音，返回 MP3 路徑。要發到 Discord 時，使用 discord_send_file 將該檔案傳到目標頻道或私訊。'
+      '把一段文字合成語音，返回 MP3 路徑。要發到 Discord 時，使用 discord_send_file 將該檔案傳到目前發起這輪對話的頻道／私訊；不可跨頻道傳送。'
       + '适合短句、情绪性的、想让她听见语气的话；长文和讲道理还是用字。',
     parameters: {
       type: 'object',
