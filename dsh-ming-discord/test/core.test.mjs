@@ -284,12 +284,12 @@ test('slash commands and model tools inherit Discord actor and Owner permissions
     }),
     bridge.actorStorage.run(memberActor, async () => {
       await delay(5)
-      return bridge.actorForExecution({ agent: { session: { id: 'session-1' } } }).userId
+      return bridge.actorForExecution({ agent: { id: 'session-1' } }).userId
     }),
   ])
   assert.equal(ownerResult, 'owner-1')
   assert.equal(memberResult, 'member-2')
-  assert.throws(() => bridge.actorForExecution({ agent: { session: { id: 'session-1' } } }), /目前正在處理 Discord 訊息/)
+  assert.throws(() => bridge.actorForExecution({ agent: { id: 'session-1' } }), /目前正在處理 Discord 訊息/)
   assert.throws(() => bridge.actorStorage.run(ownerActor, () =>
     bridge.actorForExecution({ agent: { id: 'another-session' } })), /目前正在處理 Discord 訊息/)
 })
