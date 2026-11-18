@@ -40,8 +40,8 @@ const RULES = [
   [/^(ops_bash|ops_load_sdk|ops_discover_tools)/, KIND.SHELL],
   [/^(browse|web_)/, KIND.BROWSER],
   [/^(pet_input|app_launch)/, KIND.DESKTOP],
-  [/^(qq_send|qq_send_voice|live_speak|voice_say|bilibili_comment_post)/, KIND.SEND],
-  [/^(qzone_post|qzone_)/, KIND.PUBLISH],
+  [/^(discord_send_file|live_speak|voice_say)/, KIND.SEND],
+  [/^bilibili_comment_post/, KIND.PUBLISH],
   [/^(pay_|purchase_|checkout)/i, KIND.PAY],
 ]
 
