@@ -511,7 +511,7 @@ window.__ModuleLoader__.load({
               input('桌寵模型供應商', 'mousepet.companion.provider', ''),
               input('桌寵模型名稱', 'mousepet.companion.model', ''),
               input('對話泡泡顯示時間（毫秒）', 'mousepet.companion.bubbleMs', '', 'number')),
-            check('啟用桌寵主動陪伴', 'mousepet.companion.enabled', '關閉後保留桌寵本體，但停止主動陪伴。')),
+            check('啟用桌寵主動陪伴', 'mousepet.companion.enabled', '關閉後保留桌寵本體，但停止主動陪伴。'))),
 
         card('Bilibili 帳號與資料', 'Cookie 由帳號管理器及 DSH 憑證服務管理；這裡只設定憑證檔位置與讀取上限，不會把 Cookie 顯示在 UI。',
           h(React.Fragment, null,
