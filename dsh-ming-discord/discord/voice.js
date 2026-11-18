@@ -458,10 +458,12 @@ export class VoiceConnection extends EventEmitter {
         dave.processProposals(payload)
         return
       case DAVE_OP.MLS_ANNOUNCE_COMMIT:
+        this.daveReady = false
         dave.processTransition('commit', payload)
         this.markDAVEReady()
         return
       case DAVE_OP.MLS_WELCOME:
+        this.daveReady = false
         dave.processTransition('welcome', payload)
         this.markDAVEReady()
         return
@@ -524,6 +526,7 @@ export class VoiceConnection extends EventEmitter {
       }
       case VOICE_OP.DAVE_PREPARE_TRANSITION: {
         try {
+          this.daveReady = false
           const sendReady = this.dave?.prepareTransition(packet.d) ?? false
           if (sendReady) {
             this.sendWs({ op: DAVE_OP.TRANSITION_READY, d: { transition_id: packet.d.transition_id } })
