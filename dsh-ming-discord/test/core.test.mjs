@@ -3,7 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import assert from 'node:assert/strict'
 import os from 'node:os'
 import path from 'node:path'
-import { mkdtemp, rm, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdtemp, rm, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { readDiscord } from '../../dsh-ming-memory/lib/model.mjs'
 import { readDiscordEvents } from '../../dsh-ming-memory/lib/neuron.mjs'
 import { SettingsStore, isDiaryFilename, isDiaryPath } from '../settings.js'
@@ -117,6 +117,35 @@ test('legacy private DM diary entries are quarantined before shared memory reads
       quarantinePrivateDmDiary(workspace, privateHome, '../outside'),
       /escapes workspace/,
     )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+
+test('private diary quarantine never marks completion after an incomplete scan', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-privacy-failure-'))
+  const workspace = path.join(root, 'workspace')
+  const privateHome = path.join(root, '.dsh')
+  const diary = path.join(workspace, 'diary')
+  await mkdir(path.join(diary, '2026-11-18.md'), { recursive: true })
+  try {
+    await assert.rejects(quarantinePrivateDmDiary(workspace, privateHome), /EISDIR|illegal operation/i)
+    await assert.rejects(readdir(path.join(privateHome, 'privacy-quarantine')), { code: 'ENOENT' })
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('private diary quarantine propagates directory scan errors instead of marking done', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-privacy-scan-'))
+  const workspace = path.join(root, 'workspace')
+  const privateHome = path.join(root, '.dsh')
+  await mkdir(workspace, { recursive: true })
+  await writeFile(path.join(workspace, 'diary'), 'not a directory', 'utf8')
+  try {
+    await assert.rejects(quarantinePrivateDmDiary(workspace, privateHome), { code: 'ENOTDIR' })
+    await assert.rejects(readdir(path.join(privateHome, 'privacy-quarantine')), { code: 'ENOENT' })
   } finally {
     await rm(root, { recursive: true, force: true })
   }
