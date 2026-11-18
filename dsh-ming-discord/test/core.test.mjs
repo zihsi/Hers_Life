@@ -52,7 +52,7 @@ test('Browse settings UI values are fully synchronized to the live runtime confi
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-browse-settings-'))
   try {
     const settings = new SettingsStore({ workspace: root }, { home: path.join(root, '.dsh') })
-    settings.patch({
+    await settings.patch({
       browse: {
         enabled: true,
         idleMinutes: 7,
@@ -79,7 +79,7 @@ test('Browse settings UI values are fully synchronized to the live runtime confi
     assert.deepEqual(first.freeWindows, [{ start: '18:00', end: '23:00' }])
     assert.deepEqual(first.targets, ['bilibili'])
 
-    settings.patch({ browse: { idleMinutes: 11, allowSocialWrites: false } })
+    await settings.patch({ browse: { idleMinutes: 11, allowSocialWrites: false } })
     await syncBrowseSettings(settings)
     const second = JSON.parse(await readFile(file, 'utf8'))
     assert.equal(second.idleMinutes, 11)
