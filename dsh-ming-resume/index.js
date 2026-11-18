@@ -25,11 +25,12 @@ import { readFileSync } from 'node:fs'
 import os from 'node:os'
 
 export const name = 'ming-resume'
+const DSH_HOME = process.env.DSH_HOME || path.join(DSH_HOME)
 export const inject = ['hersLifeDiscord']
 function resolveWorkspace() {
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
-    const data = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    const data = JSON.parse(readFileSync(path.join(DSH_HOME, 'ming-memory.json'), 'utf8'))
     if (typeof data.root === 'string' && data.root.trim()) return data.root
   } catch {}
   return path.join(os.homedir(), 'hers-life-workspace')
