@@ -107,6 +107,7 @@ function cleanTimeWindows(value, fallback) {
 }
 function normalizePluginSettings(settings) {
   settings.browse = { ...DEFAULTS.browse, ...(settings.browse || {}) }
+  settings.browse.holidaysFile = safeRelativePath(settings.browse.holidaysFile, DEFAULTS.browse.holidaysFile)
   settings.resume = { ...DEFAULTS.resume, ...(settings.resume || {}) }
   settings.wake = { ...DEFAULTS.wake, ...(settings.wake || {}) }
   settings.mousepet = { ...DEFAULTS.mousepet, ...(settings.mousepet || {}), shake: { ...DEFAULTS.mousepet.shake, ...(settings.mousepet?.shake || {}) }, companion: { ...DEFAULTS.mousepet.companion, ...(settings.mousepet?.companion || {}) } }
