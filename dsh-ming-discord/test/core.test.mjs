@@ -779,6 +779,9 @@ test('Discord plugin activation registers DSH-valid tools and provides the servi
 
   applyDiscord(ctx, { enabled: false, workspace })
   assert.deepEqual(definitions.map(item => item.name), ['discord_send_to_owner', 'discord_send_file'])
+  const sendFileTool = definitions.find(item => item.name === 'discord_send_file')
+  assert.deepEqual(sendFileTool.parameters.required, ['path'])
+  assert.deepEqual(Object.keys(sendFileTool.parameters.properties).sort(), ['caption', 'path'])
   assert.ok(namedLoggers.includes('hers-life-discord'))
   const discordService = services.get('hersLifeDiscord')
   assert.ok(discordService, 'Discord must publish hersLifeDiscord before dependent plugins load')
