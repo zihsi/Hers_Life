@@ -52,7 +52,7 @@ function read(abs, why) {
     errors.push('找不到' + why + '：' + abs)
     return ''
   }
-  return fs.readFileSync(abs, 'utf8').replace(/\\r\\n/g, '\\n')
+  return fs.readFileSync(abs, 'utf8').replace(/\r\n/g, '\n')
 }
 
 /** 从 text 里切 [from, to) —— from 那行起，到 to 那行前止；to 为 null 表示切到文件末尾。 */
@@ -201,7 +201,7 @@ if (checkOnly) {
     console.error('✗ client.js 不存在，先 node build.mjs')
     process.exit(1)
   }
-  const current = fs.readFileSync(OUT, 'utf8').replace(/\\r\\n/g, '\\n')
+  const current = fs.readFileSync(OUT, 'utf8').replace(/\r\n/g, '\n')
   const stamped = (current.match(/build ([0-9a-f]{16})/) || [])[1]
   if (stamped !== digest) {
     console.error('✗ client.js 是旧的：源现在算出来 ' + digest + '，client.js 里记的是 ' + (stamped || '（没有戳）'))
