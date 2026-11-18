@@ -10,6 +10,7 @@ import { DiscordGateway } from './discord/gateway.js'
 import { DiscordBridge } from './discord/bridge.js'
 import { DiscordEvents } from './discord/events.js'
 import { VoiceManager } from './discord/voice.js'
+import { quarantinePrivateDmDiary } from './privacy.js'
 
 export const name = 'ming-discord'
 export const inject = ['agents', 'tools']
@@ -143,6 +144,14 @@ export function apply(ctx, pluginConfig = {}) {
   let detach = null
   let status = { state: 'starting', error: '', connectedAt: null }
 
+  const ensurePrivacy = async () => {
+    const result = await quarantinePrivateDmDiary(settings.resolve().workspace, settings.home)
+    if (result.entriesMoved > 0) {
+      logger?.warn('privacy: quarantined ' + result.entriesMoved + ' legacy private DM diary entries from ' + result.filesChanged + ' shared diary file(s)')
+    }
+    return result
+  }
+
   const stopAdapter = async () => {
     try { detach?.() } catch {}
     detach = null
@@ -190,9 +199,10 @@ export function apply(ctx, pluginConfig = {}) {
 
   const loadAndStart = async () => {
     await settings.load()
+    await ensureWorkspace(settings.resolve().workspace)
+    await ensurePrivacy()
     await syncMemorySettings(settings)
     await syncGraphSettings(settings)
-    await ensureWorkspace(settings.resolve().workspace)
     await startAdapter()
   }
   void loadAndStart().catch((error) => {
@@ -224,13 +234,15 @@ export function apply(ctx, pluginConfig = {}) {
             let migration = null
             if (nextWorkspace !== previousWorkspace) migration = await copyMissing(previousWorkspace, nextWorkspace)
             await ensureWorkspace(nextWorkspace)
+            await ensurePrivacy()
             await startAdapter()
             send(res, 200, { ok: true, settings: settings.publicConfig(), status, migration, restartRequired: nextWorkspace !== previousWorkspace })
             return
           }
           if (req.method === 'POST' && route === 'initialize') {
             const result = await ensureWorkspace(settings.resolve().workspace)
-            send(res, 200, { ok: true, ...result })
+            const privacy = await ensurePrivacy()
+            send(res, 200, { ok: true, ...result, privacy })
             return
           }
           if (req.method === 'POST' && route === 'migrate') {
@@ -243,6 +255,7 @@ export function apply(ctx, pluginConfig = {}) {
             await syncMemorySettings(settings)
             await syncGraphSettings(settings)
             await ensureWorkspace(destination)
+            await ensurePrivacy()
             await startAdapter()
             send(res, 200, { ok: true, from: old, to: destination, ...result })
             return
@@ -397,6 +410,7 @@ export function apply(ctx, pluginConfig = {}) {
     sendFile: (channelId, filePath, caption, actor) => sendFile(channelId, filePath, caption, actor),
     isOwner: (userId) => settings.isOwner(userId),
     getSetting: (key, fallback) => settings.get(key, fallback),
+    ensurePrivacy,
     actorForExecution: (exec) => bridge?.actorForExecution(exec) ?? null,
     sessionIdFor: (target) => pool?.sessionIdFor(target) ?? '',
     ownerIds: () => settings.ownerIds(),
