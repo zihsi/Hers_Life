@@ -129,6 +129,19 @@ test('Browse settings UI values are fully synchronized to the live runtime confi
   }
 })
 
+test('holiday workspace editor accepts only valid ISO calendar dates', () => {
+  assert.deepEqual(validateHolidayConfig(JSON.stringify({
+    off: ['2026-11-19', '2026-12-25'],
+    work: ['2026-11-21'],
+  })), {
+    off: ['2026-11-19', '2026-12-25'],
+    work: ['2026-11-21'],
+  })
+  assert.throws(() => validateHolidayConfig('{bad json'), /有效 JSON/)
+  assert.throws(() => validateHolidayConfig({ off: ['2026-02-30'], work: [] }), /YYYY-MM-DD/)
+  assert.throws(() => validateHolidayConfig({ off: '2026-11-19', work: [] }), /YYYY-MM-DD/)
+})
+
 test('workspace initialization creates custom persona files and diary folders automatically', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-custom-workspace-'))
   try {
