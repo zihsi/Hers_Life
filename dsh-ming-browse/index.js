@@ -1134,21 +1134,21 @@ export function apply(ctx, config) {
   /**
    * 点按检查：返回 null 表示放行，返回字符串表示拒绝理由。
    *
-   * 2026-10-20 晚改：以前是「前台不是 B站 就一律不点」，那是我自己加的严，连浏览都挡住。
-   * 现在按她说的来——社交平台可以看、可以点开内容，只是不许点赞/评论/关注这类写操作。
-   * 2026-10-29：查不到前台时，**带写操作字样的按钮按拒绝处理**（fail closed）。
+   * 社交平台写入／发布默认允许；只有 Owner 在 Hers Life 设置页明确关闭时，才应用下方 App 与关键词限制。
+   * 关闭限制时查不到前台仍 fail closed，避免误点到未知 App。
    */
   const checkTap = (args) => {
+    if (cfg.allowSocialWrites !== false) return null
     const text = [args?.label, args?.query, args?.text].filter((x) => typeof x === 'string').join(' ')
     const word = cfg.socialWriteWords.find((k) => text.includes(k))
     if (!word) return null
     const fg = socialApp()
     if (fg.state === 'unknown') {
-      return '这个按钮带「' + word + '」（点赞/评论/关注这类写操作），而我**查不到手机前台是哪个 App**（'
+      return 'Owner 已关闭社交平台写入；这个按钮带「' + word + '」，但我**查不到手机前台是哪个 App**（'
         + (fg.why || 'adb 没回话') + '）——查不到就不敢替你点，先确认模拟器连着（' + cfg.serial + '）。'
     }
     if (fg.state === 'social') {
-      return '现在前台是社交平台（' + fg.pkg + '），这个按钮带「' + word + '」，属于点赞/评论/关注这类写操作——她只放开了浏览。看点内容可以，别互动。'
+      return 'Owner 已关闭社交平台写入；现在前台是社交平台（' + fg.pkg + '），按钮带「' + word + '」，因此依照设置拒绝这次写入。'
     }
     return null
   }
