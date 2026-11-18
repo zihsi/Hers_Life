@@ -397,7 +397,9 @@ window.__ModuleLoader__.load({
               + 'Browse 輪替紀錄：' + (status.paths?.browseRotation || '尚未取得') + '\n'
               + 'Browse 自主喚醒狀態：' + (status.paths?.browseSelfWake || '尚未取得') + '\n'
               + 'Browse 不限量旗標：' + (status.paths?.browseUnlimited || '尚未取得') + '\n'
+              + 'Resume 摘要：' + (status.paths?.resumeFile || '尚未取得') + '\n'
               + 'Resume 紀錄：' + (status.paths?.resumeLog || '尚未取得') + '\n'
+              + '假日設定：' + (status.paths?.holidaysFile || '尚未取得') + '\n'
               + 'Mousepet 設定：' + (status.paths?.mousepetSettings || '尚未取得') + '\n'
               + 'Wake 佇列：' + (status.paths?.wakeQueue || '尚未取得') + '\n'
               + '語音輸出：' + (status.paths?.voiceOutput || '尚未取得') + '\n'
@@ -405,7 +407,7 @@ window.__ModuleLoader__.load({
               + 'Skill 隔離狀態：' + (status.paths?.skillIsolationState || '尚未取得')),
             area('人設檔案清單（每行一個相對路徑）', 'personaFiles', '首次初始化會自動建立缺少的自訂人設檔與日記資料夾，不會覆蓋既有檔案。', 3),
             h('div', { className: 'hl-actions' }, button('初始化／補齊工作區', initialize, true, busy)))),
-        card('人設、規則與日記編輯', '直接在 Hers Life 設定頁編輯工作區內的 Markdown，不必自行尋找檔案。人設檔、AGENTS.md 與日期格式日記才允許寫入。',
+        card('人設、規則、日記與工作區文件編輯', '直接在 Hers Life 設定頁編輯人設、AGENTS.md、日記、記憶接續摘要與假日設定，不必自行尋找檔案。假日設定會驗證 JSON 與日期格式。',
           h(React.Fragment, null,
             h('div', { className: 'hl-grid' },
               h('label', { className: 'hl-field' },
@@ -428,7 +430,7 @@ window.__ModuleLoader__.load({
                 rows: 14,
                 value: workspaceFileContent,
                 onChange: (e) => setWorkspaceFileContent(e.target.value),
-                placeholder: '選擇一份人設檔、規則檔或日記開始編輯。',
+                placeholder: '選擇人設、規則、日記、記憶接續摘要或假日設定開始編輯。',
               })),
             h('div', { className: 'hl-actions' },
               button('保存檔案', saveWorkspaceFile, true, busy),
