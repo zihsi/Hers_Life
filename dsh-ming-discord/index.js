@@ -275,7 +275,11 @@ export function apply(ctx, pluginConfig = {}) {
               bilibiliCredentials: path.join(settings.home, 'bili-duty', 'bili_credential.json'),
               skillIsolationState: settings.get('skillIsolate.stateFile') || path.join(resolved.workspace, 'skills-off.json'),
             }
-            send(res, 200, { ok: true, settings: settings.publicConfig(), status: { ...status, paths }, paths, hasToken: settings.hasToken(),
+            const plugins = {}
+            for (const [name, provider] of statusProviders) {
+              try { plugins[name] = await provider() } catch (error) { plugins[name] = { error: String(error?.message || error) } }
+            }
+            send(res, 200, { ok: true, settings: settings.publicConfig(), status: { ...status, paths, plugins }, paths, hasToken: settings.hasToken(),
               events: events?.list?.(30) ?? [], sessions: pool?.list?.() ?? [], interests: interests?.list?.(100) ?? [] })
             return
           }
@@ -488,6 +492,12 @@ export function apply(ctx, pluginConfig = {}) {
       const next = settings.patch(patch)
       await settings.save()
       return next
+    },
+    registerStatusProvider: (name, provider) => {
+      const key = String(name || '').trim()
+      if (!key || typeof provider !== 'function') return () => {}
+      statusProviders.set(key, provider)
+      return () => statusProviders.delete(key)
     },
     ensurePrivacy,
     actorForExecution: (exec) => bridge?.actorForExecution(exec) ?? null,
