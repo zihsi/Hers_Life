@@ -1172,6 +1172,27 @@ const toolDefs = [
   },
 ];
 
+function requireTrustedOwnerForDiscord(ctx, exec, operation) {
+  const meta = exec?.agent?.session?.header?.meta?.hersLife
+    ?? exec?.agent?.session?.header?.metadata?.hersLife ?? {}
+  if (meta.platform !== 'discord') return
+  const actor = ctx.hersLifeDiscord?.actorForExecution?.(exec)
+  const agentId = String(exec?.agent?.id ?? '')
+  if (!actor || !agentId || actor.sessionId !== agentId || !actor.userId
+    || typeof ctx.hersLifeDiscord?.isOwner !== 'function'
+    || !ctx.hersLifeDiscord.isOwner(actor.userId)) {
+    throw new Error('Discord 中的核心記憶僅限 Owner 使用（' + String(operation || 'memory') + '）。')
+  }
+}
+
+function canInjectCoreMemory(agent, ctx) {
+  const meta = agent?.session?.header?.meta?.hersLife
+    ?? agent?.session?.header?.metadata?.hersLife ?? {}
+  if (meta.platform !== 'discord') return true
+  if (meta.conversationType !== 'dm') return false
+  return Boolean(meta.userId && ctx.hersLifeDiscord?.isOwner?.(String(meta.userId)))
+}
+
 export function apply(ctx) {
   // 引导创建（不阻塞激活；失败仅告警）
   enqueue(async () => {
@@ -1181,15 +1202,30 @@ export function apply(ctx) {
   }).catch((e) => console.error('dsh-core-memory: bootstrap failed', e));
 
   for (const def of toolDefs) {
-    ctx.tools.register(def);
+    const execute = def.execute
+    ctx.tools.register({
+      ...def,
+      async execute(args, exec) {
+        requireTrustedOwnerForDiscord(ctx, exec, def.name)
+        return execute(args, exec)
+      },
+    })
   }
 
-  // 自动召回：常驻注入每个会话的每次模型组装（同步读取，永远最新）
-  ctx.systemPrompt.section({
-    name: 'ming-core-memory:recall',
-    order: 60,
-    text: () => buildSectionText(),
-  });
+  // Per-agent injection: local sessions keep core memory; Discord only receives it in the exact Owner DM.
+  ctx.on('agent/created', (payload) => {
+    const agent = payload?.agent
+    if (!agent || !canInjectCoreMemory(agent, ctx)) return
+    const agentCtx = agent.ctx
+    if (!agentCtx || typeof agentCtx.inject !== 'function') return
+    agentCtx.inject(['systemPrompt'], (c) => {
+      c.systemPrompt.section({
+        name: 'ming-core-memory:recall',
+        order: 60,
+        text: () => buildSectionText(),
+      })
+    })
+  })
 
   // 设置页读写接口：风格页（client.js）经同源 fetch 调用。
   // webServer 是可选依赖——缺席时插件照常工作，只是设置页不可用。

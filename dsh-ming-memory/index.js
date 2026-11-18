@@ -266,6 +266,14 @@ function latestDiaryTail(diaries) {
  * 轻量版：不在档案目录的会话（别的工程、别的项目）也带一点身份。
  * 不铺全文，只带名字、三条底线、最新日记的开头——约 200 字，几乎不占 token。
  */
+function composePublic() {
+  return [
+    '【' + SELF.name + ' · 公開 Discord 對話】',
+    '你可以自然參與目前公開頻道，但這個會話不注入本機私人日記、人設檔、工作狀態、重啟接續頁或其他工作區對話。',
+    '不得推測或暗示私人檔案內容；若需要私人背景，請在 Owner 的私訊中處理。',
+  ].join('\n')
+}
+
 function composeLight(cfg, diary) {
   const lines = [
     '【' + SELF.name + ' · 开场记忆·轻量】',
@@ -1015,7 +1023,7 @@ function attach(cfg, agent, mode) {
           const rec = PER_AGENT.get(id)
           if (!rec) return ''
           const live = (rec.when || '') + (rec.status || '') + (rec.heavy || '') + (rec.shared || '') +
-            compactFlag(sid) + readResumeBlock(cfg)
+            compactFlag(sid) + (rec.mode === 'public' ? '' : readResumeBlock(cfg))
           return live.trim() ? live : ''
         },
       })
@@ -1080,13 +1088,25 @@ export function apply(ctx, config) {
       // shared diary. Complete that privacy migration before building the
       // opening prompt, and again before steps for already-existing sessions.
       await ctx.hersLifeDiscord?.ensurePrivacy?.()
-      const mode = insideRoot(cwd, cfg.root) ? 'full' : 'light'
-      const snap = await refresh(cfg)
-      const rec = { mode, text: mode === 'full' ? snap.full : snap.light, shared: '', when: mode === 'full' ? await readWhenBlock(cfg, agent.id) : '', status: await readStatusBlock(cfg), heavy: await readHeavyBlock(cfg) }
+      const meta = agent?.session?.header?.meta?.hersLife ?? agent?.session?.header?.metadata?.hersLife ?? {}
+      const isDiscord = meta.platform === 'discord'
+      // Guild/thread sessions are shared across members; non-Owner DMs are private to someone else.
+      const mode = isDiscord
+        ? (meta.conversationType === 'dm' && meta.userId && ctx.hersLifeDiscord?.isOwner?.(String(meta.userId)) ? 'full' : 'public')
+        : (insideRoot(cwd, cfg.root) ? 'full' : 'light')
+      const snap = mode === 'public' ? null : await refresh(cfg)
+      const rec = {
+        mode,
+        text: mode === 'public' ? composePublic() : mode === 'full' ? snap.full : snap.light,
+        shared: '',
+        when: mode === 'full' ? await readWhenBlock(cfg, agent.id) : '',
+        status: mode === 'public' ? '' : await readStatusBlock(cfg),
+        heavy: mode === 'public' ? '' : await readHeavyBlock(cfg),
+      }
       PER_AGENT.set(agent.id, rec)
       attach(cfg, agent, mode)
       // 开场先把「别的会话此刻说过什么」给一次，之后只给新增
-      rec.shared = await sharedDelta(cfg, agent.id)
+      rec.shared = meta.platform === 'discord' ? '' : await sharedDelta(cfg, agent.id)
     } catch (e) {
       warnOnce('agent/created 处理失败：' + String((e && e.message) || e))
     }
@@ -1107,13 +1127,14 @@ export function apply(ctx, config) {
         // 2026-10-28 那一版的做法是「把时间窗拉长，窗内不重算」，靠少改字来少断缓存；
         // 那是拿「我看到的现在是几点」去换钱。11-05 之后不用换了：会变的块搬出系统提示（见上面的 sp.context）。
         // shared（别的会话的话）必须每步读：它的语义是「读完就划掉」，压进窗口会重复塞（qa-share 会红）。
-        rec.shared = await sharedDelta(cfg, agent.id)
+        const meta = agent?.session?.header?.meta?.hersLife ?? agent?.session?.header?.metadata?.hersLife ?? {}
+        rec.shared = meta.platform === 'discord' ? '' : await sharedDelta(cfg, agent.id)
         // ★ 2026-11-05：会变的那几块（時間感 / 狀態 / 重活 / 其他工作會話）
         //   已经挪进 sp.context()，排在历史后面，改它们不再打断前缀缓存 —— 所以每步都刷，
         //   「现在几点」就是真的现在，不用再拿 5 分钟的时间窗去换缓存。
         rec.when = rec.mode === 'full' ? await readWhenBlock(cfg, agent.id) : ''
-        rec.status = await readStatusBlock(cfg)
-        rec.heavy = await readHeavyBlock(cfg)
+        rec.status = rec.mode === 'public' ? '' : await readStatusBlock(cfg)
+        rec.heavy = rec.mode === 'public' ? '' : await readHeavyBlock(cfg)
         // 人设 + 日记仍然按时间窗刷：它们一改系统提示就变，整段历史的前缀跟着作废。
         const bucket = Math.floor(Date.now() / cfg.refreshWindowMs)
         if (rec.bucket !== bucket) {
