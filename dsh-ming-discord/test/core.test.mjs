@@ -630,6 +630,8 @@ test('private DMs never train shared interests or write into the shared diary', 
     const entry = { sessionId: 'session-1', agent: { session: { seq: 0, id: 'session-1' } } }
     const bridge = Object.create(DiscordBridge.prototype)
     bridge.actorStorage = new AsyncLocalStorage()
+    bridge.sessionQueues = new Map()
+    bridge.limiter = { run: task => task() }
     bridge.settings = {
       get(key, fallback) {
         if (key === 'discord.typing') return false
