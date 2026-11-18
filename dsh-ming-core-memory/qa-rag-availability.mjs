@@ -78,7 +78,7 @@ test('RAG availability uses synthetic files and never a real service', async t =
     await tools.memory_core.execute({ action: 'append', section: 'test', text: 'fixture' })
     const partial = await tools.rag_recall.execute({ query: 'fact' })
     assert.match(partial, /部分资料/)
-    const missing = await tools.rag_recall.execute({ query: 'fact', layer: 'doc' })
+    const missing = await tools.rag_recall.execute({ query: 'fact', layer: 'web' })
     assert.match(missing, /不可用/)
     assert.doesNotMatch(missing, /没搜到/)
   })
