@@ -66,7 +66,7 @@ function VoicePanel() {
       h('div', { className: 'ming-sec' },
         h('div', { className: 'ming-sec-h' },
           h('span', { className: 'ming-sec-t' }, '拿什么合成'),
-          h('span', { className: 'ming-sec-n' }, '改参数在 voice_say 工具那边'),
+          h('span', { className: 'ming-sec-n' }, '預設音色與語速在 Hers Life Discord 設定頁調整'),
         ),
         h('div', { className: 'ming-kpis' },
           kpi(data ? data.engine || '—' : '…', '引擎'),
