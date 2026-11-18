@@ -140,7 +140,10 @@ export class DiscordBrain {
     }).catch((error) => this.logger?.warn?.('Discord memory append failed: ' + String(error?.message ?? error)))
   }
   sourceLabel(event) {
-    if (event.conversationType === 'dm') return 'Discord 私訊'
+    if (event.conversationType === 'dm') {
+      const conversation = String(event.channelName || event.participantName || event.authorName || '').trim()
+      return conversation ? 'Discord 私訊 / ' + conversation : 'Discord 私訊'
+    }
     const guild = event.guildName || (event.guildId ? '伺服器 ' + event.guildId : 'Discord')
     const channel = event.channelName ? '#' + event.channelName : '頻道 ' + event.channelId
     return guild + ' / ' + channel + (event.threadId ? ' / Thread ' + event.threadId : '')
