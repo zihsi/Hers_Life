@@ -1,5 +1,8 @@
 # v1.2.0
 
+> **歷史版本說明／舊 QQ + AstrBot 混合架構。** 本文記錄的是 Discord-only 重構前的 release 行為；其中的 AstrBot、QQ、OneBot、舊路徑與設定不適用於目前分支。現行功能與安裝方式請看根目錄 README、`docs/install.md` 與 `docs/capability-table.md`。
+
+
 > **已知问题（2026-11-17 当日修）**：本版 `dsh-ming-browse` 在自由活动（自主轮次）里会被自己的权限闸拦死——`run_code` 不在分类表，判成 UNKNOWN 直接拒，整轮连读文件都做不到。已发 v1.2.1 修复（容器放行）。装了这一版的，请换 v1.2.1。
 
 从 v1.1.1 到这一版，做的是这些。
