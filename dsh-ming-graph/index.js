@@ -264,8 +264,10 @@ export const __internals = { build, readDsh, readDiscord, readPeople, DEFAULTS, 
 
 // ---------- 服务 ----------
 export function apply(ctx, config) {
+  const central = ctx.hersLifeDiscord?.getSetting?.('graph', {}) || {}
+  if (central.enabled === false) return
   const local = loadLocalConfig()
-  const cfg = { ...DEFAULTS, ...local, ...(config || {}) }
+  const cfg = { ...DEFAULTS, ...local, ...(config || {}), ...central }
   const currentWorkspace = ctx.hersLifeDiscord?.workspace || resolveWorkspace()
   if (currentWorkspace) {
     WORKSPACE = path.normalize(currentWorkspace)
@@ -273,8 +275,8 @@ export function apply(ctx, config) {
     if (!local.skillsCwd && !config?.skillsCwd) cfg.skillsCwd = WORKSPACE
     if (!local.diaryDir && !config?.diaryDir) cfg.diaryDir = path.join(WORKSPACE, 'diary')
     if (!local.discordMemoryFile && !config?.discordMemoryFile) cfg.discordMemoryFile = path.join(WORKSPACE, 'live', 'discord-memory.jsonl')
-    if (!local.costPricesFile && !config?.costPricesFile && !process.env.MING_COST_PRICES) cfg.costPricesFile = path.join(WORKSPACE, 'live', 'cost-prices.json')
-    if (!local.costAutoFile && !config?.costAutoFile && !process.env.MING_COST_AUTO) cfg.costAutoFile = path.join(WORKSPACE, 'live', 'cost-prices.auto.json')
+    if (!local.costPricesFile && !config?.costPricesFile && !central.costPricesFile && !process.env.MING_COST_PRICES) cfg.costPricesFile = path.join(WORKSPACE, 'live', 'cost-prices.json')
+    if (!local.costAutoFile && !config?.costAutoFile && !central.costAutoFile && !process.env.MING_COST_AUTO) cfg.costAutoFile = path.join(WORKSPACE, 'live', 'cost-prices.auto.json')
   }
   // Discord server/channel labels travel with each event; optional roomLabels may override the display name.
   cfg.roomLabels = { ...GROUP_NAMES, ...(cfg.roomLabels || {}) }
