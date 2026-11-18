@@ -1069,13 +1069,14 @@ function readCwd(agent) {
 }
 
 export function apply(ctx, config) {
+  const centralSetting = (key, fallback) => ctx.hersLifeDiscord?.getSetting?.(key, fallback) ?? fallback
   const cfg = normalize({
     ...(config || {}),
-    personaFiles: ctx.hersLifeDiscord?.getSetting?.('personaFiles', config?.personaFiles),
-    diaryDir: ctx.hersLifeDiscord?.getSetting?.('diaryDir', config?.diaryDir),
-    diaryCount: ctx.hersLifeDiscord?.getSetting?.('diaryCount', config?.diaryCount),
-    diaryChars: ctx.hersLifeDiscord?.getSetting?.('diaryChars', config?.diaryChars),
-    maxChars: ctx.hersLifeDiscord?.getSetting?.('maxChars', config?.maxChars),
+    personaFiles: centralSetting('personaFiles', config?.personaFiles),
+    diaryDir: centralSetting('diaryDir', config?.diaryDir),
+    diaryCount: centralSetting('diaryCount', config?.diaryCount),
+    diaryChars: centralSetting('diaryChars', config?.diaryChars),
+    maxChars: centralSetting('maxChars', config?.maxChars),
     root: config?.root || ctx.hersLifeDiscord?.workspace || loadLocalConfig().root,
   })
   registerArchiveRoutes(ctx)
