@@ -299,7 +299,7 @@ export function apply(ctx, pluginConfig = {}) {
               browseConfig: path.join(resolved.workspace, 'live', 'browse-config.json'),
               wakeQueue: path.join(resolved.workspace, 'live', 'wake-arm.json'),
               voiceOutput: path.join(resolved.workspace, 'live', 'voice'),
-              bilibiliCredentials: settings.get('bilibili.credentialFile') || path.join(settings.home, 'bili-duty', 'bili_credential.json'),
+              bilibiliCredentials: settings.get('bilibili.credentialFile') ? path.resolve(String(settings.get('bilibili.credentialFile'))) : path.join(settings.home, 'bili-duty', 'bili_credential.json'),
               skillIsolationState: settings.get('skillIsolate.stateFile') ? path.resolve(String(settings.get('skillIsolate.stateFile'))) : path.join(resolved.workspace, 'skills-off.json'),
             }
             const plugins = {}
