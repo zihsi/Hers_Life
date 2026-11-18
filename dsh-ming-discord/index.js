@@ -394,6 +394,7 @@ export function apply(ctx, pluginConfig = {}) {
     sendToOwner,
     sendFile: (channelId, filePath, caption, actor) => sendFile(channelId, filePath, caption, actor),
     isOwner: (userId) => settings.isOwner(userId),
+    actorForExecution: (exec) => bridge?.actorForExecution(exec) ?? null,
     sessionIdFor: (target) => pool?.sessionIdFor(target) ?? '',
     ownerIds: () => settings.ownerIds(),
     get workspace() { return settings.resolve().workspace },
