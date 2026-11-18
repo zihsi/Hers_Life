@@ -13,6 +13,7 @@ import { DiscordInterestStore } from '../interests.js'
 import { quarantinePrivateDmDiary } from '../privacy.js'
 import { DiscordBridge } from '../discord/bridge.js'
 import { DaveSession } from '../discord/dave.js'
+import { VoiceConnection } from '../discord/voice.js'
 import { apply as applyDiscord } from '../index.js'
 import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
 import { apply as applyVoice } from '../../dsh-ming-voice/index.js'
@@ -204,6 +205,50 @@ test('DAVE protocol zero is rejected and never enables plaintext passthrough', (
     if (version <= 0) throw new Error('DAVE protocol version 0 would disable end-to-end encryption')
   }
   assert.throws(() => dave.prepareEpoch({ epoch: 1, protocol_version: 0 }), /protocol version 0/)
+})
+
+test('DAVE never passes Opus through while inactive or after an encryption error', () => {
+  const dave = Object.create(DaveSession.prototype)
+  dave.protocolVersion = 1
+  dave.session = { ready: false }
+  dave.logger = null
+  const opus = Buffer.from([1, 2, 3, 4])
+  assert.equal(dave.encrypt(opus), null, 'pre-MLS outbound Opus must be dropped')
+  assert.equal(dave.decrypt('speaker-1', opus), null, 'pre-MLS inbound Opus must be dropped')
+
+  dave.session = {
+    ready: true,
+    encryptOpus() { throw new Error('native encrypt failed') },
+  }
+  assert.equal(dave.encrypt(opus), null, 'native encryption failure must not return plaintext')
+
+  let sent = 0
+  const connection = Object.create(VoiceConnection.prototype)
+  connection.dave = dave
+  connection.udp = { send() { sent += 1 } }
+  connection.remote = { address: '127.0.0.1', port: 9000 }
+  assert.equal(connection.buildRtpPacket(opus), null)
+  assert.equal(connection.sendFrame(opus), false)
+  assert.equal(sent, 0, 'no RTP datagram may be sent without a DAVE ciphertext')
+})
+
+test('voice Session Description without a positive DAVE version fails the connection', () => {
+  let left = 0
+  let rejected = null
+  const connection = new VoiceConnection({
+    gateway: { leaveVoice() { left += 1 } },
+    rest: {},
+    logger: null,
+    guildId: 'guild-1',
+    channelId: 'voice-1',
+    userId: 'bot-1',
+  })
+  connection.on('error', () => {})
+  connection.readyReject = error => { rejected = error }
+  connection.onSessionDescription({ secret_key: [], dave_protocol_version: 0 })
+  assert.equal(connection.state, 'failed')
+  assert.match(rejected?.message ?? '', /did not negotiate DAVE E2EE/)
+  assert.equal(left, 1, 'failed E2EE negotiation must leave the Discord voice gateway')
 })
 
 test('Discord PNG, APNG and GIF stickers are passed to the model as images', async () => {
