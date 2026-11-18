@@ -21,7 +21,8 @@
     "store.js",
     "discord",
     "interests.js",
-    "src/interest-panel.js"
+    "src/interest-panel.js",
+    "privacy.js"
   ],
   "dsh": {
     "bundle": {
