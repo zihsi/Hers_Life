@@ -73,7 +73,8 @@ export const REFERENCE = {
 }
 
 export const DEFAULT_RATE = 7.2
-export const DEFAULT_AUTO = path.join(os.homedir(), '.dsh', 'dsh-ming-graph', 'cost-prices.auto.json')
+export const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
+export const DEFAULT_AUTO = path.join(DSH_HOME, 'dsh-ming-graph', 'cost-prices.auto.json')
 
 // ---------- 名字归一化与相似度 ----------
 
@@ -309,7 +310,7 @@ export async function searchBing(query) {
 
 // ---------- 一个模型的索引流程 ----------
 
-const cacheDirOf = (dir) => dir || path.join(os.homedir(), '.dsh', 'dsh-ming-graph', 'price-cache')
+const cacheDirOf = (dir) => dir || path.join(DSH_HOME, 'dsh-ming-graph', 'price-cache')
 const cacheKey = (s) => Buffer.from(s).toString('base64url').slice(0, 48)
 
 function readCache(dir, key, ttlMs) {
