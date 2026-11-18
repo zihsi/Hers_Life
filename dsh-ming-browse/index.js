@@ -47,7 +47,6 @@ export const inject = ['agents', 'timer', 'tools', 'hersLifeDiscord']
 const BROWSE_SESSION_ID = 'ming-browse'
 
 function resolveWorkspace() {
-  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
     const central = JSON.parse(readFileSync(path.join(getDshHome(), 'ming-memory.json'), 'utf8'))
     if (central && typeof central.root === 'string' && central.root.trim()) return central.root
