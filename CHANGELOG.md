@@ -29,6 +29,7 @@
 
 ### 套件文件版本
 
+- `dsh-ming-browse@0.1.4`：輪次帳本改為序列化佇列與暫存檔原子 rename，避免 session 輪替、採用 session 與每輪結算併發寫入時把 JSON 截成空檔；QA 改為等待預期狀態落盤。
 - `dsh-ming-bilibili-account@0.1.3`：修正套件描述，明確指出登入態同步持久化到 DSH credentials service 與本機憑證檔。
 - `dsh-ming-core-memory@1.0.3-ming.2`：README 與實際事實型記憶政策、私有 Git 安裝方式及 DSH 最低版本保持一致。
 
