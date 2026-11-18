@@ -330,6 +330,11 @@ window.__ModuleLoader__.load({
               input('開場注入日記篇數', 'diaryCount', '', 'number'),
               input('日記注入字元預算', 'diaryChars', '', 'number'),
               input('人設注入字元上限', 'maxChars', '', 'number')),
+            h('div', { className: 'hl-muted' },
+              'DSH_HOME：' + (status.paths?.dshHome || '尚未取得') + '\\n'
+              + '工作區：' + (status.paths?.workspace || cfg.workspace || '尚未設定') + '\\n'
+              + '資料索引：' + (status.paths?.dataRoot || '尚未取得') + '\\n'
+              + '日記：' + (status.paths?.diary || '尚未取得')),
             area('人設檔案清單（每行一個相對路徑）', 'personaFiles', '首次初始化會建立預設檔案；自訂路徑若不存在不會覆蓋其他檔案。', 3),
             h('div', { className: 'hl-actions' }, button('初始化／補齊工作區', initialize, true, busy)))),
         card('人設、規則與日記編輯', '直接在 Hers Life 設定頁編輯工作區內的 Markdown，不必自行尋找檔案。人設檔、AGENTS.md 與日期格式日記才允許寫入。',
