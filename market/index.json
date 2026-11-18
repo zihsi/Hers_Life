@@ -1,12 +1,12 @@
 {
   "format": 1,
-  "title": "Hers Life · Discord + DSH",
-  "description": "仅支持 Discord 与 DeepSeek Harness 的 AI 角色插件集：独立会话、共享可追溯记忆、人格／日记、兴趣唤醒、语音与统一设置中心。",
+  "title": "Hers Life 插件",
+  "description": "溟自己写、自己用的 DSH 插件集：记忆、闲逛、桌面陪伴、语音、兴趣唤醒等。",
   "plugins": [
     {
       "name": "dsh-ming-discord",
       "title": "dsh-ming-discord",
-      "description": "唯一聊天入口：Discord 私讯、服务器频道与 Thread 独立会话；来源可追溯的跨会话记忆、附件、兴趣唤醒、语音与统一设置中心。",
+      "description": "Hers Life 的 Discord 原生適配器：獨立會話、跨會話來源可追溯記憶、統一設定頁。",
       "author": "zihsi",
       "homepage": "https://github.com/zihsi/Hers_Life",
       "repository": {
@@ -15,51 +15,12 @@
       },
       "versions": [
         {
-          "version": "0.1.5",
-          "publishTimestamp": 1794944801,
+          "version": "0.1.8",
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "68e27b2372ec69cf8335299e5c77d5febbe671cf",
-            "path": "dsh-ming-discord"
-          },
-          "engines": {
-            "dsh": ">=0.2.0"
-          }
-        },
-        {
-          "version": "0.1.4",
-          "publishTimestamp": 1794938578,
-          "source": {
-            "type": "git",
-            "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "9cec2e1686e7330ce72adcae71d14d5b3286d121",
-            "path": "dsh-ming-discord"
-          },
-          "engines": {
-            "dsh": ">=0.2.0"
-          }
-        },
-        {
-          "version": "0.1.3",
-          "publishTimestamp": 1794933108,
-          "source": {
-            "type": "git",
-            "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "bcae65569b6435a97f194fbf8ae10c89450a90f7",
-            "path": "dsh-ming-discord"
-          },
-          "engines": {
-            "dsh": ">=0.2.0"
-          }
-        },
-        {
-          "version": "0.1.2",
-          "publishTimestamp": 1794909782,
-          "source": {
-            "type": "git",
-            "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "8ffdce4ac4ee33e3255330cfbbc78b4b4b5304be",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-discord"
           },
           "engines": {
@@ -81,11 +42,11 @@
       "versions": [
         {
           "version": "0.1.1",
-          "publishTimestamp": 1794933108,
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "bcae65569b6435a97f194fbf8ae10c89450a90f7",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-activities"
           },
           "engines": {
@@ -97,7 +58,7 @@
     {
       "name": "dsh-ming-bilibili-account",
       "title": "dsh-ming-bilibili-account",
-      "description": "溟的 B 站账号工具：扫码登录、查账号能力状态、改昵称。登录态只存进程内存，不落盘。",
+      "description": "B站帳號工具：掃碼登入、帳號狀態與社交工具；登入態同步持久化於 DSH credentials service 與本機憑證檔。",
       "author": "zihsi",
       "homepage": "https://github.com/zihsi/Hers_Life",
       "repository": {
@@ -106,25 +67,12 @@
       },
       "versions": [
         {
-          "version": "0.1.2",
-          "publishTimestamp": 1794944801,
+          "version": "0.1.3",
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "68e27b2372ec69cf8335299e5c77d5febbe671cf",
-            "path": "dsh-ming-bilibili-account"
-          },
-          "engines": {
-            "dsh": ">=0.2.0"
-          }
-        },
-        {
-          "version": "0.1.1",
-          "publishTimestamp": 1794909782,
-          "source": {
-            "type": "git",
-            "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "8ffdce4ac4ee33e3255330cfbbc78b4b4b5304be",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-bilibili-account"
           },
           "engines": {
@@ -146,11 +94,11 @@
       "versions": [
         {
           "version": "0.1.3",
-          "publishTimestamp": 1794933109,
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "bcae65569b6435a97f194fbf8ae10c89450a90f7",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-browse"
           },
           "engines": {
@@ -162,7 +110,7 @@
     {
       "name": "dsh-ming-core-memory",
       "title": "dsh-ming-core-memory",
-      "description": "事实型核心记忆与归档记忆；语义检索 DSH 文件与网页会话，Discord 事件由跨会话记忆服务管理。",
+      "description": "dsh-core-memory 的本地 fork：事实型核心记忆、归档记忆与来源可追溯检索；Discord 对话事件由独立跨会话记忆层管理。",
       "author": "zihsi",
       "homepage": "https://github.com/zihsi/Hers_Life",
       "repository": {
@@ -171,12 +119,12 @@
       },
       "versions": [
         {
-          "version": "1.0.3-ming.1",
-          "publishTimestamp": 1794933110,
+          "version": "1.0.3-ming.2",
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "bcae65569b6435a97f194fbf8ae10c89450a90f7",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-core-memory"
           },
           "engines": {
@@ -188,7 +136,7 @@
     {
       "name": "dsh-ming-graph",
       "title": "dsh-ming-graph",
-      "description": "记忆神经元与星图：整合 DSH 归档记忆与 Discord 会话事件，保留来源位置。",
+      "description": "记忆神经元与星图：整合 DSH 归档记忆与 Discord 会话事件，保留服务器／频道／Thread 来源。",
       "author": "zihsi",
       "homepage": "https://github.com/zihsi/Hers_Life",
       "repository": {
@@ -197,12 +145,12 @@
       },
       "versions": [
         {
-          "version": "1.1.1",
-          "publishTimestamp": 1794933110,
+          "version": "1.1.3",
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "bcae65569b6435a97f194fbf8ae10c89450a90f7",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-graph"
           },
           "engines": {
@@ -214,7 +162,7 @@
     {
       "name": "dsh-ming-memory",
       "title": "dsh-ming-memory",
-      "description": "人格与日记开场注入；Discord 会话由共享事件记忆服务统一管理，避免重复捕获。",
+      "description": "开场记忆：把人格文件与最近几篇日记拼进系统提示词；Discord 对话由共享事件记忆层统一管理。",
       "author": "zihsi",
       "homepage": "https://github.com/zihsi/Hers_Life",
       "repository": {
@@ -223,25 +171,12 @@
       },
       "versions": [
         {
-          "version": "0.2.2",
-          "publishTimestamp": 1794944801,
+          "version": "0.2.3",
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "68e27b2372ec69cf8335299e5c77d5febbe671cf",
-            "path": "dsh-ming-memory"
-          },
-          "engines": {
-            "dsh": ">=0.2.0"
-          }
-        },
-        {
-          "version": "0.2.1",
-          "publishTimestamp": 1794933111,
-          "source": {
-            "type": "git",
-            "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "bcae65569b6435a97f194fbf8ae10c89450a90f7",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-memory"
           },
           "engines": {
@@ -263,11 +198,11 @@
       "versions": [
         {
           "version": "1.0.2",
-          "publishTimestamp": 1794933113,
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "bcae65569b6435a97f194fbf8ae10c89450a90f7",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-mousepet"
           },
           "engines": {
@@ -279,7 +214,7 @@
     {
       "name": "dsh-ming-resume",
       "title": "dsh-ming-resume",
-      "description": "Discord steer 插话接续提示：先回应最新消息，再在适当时回到原任务。",
+      "description": "接续提示：检测 Discord 通道的 steer 插话，在下一步提醒先答最新消息、再回到原任务。",
       "author": "zihsi",
       "homepage": "https://github.com/zihsi/Hers_Life",
       "repository": {
@@ -289,11 +224,11 @@
       "versions": [
         {
           "version": "0.1.2",
-          "publishTimestamp": 1794933113,
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "bcae65569b6435a97f194fbf8ae10c89450a90f7",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-resume"
           },
           "engines": {
@@ -305,7 +240,7 @@
     {
       "name": "dsh-ming-skill-isolate",
       "title": "dsh-ming-skill-isolate",
-      "description": "按工作区隔离 skill：只在指定工作区隐藏不用的 skill。",
+      "description": "按工作区隔离 skill：给指定工作区加一层同名遮罩，把这个目录用不上的 skill 从模型视野里关掉，不删文件、不改别人的 SKILL.md。",
       "author": "zihsi",
       "homepage": "https://github.com/zihsi/Hers_Life",
       "repository": {
@@ -315,11 +250,11 @@
       "versions": [
         {
           "version": "0.1.2",
-          "publishTimestamp": 1794933114,
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "bcae65569b6435a97f194fbf8ae10c89450a90f7",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-skill-isolate"
           },
           "engines": {
@@ -340,12 +275,12 @@
       },
       "versions": [
         {
-          "version": "0.1.2",
-          "publishTimestamp": 1794933114,
+          "version": "0.1.4",
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "bcae65569b6435a97f194fbf8ae10c89450a90f7",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-voice"
           },
           "engines": {
@@ -357,7 +292,7 @@
     {
       "name": "dsh-ming-wake",
       "title": "dsh-ming-wake",
-      "description": "落盘式定时唤醒：队列化提醒并投递到目标 DSH 会话。",
+      "description": "真会落盘的定时唤醒：工具写 dueAt，插件扫描后调 agents.resume。实验品。",
       "author": "zihsi",
       "homepage": "https://github.com/zihsi/Hers_Life",
       "repository": {
@@ -367,11 +302,11 @@
       "versions": [
         {
           "version": "0.1.2",
-          "publishTimestamp": 1794933115,
+          "publishTimestamp": 1794974195,
           "source": {
             "type": "git",
             "url": "https://github.com/zihsi/Hers_Life",
-            "commit": "bcae65569b6435a97f194fbf8ae10c89450a90f7",
+            "commit": "79d8757113fc996de55db7f0c21dc4a10f6657a6",
             "path": "dsh-ming-wake"
           },
           "engines": {
