@@ -19,8 +19,8 @@ export function tempRoot(prefix = 'ming-qa-') {
   return mkdtempSync(join(tmpdir(), prefix))
 }
 
-/** 空目录：把 cfg.qq.dir 指过去，测试才不会读到本机真的 QQ 消息 */
-export function emptyDir(prefix = 'ming-noqq-') {
+/** 建立独立空目录，确保测试只读写自己的临时数据，不碰使用者资料。 */
+export function emptyDir(prefix = 'ming-qa-empty-') {
   const dir = mkdtempSync(join(tmpdir(), prefix))
   mkdirSync(dir, { recursive: true })
   return dir
