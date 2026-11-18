@@ -101,7 +101,7 @@ function cleanTimeWindows(value, fallback) {
     if (!row || typeof row !== 'object') return null
     const start = String(row.start || '')
     const end = String(row.end || '')
-    if (!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(start) || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(end)) return null
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(start) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(end)) return null
     return { start, end, ...(row.only === 'rest' ? { only: 'rest' } : {}) }
   }).filter(Boolean)
 }
