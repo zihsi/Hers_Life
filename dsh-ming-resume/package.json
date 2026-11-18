@@ -1,6 +1,6 @@
 {
   "name": "dsh-ming-resume",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "type": "module",
   "description": "接续提示：检测 Discord 通道的 steer 插话，在下一步提醒先答最新消息、再回到原任务。",
