@@ -61,6 +61,8 @@ let SELF = {
   identity: true,
 }
 
+const DSH_HOME = process.env.DSH_HOME || path.join(DSH_HOME)
+
 const CACHE = new Map() // root -> { sig, text }
 const PER_AGENT = new Map() // agentId -> { text }
 const ATTACHED = new Set() // agentId
@@ -147,7 +149,7 @@ function warnOnce(msg) {
 }
 
 export function loadLocalConfig(file) {
-  const f = file || process.env.MING_MEMORY_CONFIG || path.join(os.homedir(), '.dsh', 'ming-memory.json')
+  const f = file || process.env.MING_MEMORY_CONFIG || path.join(DSH_HOME, 'ming-memory.json')
   try {
     const j = JSON.parse(readFileSync(f, 'utf8'))
     return j && typeof j === 'object' ? j : {}
@@ -313,7 +315,7 @@ function fileChars(p) {
 function indexChars() {
   // 归档索引：core-memory 取最新 12 条，这里按 mtime 数同样 12 个文件（近似，报的时候标「约」）
   try {
-    const dir = path.join(os.homedir(), '.dsh', 'memory', 'notes')
+    const dir = path.join(DSH_HOME, 'memory', 'notes')
     const files = readdirSync(dir)
       .filter((f) => f.endsWith('.md'))
       .map((f) => ({ f, t: statSync(path.join(dir, f)).mtimeMs }))
@@ -362,7 +364,7 @@ export function lastAccountSnapshot() {
 function accountBlock(cfg, personaChars, diaryChars) {
   const total = Number.isInteger(cfg.totalChars) ? cfg.totalChars : DEFAULTS.totalChars
   const agents = fileChars(path.join(cfg.root, 'AGENTS.md'))
-  const core = fileChars(path.join(os.homedir(), '.dsh', 'memory', 'MEMORY.md'))
+  const core = fileChars(path.join(DSH_HOME, 'memory', 'MEMORY.md'))
   const idx = indexChars()
   const sum = personaChars + diaryChars + agents + core + idx
   const over = sum > total
@@ -1188,11 +1190,11 @@ export function registerArchiveRoutes(ctx) {
           if (rejection !== undefined) { respond(rejection || 403, { ok: false, error: 'rejected' }); return }
 
           const what = url.pathname.slice(ARCHIVE_ROUTE.length).replace(/^\//, '')
-          const dir = path.join(os.homedir(), '.dsh', 'memory', 'notes')
+          const dir = path.join(DSH_HOME, 'memory', 'notes')
 
           // 身份与称呼（2026-11-10）：读/写 ~/.dsh/ming-memory.json 里那几格，别的键原样保留。
           if (what === 'identity') {
-            const file = path.join(os.homedir(), '.dsh', 'ming-memory.json')
+            const file = path.join(DSH_HOME, 'ming-memory.json')
             const KEYS = ['selfName', 'selfFullName', 'selfDesc', 'userName', 'identity']
             const readJ = async () => {
               try { return JSON.parse(await readFile(file, 'utf8')) } catch { return {} }
