@@ -15,8 +15,11 @@ async function replaceFile(temp, target) {
     } catch (replaceError) {
       if (moved) {
         try { await rename(backup, target) } catch {}
+      } else if (replaceError?.code === 'ENOENT') {
+        await rename(temp, target)
+      } else {
+        throw replaceError
       }
-      throw replaceError
     }
   } finally {
     await rm(temp, { force: true }).catch(() => {})
