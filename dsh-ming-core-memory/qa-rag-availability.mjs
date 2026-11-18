@@ -40,7 +40,7 @@ test('RAG availability uses synthetic files and never a real service', async t =
     assert.equal(r.status, 'partial')
     assert.deepEqual(r.layers, ['doc'])
     assert.equal(r.hits[0].text, 'A known project fact')
-    assert.equal(r.issues.length, 3) // 2 层缺失 + doc 没有清单（info，J-2 起会记一条）
+    assert.equal(r.issues.length, 2) // web 缺失 + doc 无清单（info）；每层只记录一次状态
   })
   await t.test('loaded empty index is an actual empty search', async () => {
     await doc([], [])
@@ -78,7 +78,7 @@ test('RAG availability uses synthetic files and never a real service', async t =
     await tools.memory_core.execute({ action: 'append', section: 'test', text: 'fixture' })
     const partial = await tools.rag_recall.execute({ query: 'fact' })
     assert.match(partial, /部分资料/)
-    const missing = await tools.rag_recall.execute({ query: 'fact', layer: 'qq' })
+    const missing = await tools.rag_recall.execute({ query: 'fact', layer: 'doc' })
     assert.match(missing, /不可用/)
     assert.doesNotMatch(missing, /没搜到/)
   })
