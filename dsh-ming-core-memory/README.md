@@ -58,13 +58,15 @@ memory/
 - 你要求改变说话风格 → 模型调 `persona` 切换预设；
 - 需要回忆往事 → 模型主动调 `memory_search` 检索，再 `memory_read` 读全文。
 
-你也可以直接编辑 `~/.dsh/memory/MEMORY.md`——注入是每次组装时同步读取的，保存即可生效。
+核心记忆正文可直接在 Hers Life →「人设、规则与日记编辑／核心记忆编辑」中修改，不必自行寻找或建立 `MEMORY.md`；设定中心会在首次启动时自动建立缺少的档案。
 
 ## 配置
 
 | 环境变量 | 说明 | 默认值 |
 |---|---|---|
-| `DSH_HOME` | Harness 主目录，记忆库位于其下的 `memory/` | `~/.dsh` |
+| `DSH_HOME` | Harness 主目录，由 DSH 宿主自动提供；一般使用者不需要手动设定 | 宿主提供，缺省回退 `~/.dsh` |
+
+语意检索的 Embedding Endpoint 与模型请在 Hers Life →「Activities、Skill Isolate 与 Graph」的 Core Memory 区块设定；不需要设置 `EMB_ENDPOINT` 或 `EMB_MODEL`。
 
 ## 兼容性
 
