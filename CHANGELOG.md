@@ -2,7 +2,7 @@
 
 ## 2026-11-18 · 全倉庫稽核修正
 
-### Discord 適配器 dsh-ming-discord@0.1.8
+### Discord 適配器 dsh-ming-discord@0.1.9
 
 - 私訊訊息、指令活動不再寫入共用事件預覽；私訊回覆不寫共用日記，也不參與公開興趣學習。
 - 新增舊版私訊日記隔離遷移：`私聊 ...` 條目（含多行延續）搬到 `~/.dsh/privacy-quarantine/`，保留原文但從共用日記移除；支援自訂日記目錄、路徑防逃逸與重複執行防護。
@@ -10,7 +10,7 @@
 - PNG／APNG／GIF Discord 貼圖會下載並轉成模型影像區塊；Lottie 仍只提供文字描述。
 - 修正多人同頻道並行時的發起者身分競態，改用 AsyncLocalStorage 綁定每次工具執行；依 DSH 正式 ToolRunContext.agent.id 讀取 Session ID。
 - 私訊召回改為精確比對 Discord User ID；多 Owner 之間不再共享私人背景。關閉跨伺服器記憶時，DM 也不再成為可讀取所有伺服器的萬用範圍。
-- DAVE 改為嚴格 fail-closed：協商缺少正版本、原生版本不相容、MLS 尚未 ready 或加密失敗時，一律不送出明文 Opus；接收端在 DAVE 未 ready 時也丟棄音訊。原生轉換失敗不再吞掉錯誤或假裝完成。
+- DAVE 改為嚴格 fail-closed：協商缺少正版本、原生版本不相容、MLS 尚未 ready 或加密失敗時，一律不送出明文 Opus；接收端在 DAVE 未 ready 時也丟棄音訊。原生轉換失敗不再吞掉錯誤或假裝完成。 `/voice join` 需等到 MLS ready 才回報成功（最多 20 秒），未 ready 時播放工具明確拒絕；同頻道重複 join 也不能繞過等待。
 - 事件預覽同步套用 Guild／Channel 白名單；補齊 Gateway 特權 Intent、DAVE 語音先決條件文件。
 
 ### 開場記憶 dsh-ming-memory@0.2.3
