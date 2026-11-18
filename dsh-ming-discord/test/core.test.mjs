@@ -72,7 +72,7 @@ test('interest pause state is reversible and reports its skip reason', async () 
   }
 })
 
-test('slash commands and model tools inherit Discord actor and Owner permissions', () => {
+test('slash commands and model tools inherit Discord actor and Owner permissions', async () => {
   const bridge = Object.create(DiscordBridge.prototype)
   const config = {
     discord: {
