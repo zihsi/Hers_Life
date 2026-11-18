@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import assert from 'node:assert/strict'
 import os from 'node:os'
 import path from 'node:path'
@@ -112,9 +113,54 @@ test('slash commands and model tools inherit Discord actor and Owner permissions
     member: { user: { id: 'owner-1' } }, guild_id: 'guild-1', channel_id: 'channel-1',
   }), '')
 
-  bridge.activeActors = new Map([['session-1', { userId: 'owner-1', sessionId: 'session-1', channelId: 'channel-1' }]])
-  assert.equal(bridge.actorForExecution({ agent: { session: { id: 'session-1' } } }).userId, 'owner-1')
-  assert.throws(() => bridge.actorForExecution({ agent: { session: { id: 'other-session' } } }), /目前正在處理 Discord 訊息/)
+  bridge.actorStorage = new AsyncLocalStorage()
+  const ownerActor = { userId: 'owner-1', sessionId: 'session-1', channelId: 'channel-1' }
+  const memberActor = { userId: 'member-2', sessionId: 'session-1', channelId: 'channel-1' }
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+  const [ownerResult, memberResult] = await Promise.all([
+    bridge.actorStorage.run(ownerActor, async () => {
+      await delay(20)
+      return bridge.actorForExecution({ agent: { session: { id: 'session-1' } } }).userId
+    }),
+    bridge.actorStorage.run(memberActor, async () => {
+      await delay(5)
+      return bridge.actorForExecution({ agent: { session: { id: 'session-1' } } }).userId
+    }),
+  ])
+  assert.equal(ownerResult, 'owner-1')
+  assert.equal(memberResult, 'member-2')
+  assert.throws(() => bridge.actorForExecution({ agent: { session: { id: 'session-1' } } }), /目前正在處理 Discord 訊息/)
+  assert.throws(() => bridge.actorStorage.run(ownerActor, () =>
+    bridge.actorForExecution({ agent: { session: { id: 'another-session' } } })), /目前正在處理 Discord 訊息/)
+})
+
+test('slash command dispatcher excludes private DMs from shared interaction events', async () => {
+  const { Interactions } = await import('../discord/commands.js')
+  const pushed = []
+  const callbacks = []
+  const interactions = new Interactions({
+    rest: {
+      async interactionCallback(id, token, payload) { callbacks.push({ id, token, payload }); return {} },
+    },
+    logger: null,
+    events: { push(...args) { pushed.push(args) } },
+  })
+  interactions.handle('ask', async () => 'ok')
+  await interactions.dispatch({
+    id: 'dm-interaction', token: 'token', type: 2,
+    user: { id: 'owner-1', username: 'Owner' },
+    channel_id: 'dm-channel', data: { name: 'ask', options: [] },
+  })
+  assert.equal(pushed.length, 0)
+  await interactions.dispatch({
+    id: 'guild-interaction', token: 'token-2', type: 2,
+    guild_id: 'guild-1', channel_id: 'channel-1',
+    member: { user: { id: 'member-1', username: 'Member' } },
+    data: { name: 'ask', options: [] },
+  })
+  assert.equal(pushed.length, 1)
+  assert.equal(pushed[0][0], 'INTERACTION_CREATE')
+  assert.equal(callbacks.length, 2)
 })
 
 test('private DM messages and activity never enter the shared event preview', () => {
