@@ -1230,7 +1230,7 @@ export function registerArchiveRoutes(ctx) {
           if (rejection !== undefined) { respond(rejection || 403, { ok: false, error: 'rejected' }); return }
 
           const what = url.pathname.slice(ARCHIVE_ROUTE.length).replace(/^\//, '')
-          const dir = path.join(DSH_HOME, 'memory', 'notes')
+          const dir = coreMemoryPath('notes')
 
           // 身份与称呼（2026-11-10）：读/写 ~/.dsh/ming-memory.json 里那几格，别的键原样保留。
           if (what === 'identity') {
