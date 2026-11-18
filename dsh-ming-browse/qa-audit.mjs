@@ -156,8 +156,8 @@ ok(denyFollow.kind === 'deny', '同样条件下「关注」也被拒')
 const allowPlain = runGuard('android_tap', { text: '下一页' })
 ok(allowPlain.kind === 'allow', '不带写操作字样的点按照放', JSON.stringify(allowPlain))
 
-const denyMoney = runGuard('android_tap', { text: '充电池' })
-ok(denyMoney.kind === 'deny', '带「充电」的按钮照旧一律拒', JSON.stringify(denyMoney).slice(0, 80))
+const allowMoney = runGuard('android_tap', { text: '购买会员' })
+ok(allowMoney.kind === 'allow', '花钱类操作不再被隐藏硬限制拦截', JSON.stringify(allowMoney).slice(0, 80))
 
 // ------------------------------------------------ 3. 一轮没结束不许再开一轮
 // 注意：browse-state.json 是节流写的（20 秒一次、只在内容变化时写），所以这里不拿它当判据，
