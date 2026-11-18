@@ -189,7 +189,10 @@ export function apply(ctx, config) {
     },
     async execute(args, exec) {
       const sessionId = String(exec?.agent?.session?.id ?? '')
-      if (!sessionId) throw new Error('voice_say 需要目前 DSH Agent 的 Session 身分')
+      const actor = ctx.hersLifeDiscord?.actorForExecution?.(exec) ?? null
+      if (!sessionId || !actor?.userId || actor.sessionId !== sessionId) {
+        throw new Error('voice_say 需要有效的 Discord 發起者與 DSH Session 身分')
+      }
       const text = typeof args?.text === 'string' ? args.text.trim() : ''
       if (!text) return 'text 是空的，没东西可合成。'
       if (text.length > 800) return '太长了（' + text.length + ' 字）。语音只适合一两句；长内容用字发。'
@@ -211,7 +214,7 @@ export function apply(ctx, config) {
       // Tag each generated voice file with the exact DSH session that created it.
       // Discord's send-file tool checks this sidecar before a non-Owner can post
       // it, preventing another channel from forwarding private DM voice output.
-      await writeFile(out + '.session', sessionId, { encoding: 'utf8', mode: 0o600 })
+      await writeFile(out + '.session', JSON.stringify({ sessionId, userId: String(actor.userId) }), { encoding: 'utf8', mode: 0o600 })
       pruneOldVoices(dir).catch(() => {})   // ★ 只进不出的清理（见函数说明）
       return 'OK ' + engine + ' ' + out
     },
