@@ -38,7 +38,7 @@ const cmd = argv.find((x) => !x.startsWith('--')) || 'list'
 const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 let centralSettings = {}
 try { centralSettings = JSON.parse(fs.readFileSync(path.join(DSH_HOME, 'hers-life.json'), 'utf8')) } catch {}
-const workspace = String(centralSettings.workspace || process.env.MING_WORKSPACE || '')
+const workspace = String(centralSettings.workspace || '')
 const LIVE = flag('live') || path.join(workspace, 'live')
 const ROOT = path.join(LIVE, 'rag-index')
 const GEN = path.join(ROOT, 'generations')
