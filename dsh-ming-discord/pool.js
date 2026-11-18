@@ -40,8 +40,14 @@ export class DiscordSessionPool {
     const preset = String(this.settings.get('agentPreset', '') || '').trim()
     const setup = async (agentCtx) => {
       if (!preset) return
-      try { await this.ctx.get('agentPresets')?.mount?.(agentCtx, preset) } catch (error) {
-        this.logger?.warn?.('Discord preset mount failed: ' + String(error?.message ?? error))
+      const presets = this.ctx.get('agentPresets')
+      if (typeof presets?.mount !== 'function') {
+        throw new Error('已設定 Discord Agent Preset「' + preset + '」，但 DSH Agent Presets 服務不可用；為避免這個會話悄悄退回另一套人格，已停止建立會話。')
+      }
+      try {
+        await presets.mount(agentCtx, preset)
+      } catch (error) {
+        throw new Error('Discord Agent Preset「' + preset + '」載入失敗：' + String(error?.message ?? error))
       }
     }
     const meta = {
