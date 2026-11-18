@@ -96,7 +96,7 @@ window.__ModuleLoader__.load({
           setCfg(mergedSettings)
           setBrowseWindowsDraft(JSON.stringify(mergedSettings.browse.freeWindows || [], null, 2))
           setHasToken(!!d.hasToken)
-          setStatus(d.status || {})
+          setStatus((old) => ({ ...old, ...(d.status || {}), plugins: d.status?.plugins || old.plugins, paths: d.status?.paths || old.paths }))
           setEvents(d.events || [])
           setSessions(d.sessions || [])
         } catch (e) { setError(String(e.message || e)) }
@@ -188,7 +188,7 @@ window.__ModuleLoader__.load({
           setCfg(mergedSettings)
           setBrowseWindowsDraft(JSON.stringify(mergedSettings.browse.freeWindows || [], null, 2))
           setToken('')
-          setStatus(d.status || {})
+          setStatus((old) => ({ ...old, ...(d.status || {}), plugins: d.status?.plugins || old.plugins, paths: d.status?.paths || old.paths }))
           setMigration(d.migration || null)
           if (d.restartRequired) {
             setNote('工作區已切換並保全式複製資料。請重啟 DSH，讓所有配套插件一起切換到新路徑。')
@@ -297,7 +297,7 @@ window.__ModuleLoader__.load({
           const r = await fetch(API + '/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ clearToken: true, settings: cfg }) })
           const d = await r.json()
           if (!r.ok || !d.ok) throw new Error(d.error || '刪除失敗')
-          setHasToken(false); setStatus(d.status || {}); setNote('Token 已從本機密鑰檔移除。')
+          setHasToken(false); setStatus((old) => ({ ...old, ...(d.status || {}), plugins: d.status?.plugins || old.plugins, paths: d.status?.paths || old.paths })); setNote('Token 已從本機密鑰檔移除。')
         } catch (e) { setError(String(e.message || e)) }
         setBusy(false)
       }
@@ -519,7 +519,11 @@ window.__ModuleLoader__.load({
               input('憑證檔路徑', 'bilibili.credentialFile', '留空使用 DSH_HOME/bili-duty/bili_credential.json。'),
               input('搜尋最大頁數', 'bilibili.searchMaxPageSize', '', 'number'),
               input('字幕最大字元數', 'bilibili.subtitleMaxChars', '', 'number'),
-              input('請求逾時（毫秒）', 'bilibili.timeoutMs', '', 'number')))),
+              input('請求逾時（毫秒）', 'bilibili.timeoutMs', '', 'number')),
+            h('div', { className: 'hl-muted' },
+              '登入狀態：' + (status.plugins?.bilibili?.loggedIn ? '已登入' : status.plugins?.bilibili ? '未登入' : '插件尚未回報狀態') + '\n'
+              + '帳號：' + (status.plugins?.bilibili?.userName || '—') + '\n'
+              + 'UID：' + (status.plugins?.bilibili?.userId || '—')))),
 
         card('Activities、Skill Isolate 與 Graph', '集中管理其他配套插件的啟用狀態、資料檔路徑與同步頻率。修改後請重啟 DSH。',
           h(React.Fragment, null,
