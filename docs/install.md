@@ -1,103 +1,120 @@
-# 最小安装（F-3）
+# Hers Life 安裝與驗收（Discord-only）
 
-> 这是**本机跑通过**的一份记录，不是「所有机器都行」的承诺。
-> 每条都标了验证层级：`已验证` = 在这台机器上真跑过；`未验` = 没条件，别当已经支持。
+> 本文件對應 `discord-dsh-only` 分支。它不再描述舊 QQ／OneBot／AstrBot 部署。
+> GitHub CI 的離線測試通過，不代表已在你的 Windows DSH Profile 完成真實 Gateway、語音或桌寵端到端測試；限制見 [compatibility.md](compatibility.md)。
 
-## 1. 支持条件
+## 1. 必要條件
 
-| 项 | 本机实测值 | 说明 |
+| 項目 | 要求 | 用途 |
 |---|---|---|
-| Windows | 10.0.26100.8457 | 只有这一个版本验过 |
-| Node | v24.21.0（Discord 适配器要求 Node 22+） | 使用 ESM、原生 WebSocket 与现代 Node API |
-| DSH | 0.2.2-rc.1 | 插件靠 Cordis 的 `inject` / `tools` / `agents`；低版本不一定有 |
-| Discord Bot | Bot Token + Message Content Intent + Server Members Intent | 两项都要在 Developer Portal 开启，否则可能 Gateway 4014；由 `dsh-ming-discord` 统一连接，无需额外消息桥 |
+| Windows／Linux | 依實際插件功能選擇；桌寵僅支援 Windows | Discord／記憶插件可在支援 Node 的 Host 運行，桌寵需 Windows |
+| Node.js | 22 或更新版本 | ESM、原生 WebSocket、Node-API |
+| DeepSeek Harness | 0.2.0 或更新版本 | 插件 manifest 的最低聲明；仍需實際 Host API 相容 |
+| Discord Bot | Bot Token、Application ID／Bot 身分 | 唯一聊天平台 |
+| Discord Gateway Intents | Message Content + Server Members | 程式 Identify 會要求兩個特權 Intent；未開可能收到 4014 |
+| 即時 Discord 語音 | FFmpeg + 可載入的 `dsh-ming-discord/discord/dave/davey.node` | Opus／音訊處理與 DAVE E2EE；非 Stage 語音不支援無加密降級 |
+| TTS | Python + `edge-tts`；Windows 離線回退另需 PowerShell SAPI 與 FFmpeg | 將文字合成 MP3 |
+| Bilibili 登入工具 | 使用者自行登入／提供 Cookie | 只有需要登入的 B 站功能才需要 |
 
-### Discord Bot 必要 Intent
+Discord 已要求非 Stage 語音連線支援 DAVE E2EE；不支援的客戶端會被語音 Gateway 以 4017 拒絕。Stage 是 E2EE 例外，但本適配器目前沒有 Stage 專用的無 DAVE 傳輸路徑。參考 [Discord 語音加密要求](https://support.discord.com/hc/en-us/articles/25968222946071-End-to-End-Encryption-for-Audio-and-Video) 與 [第三方 Bot 語音最低要求](https://support.discord.com/hc/en-us/articles/38025123604631-Minimum-Client-Version-Requirements-for-Voice-Chat)。
 
-在 Discord Developer Portal → Bot → Privileged Gateway Intents 開啟：
+## 2. 安裝方式
 
-- **Message Content Intent**
-- **Server Members Intent**
+這個倉庫的插件目前是私有 Git 工作區套件，**沒有發布到 npm**。建議先把倉庫 Clone 到固定路徑，再透過 DSH Profile 的 `link:` 依賴引用實際執行的那份目錄。
 
-此分支的 Gateway Identify 會要求以上兩項。只改程式、不在 Developer Portal 啟用，Discord 會以 `4014 Disallowed Intents` 關閉連線；開啟後要重連 Bot／重啟 DSH。詳見 [Discord 官方說明](https://support-dev.discord.com/hc/en-us/articles/6207308062871-What-are-Privileged-Intents)。
-
-## 2. 安装方式
-
-当前**没有发 npm**。本机是 DSH profile 的 `link:` 依赖 + `dsh.profile.bundles`：
+在 DSH Profile 的 `package.json` 中，至少加入主要插件依賴（路徑替換成自己的倉庫位置）：
 
 ```jsonc
-// ~/.dsh/profiles/web/package.json 里
 {
   "dependencies": {
-    "dsh-ming-discord": "link:C:/dsh/Hers_Life/dsh-ming-discord",
-    "dsh-ming-memory": "link:C:/dsh/Hers_Life/dsh-ming-memory",
-    "dsh-ming-core-memory": "link:C:/dsh/Hers_Life/dsh-ming-core-memory",
-    "dsh-ming-browse": "link:C:/dsh/Hers_Life/dsh-ming-browse"
+    "dsh-ming-discord": "link:<HERS_LIFE_PATH>/dsh-ming-discord",
+    "dsh-ming-memory": "link:<HERS_LIFE_PATH>/dsh-ming-memory",
+    "dsh-ming-core-memory": "link:<HERS_LIFE_PATH>/dsh-ming-core-memory",
+    "dsh-ming-graph": "link:<HERS_LIFE_PATH>/dsh-ming-graph",
+    "dsh-ming-voice": "link:<HERS_LIFE_PATH>/dsh-ming-voice"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "dsh-ming-discord",
+        "dsh-ming-memory",
+        "dsh-ming-core-memory",
+        "dsh-ming-graph",
+        "dsh-ming-voice"
+      ]
+    }
   }
 }
 ```
 
-Windows 路径用正斜杠。`link:` 指向的目录必须是**运行目录**（DSH 实际加载的那份），不是源码仓库
-——这两者是两套文件，改仓库不会自动生效，这是今天踩过的坑。
+`dsh-ming-voice`、`dsh-ming-graph`、`dsh-ming-core-memory` 可按需求選擇；Discord 入口與跨會話開場日記至少需要 `dsh-ming-discord` 與 `dsh-ming-memory`。若使用提醒、桌寵、主動瀏覽、活動卡或 Bilibili，需再把對應插件加入 dependencies 與 bundles。不要只加 dependencies 而漏掉 bundles。
 
-## 3. 三个位置要分清
+安裝後重啟 DSH。修改倉庫原始碼不會自動更新已安裝的另一份執行目錄；使用 `link:` 時必須確認連結指向 DSH 實際載入的路徑，而不是另一個 Clone。
 
-| 名字 | 是什么 | 本机值 |
-|---|---|---|
-| 源码仓库（`MING_ROOT`） | 放代码、跑的测试、生成物 | `C:\dsh\Hers_Life` |
-| 数据工作区（`MING_WORKSPACE`） | 人设、日记、`live/`、索引 | `C:\dsh\hers_workplace` |
-| 宿主配置目录 | profile 的 `cordis.patch.yml`、插件 config | `C:\Users\<你>\.dsh\profiles\web` |
+## 3. Discord Bot 設定
 
-`MING_ROOT` 与数据工作区**不是一回事**：前者是代码目录，后者由 Hers Life 插件自己的设置页统一指定（不是 DSH 全域设置）。`MING_WORKSPACE` 只保留为高级环境变量覆盖。变更工作区时只复制缺少的文件、不覆盖目的地已有数据；变更后请重启 DSH，让所有配套插件一起切换。
+在 Discord Developer Portal → **Bot → Privileged Gateway Intents** 開啟：
 
-## 4. 递进组合（别一次全装）
+- **Message Content Intent**
+- **Server Members Intent**
 
-1. **最小可用**：`dsh-ming-discord` + `dsh-ming-core-memory` + `dsh-ming-memory`。Discord 连接、Owner、工作区与人设路径都在统一设置页完成。
-2. **加 UI**：`dsh-ming-graph`（关系图）→ 需要先构建生成物：`node dsh-ming-graph/build.mjs`。
-3. **加自己玩**：`dsh-ming-browse`（会从 Discord 设置中心取得工作区，不需要手动填写路径）。
-4. **加声音/桌宠**：`dsh-ming-voice`（要 ffplay）、`dsh-ming-mousepet`（要 Windows 桌面）。
-5. **连接 Discord**：在 Hers Life 设置页贴入 Bot Token、填写 Owner Discord ID，并启用 Bot。
+接著在 Hers Life 的 Discord 設定頁填入：
 
-## 5. 素材
+1. Discord Bot Token。
+2. Owner Discord User ID（不是 Guild ID）。
+3. 工作區根目錄。
+4. 需要限制時填入 Guild／Channel 白名單。
+5. 啟用 Hers Life 與 Discord 接收總開關。
 
-| 文件 | 用途 | 是否必需 |
-|---|---|---|
-| `dsh-ming-ui/src/theme.js` | 所有面板共用的主题 | 构建 UI 必需 |
-| `dsh-ming-graph/icon.svg` | 侧栏图标 | 可选（缺了没图标） |
-| 立绘 / 语音模型 | 桌宠、语音 | 可选（缺了对应用不了，其它照常） |
+Token 只存於 `~/.dsh/hers-life-secrets.json`；設定 API 只回報是否已配置，不會回傳明碼。私訊政策可選 Owner、白名單或任何人；敏感管理指令仍限 Owner。
 
-没有捆绑任何私人素材；缺了只有对应功能不可用。
+## 4. 工作區與記憶
 
-## 6. 外部组件（缺了怎么降级）
+工作區由 Hers Life 設定頁管理，包含 `persona/`、`diary/`、`live/`、`memories/`、`outbox/` 等資料夾。工作區更換會保全式複製目的地缺少的檔案，不會覆蓋目的地現有內容。
 
-| 组件 | 用途 | 缺了会怎样 |
-|---|---|---|
-| 嵌入服务（`EMB_ENDPOINT`，默认 `127.0.0.1:18091`） | 语义检索 | `rag` 两层（doc / web）报 `service: unavailable`，关键词层照常 |
-| `ffplay` | 语音试听 | 只有试听不可用，合成不受影响；用 `MING_FFPLAY` 指定路径 |
-| B 站凭证（`~/.dsh/bili-duty/bili_credential.json`） | B 站工具 | 只读接口仍可用，需要登录的返回明确错误 |
-| Discord Bot Token | Discord 聊天入口 | 未配置时适配器保持 `needs-token`，本地记忆与其它 DSH 插件仍可单独使用 |
-| Discord 特權 Intent | 讀取群聊內容與成員事件 | Developer Portal 必須啟用 Message Content + Server Members；否則 Gateway 可能以 4014 拒絕連線 |
-| DAVE 原生模組 | 非 Stage Discord 語音 | `dsh-ming-discord/discord/dave/davey.node` 必須能被目前 Node／Electron 載入；缺失時語音明確不可用，文字 Discord 不受影響 |
+私訊不寫入共用日記、不參與公開興趣學習，也不進共用事件預覽。舊版留下的 `私聊 ...` 日記條目會在記憶讀取前移至 `~/.dsh/privacy-quarantine/private-dm-diary/`，保留原文但不再進入其他會話的開場日記。請保留隔離資料夾，除非你確定不再需要這些原始紀錄。
 
-## 7. 启动后怎么算成功
+## 5. 語音設定
 
-- DSH 里能看到 `【溟 · 开场记忆】` 那段字 → memory 插件挂上了。
-- 面板上有记忆关系图图标、点开有内容 → graph 挂上了。设置页显示 Discord `connected` → Bot Gateway 已连接。
-- 右侧栏看到「自己玩」状态 → browse 挂上了。
-- 启动日志里没有 `Traceback` / `cannot get property ... without inject`。
+- **TTS 附件**：`dsh-ming-voice` 的 `voice_say` 產生 MP3，再由 `discord_send_file` 傳到目前發起回合的頻道。預設音色、語速與 FFmpeg 可在 Hers Life 設定頁調整。
+- **即時語音**：Discord Bot 加入語音頻道並使用 DAVE E2EE；必須能載入打包的 `davey.node`，並且 FFmpeg 可執行。DAVE 載入失敗時，文字聊天仍可使用，但非 Stage 語音會明確不可用。
+- TTS MP3 與即時語音是兩條不同路徑；TTS 成功不代表即時語音 DAVE 已驗收。
 
-关闭可选组件：在 `cordis.patch.yml` 里给它那条加 `disabled: true`，别删依赖。
+## 6. 本地檢查
 
-## 8. 没验的部分
-
-- **干净用户 / 第二台机器从零装**：未验（F-T9）。
-- **中文空格路径**：构建脚本已用参数数组，理论安全；`qa-portability.mjs` 在临时目录验过，
-  但临时目录路径是英文的，**中文没实跑**。
-- **npm 发布**：没有。将来要发，另跑 `npm pack --dry-run` 检查 client / license 是否齐。
-
-## 相关检查
+在倉庫根目錄執行：
 
 ```bash
+node scripts/check.mjs --list
 node scripts/check.mjs --suite offline
-node test-support/qa-portability.mjs   # F-T1/T2/T4/T5
+node scripts/check.mjs --suite build
+node dsh-ming-graph/build.mjs --check
+node dsh-ming-memory/build.mjs --check
 ```
+
+修改 Graph 面板來源或任何被 Graph 組裝的面板後，執行：
+
+```bash
+node dsh-ming-graph/build.mjs
+```
+
+修改 Memory 開場記憶的 client 面板來源後，執行：
+
+```bash
+node dsh-ming-memory/build.mjs
+```
+
+提交前確認生成物的 `--check` 通過；不可只改 `src/` 卻漏掉 `client.js`。
+
+## 7. 尚需實機驗收
+
+自動化 CI 使用 Ubuntu + Node 22 與模擬 Host，不能代替以下實機測試：
+
+- 在實際 Windows DSH Profile 啟動所有需要的插件，確認設定頁／關係圖可載入。
+- 以真 Discord Bot 驗證 DM、@提及、回覆、Thread、附件、PNG／APNG／GIF 貼圖與斜線指令。
+- 使用兩個不同 Discord 使用者測試 Owner 權限、DM 政策、頻道白名單、跨會話記憶與私訊隔離。
+- 在真實語音頻道驗證 DAVE 加入、收音、播放、離開及重連；只見 Bot 加入頻道不代表音訊加解密已正常。
+- 驗證 Bilibili 真人掃碼、重啟後登入狀態，以及桌寵截圖／UIA／物理輸入回退。
+- 在乾淨 Profile 與含中文、空格的路徑做一次從零安裝。
+
+完整自動測試與未驗範圍請看 [compatibility.md](compatibility.md)。
