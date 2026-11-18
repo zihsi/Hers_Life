@@ -185,6 +185,39 @@ test('DM, guild channel and thread get distinct durable session ids', async () =
   }
 })
 
+
+test('Discord turns serialize per channel while different sessions remain concurrent', async () => {
+  const bridge = new DiscordBridge({ ctx: {}, settings: {}, rest: {}, gateway: null, events: {} })
+  let activeA = 0
+  let maxA = 0
+  let activeAll = 0
+  let maxAll = 0
+  const order = []
+  const job = (channel, label) => bridge.enqueueSession(channel, async () => {
+    if (channel === 'channel-a') {
+      activeA += 1
+      maxA = Math.max(maxA, activeA)
+    }
+    activeAll += 1
+    maxAll = Math.max(maxAll, activeAll)
+    order.push(label + ':start')
+    await new Promise((resolve) => setTimeout(resolve, 25))
+    order.push(label + ':end')
+    activeAll -= 1
+    if (channel === 'channel-a') activeA -= 1
+  })
+
+  await Promise.all([
+    job('channel-a', 'a1'),
+    job('channel-a', 'a2'),
+    job('channel-b', 'b1'),
+  ])
+  assert.equal(maxA, 1, 'one Session must never run two Discord turns at once')
+  assert.ok(maxAll >= 2, 'different Sessions should still run in parallel')
+  assert.ok(order.indexOf('a1:end') < order.indexOf('a2:start'), 'same-channel turns must preserve arrival order')
+  assert.equal(bridge.sessionQueues.size, 0, 'completed queue entries should be released')
+})
+
 test('interest pause state is reversible and reports its skip reason', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-interest-'))
   try {
