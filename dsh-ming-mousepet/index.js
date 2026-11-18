@@ -59,12 +59,12 @@ function toLosslessJson(value) {
   return out
 }
 
-async function loadDefineTool() {
+async function loadDefineTool(toolsPath = '') {
   try {
     const mod = await import('@deepseek-ai/dsh-tools')
     if (mod?.defineTool) return mod.defineTool
   } catch { /* 本地测试时走环境变量 */ }
-  const override = process.env.DSH_TOOLS_PATH
+  const override = String(toolsPath || process.env.DSH_TOOLS_PATH || '').trim()
   if (override) {
     const { pathToFileURL } = await import('node:url')
     const mod = await import(pathToFileURL(override).href)
@@ -340,7 +340,7 @@ export async function apply(ctx, rawConfig = {}) {
       throw new Error('桌面與網頁取文操作僅限 Discord Owner 使用（' + String(operation || 'pet') + '）。')
     }
   }
-  const defineTool = await loadDefineTool()
+  const defineTool = await loadDefineTool(mergedConfig.toolsPath)
   const log = (message) => { try { ctx?.logger?.info?.(`[ming-mousepet] ${message}`) } catch { /* ignore */ } }
   const saved = await loadSavedSettings(log)
   let current = normalizeSettings(central, normalizeSettings(saved, normalizeSettings(mergedConfig)))
