@@ -159,7 +159,7 @@ window.__ModuleLoader__.load({
           : String(path.split('.').reduce((o, k) => o?.[k], cfg) ?? ''),
           onChange: (e) => {
             const raw = e.target.value
-            set(path, path.endsWith('Ids') || path === 'discord.whitelist' || path === 'ownerIds' || path === 'personaFiles' ? raw.split(/[,\n]/).map((x) => x.trim()).filter(Boolean) : raw)
+            set(path, path.endsWith('Ids') || path === 'discord.whitelist' || path === 'ownerIds' || path === 'personaFiles' || ['browse.socialApps', 'browse.socialWriteWords', 'browse.targets'].includes(path) ? raw.split(/[,\n]/).map((x) => x.trim()).filter(Boolean) : raw)
           } }),
         hint ? h('small', { className: 'hl-hint' }, hint) : null)
       const card = (title, desc, children) => h('section', { className: 'hl-card', key: title },
