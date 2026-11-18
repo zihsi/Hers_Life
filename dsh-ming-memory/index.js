@@ -1071,9 +1071,13 @@ function readCwd(agent) {
 export function apply(ctx, config) {
   const mergedConfig = { ...(config || {}) }
   for (const key of ['personaFiles', 'diaryDir', 'diaryCount', 'diaryChars', 'maxChars']) {
-    const value = ctx.hersLifeDiscord?.getSetting?.(key, config?.[key]) ?? config?.[key]
-    if (value !== undefined) mergedConfig[key] = value
-    else delete mergedConfig[key]
+    const hasPluginValue = Object.prototype.hasOwnProperty.call(config || {}, key)
+    const fallback = hasPluginValue ? config[key] : undefined
+    const value = ctx.hersLifeDiscord?.getSetting?.(key, fallback) ?? fallback
+    // Preserve an explicitly supplied undefined/invalid value: normalize() uses
+    // it to disable a local-file override. If the plugin omitted the key
+    // entirely, leave it absent so the legacy local config can still apply.
+    if (value !== undefined || hasPluginValue) mergedConfig[key] = value
   }
   mergedConfig.root = config?.root || ctx.hersLifeDiscord?.workspace || loadLocalConfig().root
   const cfg = normalize(mergedConfig)
