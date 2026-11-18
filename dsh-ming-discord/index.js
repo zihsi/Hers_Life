@@ -31,7 +31,7 @@ const TEMPLATES = {
   'knowledge/README.md': '# 知識庫\n',
   'config/README.md': '# 工作區設定\n',
   'diary/README.md': '# 日記\n\n日記會按日期建立 Markdown 檔。\n',
-  'outbox/README.md': '# Discord 發送暫存區\n\n要透過 discord_send_file 發送給目前頻道的檔案，請先放在這裡。公開會話只能傳送 outbox/ 與 live/voice/ 內的檔案。\n',
+  'outbox/README.md': '# Discord 發送暫存區\n\nOwner 可從工作區內傳送檔案到目前發起回合的頻道。其他成員只能傳送本次使用者／Session 的 live/voice/ 語音（需有 sidecar 標籤），或 outbox/<session-id>/<user-id>/ 內的檔案。\n',
 }
 
 async function ensureWorkspace(workspace) {
@@ -431,7 +431,7 @@ export function apply(ctx, pluginConfig = {}) {
   })
   ctx.tools?.register?.({
     name: 'discord_send_file',
-    description: '把工作區內的音訊、圖片或檔案發送到指定 Discord 頻道或私訊頻道。',
+    description: '把工作區內的音訊、圖片或檔案發送到目前發起這輪對話的 Discord 頻道／私訊；不可指定其他頻道。Owner 可傳工作區內檔案，其他成員只能傳本次自己的 voice 或 outbox 檔案。',
     parameters: {
       type: 'object', properties: {
         channelId: { type: 'string' }, path: { type: 'string' }, caption: { type: 'string' },
