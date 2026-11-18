@@ -281,7 +281,8 @@ test('cross-guild memory follows the same Owner without exposing other members o
     assert.match(ownerCross, /Group One \/ #general/)
     assert.match(ownerCross, /星河專案/)
     assert.equal(await brain.recallContext('星河專案', memberInGroupTwo, 'session-member-two'), '')
-    assert.equal(await brain.recallContext('私人議題', ownerInGroupTwo, 'session-guild-two'), '')
+    const ownerContinuity = await brain.recallContext('私人議題', ownerInGroupTwo, 'session-guild-two')
+    assert.doesNotMatch(ownerContinuity, /另一位成員的私人議題/, 'recent continuity must never import another member\'s message')
     assert.match(await brain.recallContext('星河專案', ownerDm, 'session-owner-dm-two'), /Group One \/ #general/)
 
     const privateInOwnerGuild = await brain.recallContext('藍色計畫', ownerInGroupTwo, 'session-guild-two')
@@ -758,7 +759,8 @@ test('shared memory recalls across guilds and hides private source attribution',
     const channelIsolated = await brain.recallContext('RTX 5080', {
       kind: 'channel', channelId: 'chan-c', guildId: 'guild-a', userId: 'owner-1',
     }, 'discord-channel-guild-a-chan-c')
-    assert.equal(channelIsolated, '', 'disabling cross-channel sharing isolates different channels in the same guild')
+    assert.doesNotMatch(channelIsolated, /Server A \/ #hardware|伺服器 A 曾討論/, 'disabling cross-channel sharing blocks public channel events')
+    assert.match(channelIsolated, /私人背景（來源隱去）/, 'the independent Owner-private-context toggle remains effective')
     config.memory.shareAcrossChannels = true
 
     config.memory.allowPrivateContextInGuild = false
