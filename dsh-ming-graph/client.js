@@ -3,7 +3,7 @@
  *
  * ⚠ 生成物，别手改：改 src/*.js 或各插件的 src/panel.js，然后 `node build.mjs`。
  *   现在是不是最新的：`node build.mjs --check`
- *   build 0e89b57ce0ed5aaf
+ *   build 9a81480ed47b6bfd
  *
  * 入口：左侧图标栏一个图标（sidebar.panellist），点开占满主区域（main 面板 key = ming-graph）。
  * 数据来自 Host 半端 /_dsh/dsh-ming-graph/neurons，自己拉、自己画，不经过模型。
@@ -2091,7 +2091,7 @@ function VoicePanel() {
       h('div', { className: 'ming-sec' },
         h('div', { className: 'ming-sec-h' },
           h('span', { className: 'ming-sec-t' }, '拿什么合成'),
-          h('span', { className: 'ming-sec-n' }, '改参数在 voice_say 工具那边'),
+          h('span', { className: 'ming-sec-n' }, '預設音色與語速在 Hers Life Discord 設定頁調整'),
         ),
         h('div', { className: 'ming-kpis' },
           kpi(data ? data.engine || '—' : '…', '引擎'),
