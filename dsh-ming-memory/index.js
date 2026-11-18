@@ -1073,6 +1073,7 @@ export function apply(ctx, config) {
   for (const key of ['personaFiles', 'diaryDir', 'diaryCount', 'diaryChars', 'maxChars']) {
     const value = ctx.hersLifeDiscord?.getSetting?.(key, config?.[key]) ?? config?.[key]
     if (value !== undefined) mergedConfig[key] = value
+    else delete mergedConfig[key]
   }
   mergedConfig.root = config?.root || ctx.hersLifeDiscord?.workspace || loadLocalConfig().root
   const cfg = normalize(mergedConfig)
