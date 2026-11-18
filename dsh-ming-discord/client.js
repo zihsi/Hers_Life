@@ -440,7 +440,6 @@ window.__ModuleLoader__.load({
           h(React.Fragment, null,
             check('啟用興趣學習與主動喚醒', 'interest.enabled', '關閉後不再學習或主動插話；正常 @ 回覆不受影響。'),
             check('啟用 Discord 語音', 'voice.enabled', '語音需要 FFmpeg 與目前可用的 DAVE 原生模組。'),
-            check('啟用語音連線心跳', 'voice.heartbeat', '維持 Discord 語音連線狀態；不影響文字訊息。'),
             h('div', { className: 'hl-grid' },
               input('FFmpeg 執行檔路徑', 'voice.ffmpeg', '可填 ffmpeg 或絕對路徑。'),
               input('TTS 預設音色', 'voice.ttsVoice', '例如 zh-CN-XiaoxiaoNeural、zh-CN-YunxiNeural 或 zh-CN-XiaoyiNeural。'),
