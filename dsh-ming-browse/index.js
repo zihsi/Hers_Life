@@ -76,6 +76,7 @@ const DEFAULTS = {
   sessionRounds: 15,
   /** 老的单一静默时段（本地时间）。有 freeWindows 时不再使用，留着兜底。 */
   quietHours: '08:00-18:30',
+  allowSocialWrites: true,
   /**
    * 自由窗口（2026-10-23 浔定）：落在任一窗口里算「自由时间」，都不在就静默。
    * only: rest = 只在节假日/双休日生效；work = 只在工作日生效；不填 = 每天。
