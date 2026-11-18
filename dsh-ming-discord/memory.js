@@ -87,8 +87,11 @@ export class DiscordBrain {
     await this.loadPrivateNotes()
     this.loaded = true
   }
+  coreMemoryDir() {
+    return this.settings.resolve?.().coreMemoryDir || path.join(this.settings.home, 'memory')
+  }
   async loadNotes() {
-    const dir = path.join(this.settings.home, 'memory', 'notes')
+    const dir = path.join(this.coreMemoryDir(), 'notes')
     try {
       const files = (await readdir(dir)).filter((name) => name.endsWith('.md')).slice(-200)
       this.notes = []
@@ -254,7 +257,7 @@ export class DiscordBrain {
     }
     const dir = isPrivate
       ? path.join(this.settings.home, 'privacy-quarantine', 'private-dm-notes', ownerId)
-      : path.join(this.settings.home, 'memory', 'notes')
+      : path.join(this.coreMemoryDir(), 'notes')
     await mkdir(dir, { recursive: true, mode: isPrivate ? 0o700 : 0o755 })
     const title = String(input?.title ?? 'Discord 記憶').slice(0, 120)
     const body = String(input?.body ?? '').slice(0, 12000)
