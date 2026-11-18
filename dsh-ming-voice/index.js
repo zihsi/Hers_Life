@@ -128,7 +128,8 @@ export function apply(ctx, config) {
           res.end(JSON.stringify(body))
         }
         try {
-          const url = new URL(req.url || '/', 'http://localhost')          const rejection = webCtx.connection?.requestRejection?.(req)
+          const url = new URL(req.url || '/', 'http://localhost')
+          const rejection = webCtx.connection?.requestRejection?.(req)
           if (rejection !== undefined) { send(rejection || 403, { error: 'rejected' }); return }
 
           const what = url.pathname.replace('/_dsh/dsh-ming-voice', '').replace(/^\//, '')
