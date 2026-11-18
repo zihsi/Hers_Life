@@ -528,6 +528,10 @@ export function apply(ctx, pluginConfig = {}) {
               try { content = await readFile(target, 'utf8') } catch {}
               files.push({ path: normalized, content, kind: isPersona ? 'persona' : isAllowedDiary ? 'diary' : 'rules' })
             }
+            const coreFile = await ensureCoreMemoryFile(settings)
+            let coreContent = ''
+            try { coreContent = await readFile(coreFile, 'utf8') } catch {}
+            files.unshift({ path: '@core-memory/MEMORY.md', content: coreContent, kind: 'core-memory' })
             send(res, 200, { ok: true, root, files })
             return
           }
@@ -536,6 +540,12 @@ export function apply(ctx, pluginConfig = {}) {
             const relative = String(body.path ?? '').replace(/\\/g, '/')
             const content = String(body.content ?? '')
             if (content.length > 120000) throw new Error('單一檔案最多 120,000 字元')
+            if (relative === '@core-memory/MEMORY.md') {
+              const target = await resolveWorkspaceFile(settings.resolve().coreMemoryDir, 'MEMORY.md', true)
+              await writeFile(target, content, 'utf8')
+              send(res, 200, { ok: true, path: relative, chars: content.length })
+              return
+            }
             const diaryDir = String(settings.get('diaryDir', 'diary') || 'diary').replace(/\\/g, '/')
             const isPersona = settings.get('personaFiles', []).includes(relative)
             const isRules = relative === 'AGENTS.md'
