@@ -31,7 +31,7 @@ test('RAG availability uses synthetic files and never a real service', async t =
   await t.test('all missing indexes are unavailable and do not call the model', async () => {
     const r = await (await load())('fact')
     assert.equal(r.status, 'unavailable')
-    assert.equal(r.issues.length, 3)
+    assert.equal(r.issues.length, 2) // doc + web 各回報一次阻斷原因
     assert.equal(calls, 0)
   })
   await t.test('working layer survives missing layers and reports partial coverage', async () => {
