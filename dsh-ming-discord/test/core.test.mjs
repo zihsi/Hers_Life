@@ -706,13 +706,13 @@ test('shared memory recalls across guilds and hides private source attribution',
     brain.feedAdd('discord-channel-guild-a-chan-a', { who: 'me', text: '伺服器 A 曾討論 RTX 5080 的功耗。', label: '#hardware' }, {
       botId: 'bot-1', messageId: 'guild-msg-1', conversationType: 'channel',
       guildId: 'guild-a', guildName: 'Server A', channelId: 'chan-a',
-      channelName: 'hardware', authorId: 'member-2', authorName: 'member-two',
+      channelName: 'hardware', authorId: 'owner-1', authorName: 'Owner',
     })
     await brain.queue
     const ownerPrompt = await brain.recallContext('RTX 5080', {
       kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'owner-1',
     }, 'discord-channel-guild-b-chan-b')
-    assert.match(ownerPrompt, /伺服器 A/)
+    assert.match(ownerPrompt, /Server A \/ #hardware/)
     assert.match(ownerPrompt, /RTX 5080/)
     assert.match(ownerPrompt, /私人背景（來源隱去）/)
     assert.doesNotMatch(ownerPrompt, /Discord 私訊/)
