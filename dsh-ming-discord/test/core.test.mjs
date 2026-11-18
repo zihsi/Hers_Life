@@ -734,6 +734,17 @@ test('shared memory recalls across guilds and hides private source attribution',
     }, 'discord-channel-guild-b-chan-b')
     assert.equal(memberPrompt, '')
 
+    brain.feedAdd('discord-channel-guild-b-chan-b', { who: 'me', text: '伺服器 B 也討論了同一張 RTX 5080 顯示卡。', label: '#general' }, {
+      botId: 'bot-1', messageId: 'guild-msg-2', conversationType: 'channel',
+      guildId: 'guild-b', guildName: 'Server B', channelId: 'chan-b',
+      channelName: 'general', authorId: 'owner-1', authorName: 'Owner',
+    })
+    await brain.queue
+    const reversePrompt = await brain.recallContext('RTX 5080', {
+      kind: 'channel', channelId: 'chan-a', guildId: 'guild-a', userId: 'owner-1',
+    }, 'discord-channel-guild-a-chan-a')
+    assert.match(reversePrompt, /Server B \/ #general/, 'Owner can recall Server B conversation back in Server A')
+
     config.memory.allowPrivateContextInGuild = false
     const noPrivate = await brain.recallContext('RTX 5080', {
       kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'owner-1',
