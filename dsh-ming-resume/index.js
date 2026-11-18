@@ -146,7 +146,9 @@ async function resumeMedia(cfg) {
 }
 
 export function apply(ctx, config) {
-  const cfg = normalize(config)
+  const central = ctx.hersLifeDiscord?.getSetting?.('resume', {}) || {}
+  if (central.enabled === false) return
+  const cfg = normalize({ ...(config || {}), ...central })
   if (ctx.hersLifeDiscord?.workspace) cfg.root = path.resolve(ctx.hersLifeDiscord.workspace)
   // 同一步里同一批插话只提醒一次：记最近提醒过的插话 id 集合
   const reminded = new Set()
