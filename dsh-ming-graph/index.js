@@ -43,6 +43,7 @@ let costIndexing = null
 
 export const name = 'dsh-ming-graph'
 export const inject = ['hersLifeDiscord']
+const DSH_HOME = process.env.DSH_HOME || path.join(DSH_HOME)
 
 // 工作区：环境变量优先；没有就从本机配置的 diaryDir（<ws>\diary）推，再退 workspace 键。
 // 2026-11-15 14:4x：面板第一版上线就撞上这件事——宿主进程里根本没有 MING_WORKSPACE，
@@ -50,15 +51,15 @@ export const inject = ['hersLifeDiscord']
 function resolveWorkspace() {
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
-    const central = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'hers-life.json'), 'utf8'))
+    const central = JSON.parse(readFileSync(path.join(DSH_HOME, 'hers-life.json'), 'utf8'))
     if (central && central.workspace) return String(central.workspace)
   } catch { /* first-run settings may not exist */ }
   try {
-    const central = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    const central = JSON.parse(readFileSync(path.join(DSH_HOME, 'ming-memory.json'), 'utf8'))
     if (central && central.root) return String(central.root)
   } catch { /* first-run setup may not have written the central file yet */ }
   try {
-    const f = process.env.MING_GRAPH_CONFIG || path.join(os.homedir(), '.dsh', 'ming-graph.json')
+    const f = process.env.MING_GRAPH_CONFIG || path.join(DSH_HOME, 'ming-graph.json')
     const j = JSON.parse(readFileSync(f, 'utf8'))
     if (j && j.workspace) return String(j.workspace)
     if (j && j.diaryDir) return path.dirname(String(j.diaryDir).replace(/[\\/]+$/, ''))
@@ -90,7 +91,7 @@ const DEFAULTS = {
 // 放 ~/.dsh/ming-graph.json（或用环境变量 MING_GRAPH_CONFIG 指一个文件），
 // 仓库里只留通用默认。沒有這個檔案也能跑：只顯示 DSH 記憶與 Discord 事件。
 export function loadLocalConfig(file) {
-  const f = file || process.env.MING_GRAPH_CONFIG || path.join(os.homedir(), '.dsh', 'ming-graph.json')
+  const f = file || process.env.MING_GRAPH_CONFIG || path.join(DSH_HOME, 'ming-graph.json')
   try {
     const j = JSON.parse(readFileSync(f, 'utf8'))
     return j && typeof j === 'object' ? j : {}
