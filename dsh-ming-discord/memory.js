@@ -193,7 +193,8 @@ export class DiscordBrain {
   }
   listNotes() { return this.notes.slice(-100) }
   async writeJournal(line) {
-    const file = path.join(this.root, 'diary', new Date().toISOString().slice(0, 10) + '.md')
+    const diaryDir = String(this.settings.get('diaryDir', 'diary') || 'diary')
+    const file = path.join(this.root, diaryDir, new Date().toISOString().slice(0, 10) + '.md')
     await mkdir(path.dirname(file), { recursive: true })
     await appendFile(file, '- ' + new Date().toISOString() + ' ' + String(line).slice(0, 1000) + '\n', 'utf8')
   }
