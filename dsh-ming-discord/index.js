@@ -34,7 +34,7 @@ const TEMPLATES = {
   'outbox/README.md': '# Discord 發送暫存區\n\nOwner 可從工作區內傳送檔案到目前發起回合的頻道。其他成員只能傳送本次使用者／Session 的 live/voice/ 語音（需有 sidecar 標籤），或 outbox/<session-id>/<user-id>/ 內的檔案。\n',
 }
 
-async function ensureWorkspace(workspace, options = {}) {
+export async function ensureWorkspace(workspace, options = {}) {
   const root = path.resolve(workspace)
   const dirs = ['persona', 'diary', 'live', 'memories/notes', 'sightings', 'knowledge', 'config', 'sessions', 'downloads', 'outbox']
   for (const dir of dirs) await mkdir(path.join(root, dir), { recursive: true })
