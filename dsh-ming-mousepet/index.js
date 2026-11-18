@@ -1279,6 +1279,7 @@ export async function apply(ctx, rawConfig = {}) {
         // 2026-11-10：存下来，重启后按这个恢复。
         current = { ...current, shake: { on: shakeState.on, level: shakeState.level } }
         try { await persistSettings(current) } catch { /* 存不下来不影响这次生效 */ }
+        await ctx.hersLifeDiscord?.patchSettings?.({ mousepet: { shake: current.shake } })
         return json(res, 200, { ok: true, shake: shakeState })
       }
       if (req.method === 'POST' && route === '/settings') {
@@ -1287,6 +1288,20 @@ export async function apply(ctx, rawConfig = {}) {
         await applySettings(nextSettings)
         await persistSettings(nextSettings)
         current = nextSettings
+        await ctx.hersLifeDiscord?.patchSettings?.({
+          mousepet: {
+            cursorMode: current.cursorMode,
+            cursorHoldMs: current.cursorHoldMs,
+            cursorSize: current.cursorSize,
+            cursorState: current.cursorState,
+            webpickDir: current.webpickDir,
+            shake: current.shake,
+            companion: {
+              provider: current.talkProvider,
+              model: current.talkModel,
+            },
+          },
+        })
         return json(res, 200, { ok: true, settings: current })
       }
       if (req.method === 'GET' && route === '/skins') {
