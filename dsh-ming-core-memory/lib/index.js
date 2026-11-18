@@ -451,7 +451,7 @@ async function loadGraph() {
 function errText(e) { return '操作失败：' + (e && e.message ? e.message : String(e)); }
 
 /** 写入审计：每次落盘记一行，用户可随时 `type memory\audit.jsonl` 看溟到底存了什么。 */
-const auditPath = () => join(dshHome(), 'memory', 'audit.jsonl');
+const auditPath = () => join(memoryRoot(), 'audit.jsonl');
 async function audit(line) {
   try {
     await mkdir(dirname(auditPath()), { recursive: true });
