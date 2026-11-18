@@ -110,3 +110,9 @@ jobs:
         shell: pwsh
         run: |
           node scripts/check.mjs --suite offline
+
+      - name: Run stateful plugin regression tests on Windows
+        shell: pwsh
+        run: |
+          node --test dsh-ming-wake/reliability.test.mjs dsh-ming-skill-isolate/reliability.test.mjs dsh-ming-browse/reliability.test.mjs
+          node dsh-ming-browse/heartbeat.test.mjs
