@@ -1,6 +1,6 @@
 {
   "name": "dsh-ming-browse",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "description": "自由活动：在独立 DSH 会话中执行后台浏览任务；Owner 控制通过 Discord 私讯完成，摘要回报 Discord Owner。",
