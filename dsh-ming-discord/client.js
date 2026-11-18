@@ -12,8 +12,42 @@ window.__ModuleLoader__.load({
       diaryDir: 'diary', diaryCount: 3, diaryChars: 8000, maxChars: 12000,
       discord: { enabled: false, mode: 'mention', allowDm: true, dmPolicy: 'owner', guildIds: [], channelIds: [], typing: true, streamEdits: true, replyToMessage: true, reactions: true, shareImages: true, chunkLimit: 1900, maxAttachmentMb: 24, progressInDm: true, showTools: false, learnInterests: true },
       memory: { enabled: true, shareAcrossChannels: true, shareAcrossGuilds: true, sharePrivateToOwner: true, allowPrivateContextInGuild: true, maxRecall: 6, maxAgeDays: 365 },
-      voice: { enabled: true, ffmpeg: 'ffmpeg', heartbeat: true, ttsVoice: 'zh-CN-XiaoxiaoNeural', ttsRate: '+0%' },
+      voice: { enabled: true, ffmpeg: 'ffmpeg', python: 'python', timeoutMs: 60000, heartbeat: true, ttsVoice: 'zh-CN-XiaoxiaoNeural', ttsRate: '+0%' },
       interest: { enabled: true, minChars: 6, contextLines: 4, minGapMinutes: 20, maxPerHour: 3, quietHours: '01:00-08:00', channelGapMinutes: 45 },
+      browse: {
+        enabled: true, idleMinutes: 1, minGapMinutes: 30, dailyMax: 8, sessionRounds: 6,
+        quietHours: '08:00-18:30', freeWindows: [{ start: '18:30', end: '08:00' }, { start: '13:50', end: '18:15', only: 'rest' }],
+        holidaysFile: 'live/holidays.json', maxItems: 2, maxShots: 2, serial: '127.0.0.1:16448',
+        adbPath: 'D:\\\\MuMuPlayer\\\\nx_device\\\\12.0\\\\shell\\\\adb.exe',
+        socialApps: ['com.xingin.xhs', 'com.tencent.weibo', 'com.sina.weibo', 'com.ss.android.ugc.aweme', 'com.smile.gifmaker', 'com.zhihu.android', 'com.baidu.tieba', 'com.tencent.mm'],
+        socialWriteWords: ['点赞', '关注', '评论', '收藏', '转发', '分享', '发布', '发送', '投币', '私信'],
+        targets: ['bilibili', 'xiaohongshu'],
+      },
+      resume: { enabled: true, adbPath: 'D:\\\\MuMuPlayer\\\\nx_device\\\\12.0\\\\shell\\\\adb.exe', serial: '127.0.0.1:7555', pauseMediaOnInterrupt: true },
+      wake: { enabled: true },
+      mousepet: { enabled: true, cursorMode: 'companion', cursorHoldMs: 2600, cursorSize: 64, webpickDir: '', companion: { enabled: true, tickMs: 0, provider: 'wb-proxy', model: 'hy4-preview', bubbleMs: 4200, workspace: '' } },
+      bilibili: { enabled: true, credentialFile: '', searchMaxPageSize: 20, subtitleMaxChars: 16000, timeoutMs: 30000 },
+      activities: { enabled: true },
+      skillIsolate: { enabled: true, stateFile: '' },
+      graph: { enabled: true, syncSeconds: 120, costPricesFile: '', costAutoFile: '' },
+    }
+
+    function mergeClientConfig(value = {}) {
+      return {
+        ...base, ...value,
+        discord: { ...base.discord, ...(value.discord || {}) },
+        memory: { ...base.memory, ...(value.memory || {}) },
+        voice: { ...base.voice, ...(value.voice || {}) },
+        interest: { ...base.interest, ...(value.interest || {}) },
+        browse: { ...base.browse, ...(value.browse || {}) },
+        resume: { ...base.resume, ...(value.resume || {}) },
+        wake: { ...base.wake, ...(value.wake || {}) },
+        mousepet: { ...base.mousepet, ...(value.mousepet || {}), companion: { ...base.mousepet.companion, ...(value.mousepet?.companion || {}) } },
+        bilibili: { ...base.bilibili, ...(value.bilibili || {}) },
+        activities: { ...base.activities, ...(value.activities || {}) },
+        skillIsolate: { ...base.skillIsolate, ...(value.skillIsolate || {}) },
+        graph: { ...base.graph, ...(value.graph || {}) },
+      }
     }
 
     function patchObject(obj, path, value) {
@@ -40,6 +74,7 @@ window.__ModuleLoader__.load({
       const [sessions, setSessions] = React.useState([])
       const [interestTopicsText, setInterestTopicsText] = React.useState('')
       const [interestMuteText, setInterestMuteText] = React.useState('')
+      const [browseWindowsDraft, setBrowseWindowsDraft] = React.useState(JSON.stringify(base.browse.freeWindows, null, 2))
       const [interestState, setInterestState] = React.useState(null)
       const [workspaceFiles, setWorkspaceFiles] = React.useState([])
       const [workspaceFilePath, setWorkspaceFilePath] = React.useState('persona/人设.md')
@@ -55,12 +90,9 @@ window.__ModuleLoader__.load({
           const r = await fetch(API + '/settings', { cache: 'no-store' })
           const d = await r.json()
           if (!r.ok || !d.ok) throw new Error(d.error || '設定讀取失敗')
-          setCfg(Object.assign({}, base, d.settings || {}, {
-            discord: Object.assign({}, base.discord, d.settings?.discord || {}),
-            memory: Object.assign({}, base.memory, d.settings?.memory || {}),
-            voice: Object.assign({}, base.voice, d.settings?.voice || {}),
-            interest: Object.assign({}, base.interest, d.settings?.interest || {}),
-          }))
+          const mergedSettings = mergeClientConfig(d.settings || {})
+          setCfg(mergedSettings)
+          setBrowseWindowsDraft(JSON.stringify(mergedSettings.browse.freeWindows || [], null, 2))
           setHasToken(!!d.hasToken)
           setStatus(d.status || {})
           setEvents(d.events || [])
@@ -138,13 +170,21 @@ window.__ModuleLoader__.load({
       const save = async () => {
         setBusy(true); setError(''); setNote('')
         try {
-          const body = { settings: cfg }
+          let freeWindows
+          try { freeWindows = JSON.parse(browseWindowsDraft || '[]') }
+          catch { throw new Error('Browse 自由時段必須是有效 JSON 陣列。') }
+          if (!Array.isArray(freeWindows)) throw new Error('Browse 自由時段必須是 JSON 陣列。')
+          const settingsToSave = JSON.parse(JSON.stringify(cfg))
+          settingsToSave.browse.freeWindows = freeWindows
+          const body = { settings: settingsToSave }
           if (token.trim()) body.token = token.trim()
           const r = await fetch(API + '/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
           const d = await r.json()
           if (!r.ok || !d.ok) throw new Error(d.error || '儲存失敗')
           setHasToken(!!d.settings?.discord?.tokenConfigured)
-          setCfg(Object.assign({}, base, d.settings || {}))
+          const mergedSettings = mergeClientConfig(d.settings || {})
+          setCfg(mergedSettings)
+          setBrowseWindowsDraft(JSON.stringify(mergedSettings.browse.freeWindows || [], null, 2))
           setToken('')
           setStatus(d.status || {})
           setMigration(d.migration || null)
