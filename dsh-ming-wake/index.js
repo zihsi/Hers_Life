@@ -19,7 +19,7 @@ import os from 'node:os'
 import { readFileSync } from 'node:fs'
 
 export const name = 'ming-wake'
-const DSH_HOME = process.env.DSH_HOME || path.join(DSH_HOME)
+const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 export const inject = ['hersLifeDiscord']
 
 // 正斜杠：Windows 的路径 API 认，而且不用数转义。
