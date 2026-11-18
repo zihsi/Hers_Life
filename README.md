@@ -50,7 +50,7 @@ Discord 原生适配器负责 Gateway、频道／私讯／Thread 会话、附件
 這些包可透過 DSH 插件市場安裝；不需要手動找 profile JSON。請在 DSH 的「插件市場 → 索引源」加入上方索引 URL，再從 UI 安裝需要的套件。若是開發者本機 link 安裝，才需要編輯 profile dependencies。假定你 clone 到 `<workspace>\\ming`：
 
 ```jsonc
-// 開發者手動 link 安裝時：<DSH_HOME>/profiles/desktop/package.json 或 profiles/web/package.json
+// 開發者手動 link 安裝（CLI Web Profile；DSH Desktop 請用內建 Plugin Manager，不要手改 desktop profile）：<DSH_HOME>/profiles/web/package.json
 "dsh-ming-graph": "link:<workspace>\ming/dsh-ming-graph",
 "dsh-ming-mousepet": "link:<workspace>\ming/dsh-ming-mousepet",
 // 其他必需配套插件照此添加；dsh-ming-activities 是可选扩展
