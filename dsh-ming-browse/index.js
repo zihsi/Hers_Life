@@ -1797,9 +1797,7 @@ export function apply(ctx, config) {
   }
 
   // 每分钟看一次就够了：这个功能要的是「闲够久了」，不是秒级反应。
-  ctx.interval(() => {
-    void tick()
-  }, 60_000)
+  ctx.interval(() => tick(), 60_000)
 
   ctx.effect(() => () => {
     const current = handle
