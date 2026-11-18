@@ -819,6 +819,10 @@ test('shared memory recalls across guilds and hides private source attribution',
       kind: 'channel', channelId: 'chan-c', guildId: 'guild-a', userId: 'owner-1',
     }, 'discord-channel-guild-a-chan-c')
     assert.match(sameGuildPrompt, /Server A \/ #hardware/, 'channel 2 can recall the Owner conversation from channel 1')
+    const memberSameGuild = await brain.recallContext('RTX 5080', {
+      kind: 'channel', channelId: 'chan-c', guildId: 'guild-a', userId: 'member-3',
+    }, 'discord-channel-guild-a-member-3')
+    assert.equal(memberSameGuild, '', 'non-Owners cannot use cross-channel recall to inspect other channels')
 
     config.memory.shareAcrossChannels = false
     const channelIsolated = await brain.recallContext('RTX 5080', {
