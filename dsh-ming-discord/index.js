@@ -472,9 +472,8 @@ export function apply(ctx, pluginConfig = {}) {
               const isPersona = settings.get('personaFiles', []).includes(normalized)
               const isAllowedDiary = normalized.startsWith(diaryDir + '/') && isDiaryFilename(normalized)
               if (normalized !== 'AGENTS.md' && !isPersona && !isAllowedDiary) continue
-              const target = path.resolve(root, normalized)
-              const rel = path.relative(root, target)
-              if (rel.startsWith('..') || path.isAbsolute(rel)) continue
+              let target
+              try { target = await resolveWorkspaceFile(root, normalized) } catch { continue }
               let content = ''
               try { content = await readFile(target, 'utf8') } catch {}
               files.push({ path: normalized, content, kind: isPersona ? 'persona' : isAllowedDiary ? 'diary' : 'rules' })
@@ -493,10 +492,7 @@ export function apply(ctx, pluginConfig = {}) {
             const isDiary = isDiaryPath(relative, diaryDir)
             if (!isPersona && !isRules && !isDiary) throw new Error('只能編輯已設定的人設檔、AGENTS.md 或日期格式日記')
             const root = settings.resolve().workspace
-            const target = path.resolve(root, relative)
-            const rel = path.relative(root, target)
-            if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error('檔案路徑超出工作區')
-            await mkdir(path.dirname(target), { recursive: true })
+            const target = await resolveWorkspaceFile(root, relative, true)
             await writeFile(target, content, 'utf8')
             send(res, 200, { ok: true, path: relative, chars: content.length })
             return
