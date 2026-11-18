@@ -21,15 +21,16 @@ import { createWebpick } from './lib/webpick.mjs'
 
 export const name = 'ming-mousepet'
 export const inject = ['tools', 'attachments', 'webServer', 'connection', 'hersLifeDiscord']
+const DSH_HOME = process.env.DSH_HOME || join(DSH_HOME)
 
 function resolveSharedWorkspace() {
   try {
-    const data = JSON.parse(readFileSync(join(homedir(), '.dsh', 'hers-life.json'), 'utf8'))
+    const data = JSON.parse(readFileSync(join(DSH_HOME, 'hers-life.json'), 'utf8'))
     if (typeof data.workspace === 'string' && data.workspace.trim()) return data.workspace
   } catch { /* legacy config fallback */ }
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
-    const data = JSON.parse(readFileSync(join(homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    const data = JSON.parse(readFileSync(join(DSH_HOME, 'ming-memory.json'), 'utf8'))
     if (typeof data.root === 'string' && data.root.trim()) return data.root
   } catch { /* central workspace is created by dsh-ming-discord on first run */ }
   return ''
@@ -37,9 +38,9 @@ function resolveSharedWorkspace() {
 
 const PLUGIN_DIR = dirname(fileURLToPath(import.meta.url))
 const PREVIEW_DIR = join(PLUGIN_DIR, 'assets', 'previews')
-const SETTINGS_FILE = join(homedir(), '.dsh', 'ming-mousepet', 'settings.json')
+const SETTINGS_FILE = join(DSH_HOME, 'ming-mousepet', 'settings.json')
 // 2026-11-08：用户自己加的皮肤。内置那十五只只读，这里的是可增可删的。
-const SKINS_DIR = join(homedir(), '.dsh', 'ming-mousepet', 'skins')
+const SKINS_DIR = join(DSH_HOME, 'ming-mousepet', 'skins')
 const SKIN_NAME_RE = /^[a-z0-9_-]{1,40}$/i
 const STYLE_IDS = [
   'pointer', 'work', 'unavailiable', 'link', 'text',
@@ -398,7 +399,7 @@ export async function apply(ctx, rawConfig = {}) {
       // 浏览器扩展刚 POST 进来一段网页选中的字（存在 webpick.json）。
       Promise.resolve()
         .then(async () => {
-          const file = join(homedir(), '.dsh', 'ming-mousepet', 'webpick.json')
+          const file = join(DSH_HOME, 'ming-mousepet', 'webpick.json')
           const raw = await readFile(file, 'utf8')
           const pick = JSON.parse(String(raw).replace(/^﻿/, ''))
           if (!pick || !pick.text) return
@@ -1163,10 +1164,10 @@ export async function apply(ctx, rawConfig = {}) {
   const webpickDir = String(rawConfig?.webpickDir || current?.webpickDir || '')
     || (sharedWorkspace
       ? join(sharedWorkspace, 'live', 'webpick')
-      : join(homedir(), '.dsh', 'ming-mousepet', 'webpick'))
+      : join(DSH_HOME, 'ming-mousepet', 'webpick'))
   const webpick = createWebpick({
     dir: webpickDir,
-    tokenFile: join(homedir(), '.dsh', 'ming-mousepet', 'webpick-token.json'),
+    tokenFile: join(DSH_HOME, 'ming-mousepet', 'webpick-token.json'),
     // 2026-11-17 她说的「和之前那个桌宠插件一样就好了」。
     // 老版收到网页取文就是走 onWebPick → speakWeb：桌宠看完那一段，自己说一句。
     // 这里照同一条路走；speakWeb 不可用（没开自动开口/宿主没给模型）才降级成冒个字数。
@@ -1482,7 +1483,7 @@ export async function apply(ctx, rawConfig = {}) {
     answerMode: () => answerMode,
     // 2026-11-08：静默读屏那个脚本，每轮醒来跑一次。
     screenScript: join(PLUGIN_DIR, 'scripts', 'read-screen.ps1'),
-    logFile: join(homedir(), '.dsh', 'ming-mousepet', 'companion.log'),
+    logFile: join(DSH_HOME, 'ming-mousepet', 'companion.log'),
   }
 
   // 2026-11-09：会话桥。她要「真去动手」时把一句丢进 DSH 会话里跑，
@@ -1588,7 +1589,7 @@ function localStamp(d = new Date()) {
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
 }
 
-const PET_CAPTURE_DIR = join(homedir(), '.dsh', 'ming-mousepet', 'captures')
+const PET_CAPTURE_DIR = join(DSH_HOME, 'ming-mousepet', 'captures')
 
 // 她问「刚才框的哪儿」时用：拿最新那张，附上图。
 async function lastShot(ctx) {
@@ -1629,7 +1630,7 @@ async function capture(ctx, engine, args) {
     if (!rect) rect = '0,0,0,0'
   }
 
-  const path = args.path || join(homedir(), '.dsh', 'ming-mousepet', 'shots', `shot-${Date.now()}.png`)
+  const path = args.path || join(DSH_HOME, 'ming-mousepet', 'shots', `shot-${Date.now()}.png`)
   await mkdir(dirname(path), { recursive: true })
   const saved = await engine.request('capture', { path, rect }, 30000)
 
