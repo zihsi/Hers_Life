@@ -362,8 +362,18 @@ export function apply(ctx, pluginConfig = {}) {
     // credentials, session logs or other private workspace files.
     if (!settings.isOwner(actor.userId)) {
       const rel = relative.split(path.sep).join('/')
-      if (!rel.startsWith('live/voice/') && !rel.startsWith('outbox/')) {
-        throw new Error('公開會話只能傳送 live/voice/ 或 outbox/ 內的檔案')
+      const sessionFolder = String(actor.sessionId).replace(/[^a-zA-Z0-9_-]/g, '_')
+      const inVoice = rel.startsWith('live/voice/')
+      const inOwnOutbox = rel.startsWith('outbox/' + sessionFolder + '/')
+      if (!inVoice && !inOwnOutbox) {
+        throw new Error('公開會話只能傳送本次會話的 live/voice/ 檔案或 outbox/' + sessionFolder + '/ 內的檔案')
+      }
+      if (inVoice) {
+        let ownerSession = ''
+        try { ownerSession = (await readFile(target + '.session', 'utf8')).trim() } catch {}
+        if (ownerSession !== String(actor.sessionId)) {
+          throw new Error('這個語音檔不是由目前 Discord 會話產生，已拒絕跨會話傳送')
+        }
       }
     }
     const info = await stat(target)
