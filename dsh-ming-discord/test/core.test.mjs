@@ -218,6 +218,66 @@ test('Discord turns serialize per channel while different sessions remain concur
   assert.equal(bridge.sessionQueues.size, 0, 'completed queue entries should be released')
 })
 
+
+test('cross-guild memory follows the same Owner without exposing other members or Owners', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-shared-memory-'))
+  try {
+    const values = {
+      'memory.enabled': true,
+      'memory.shareAcrossChannels': true,
+      'memory.shareAcrossGuilds': true,
+      'memory.sharePrivateToOwner': true,
+      'memory.allowPrivateContextInGuild': true,
+      'memory.maxRecall': 12,
+      'memory.maxAgeDays': 365,
+      'memory.maxEvents': 20000,
+      'diaryDir': 'diary',
+    }
+    const settings = {
+      home: path.join(root, '.dsh'),
+      get(key, fallback) { return Object.hasOwn(values, key) ? values[key] : fallback },
+      isOwner(userId) { return String(userId) === 'owner-1' },
+    }
+    const brain = new DiscordBrain({ workspace: root, settings, logger: null })
+    await brain.load()
+    const ownerOrigin = {
+      botId: 'bot-1', messageId: 'm-owner', guildId: 'guild-1', guildName: 'Group One',
+      channelId: 'channel-1', channelName: 'general', conversationType: 'channel',
+      authorId: 'owner-1', authorName: 'Owner',
+    }
+    brain.feedAdd('session-guild-one', { label: '#general @ Group One', who: 'me', text: '星河專案的進度是 42。', kind: 'channel' }, ownerOrigin)
+    brain.feedAdd('session-guild-one', { label: '#general @ Group One', who: 'her', text: '我會記得星河專案的進度。', kind: 'channel' }, {
+      ...ownerOrigin, messageId: 'reply-1', authorId: 'bot-1', authorName: 'Hers Life',
+      participantId: 'owner-1', participantName: 'Owner',
+    })
+    brain.feedAdd('session-guild-one', { label: '#general @ Group One', who: 'me', text: '另一位成員的私人議題。', kind: 'channel' }, {
+      ...ownerOrigin, messageId: 'm-member', authorId: 'member-2', authorName: 'Member Two',
+    })
+    brain.feedAdd('session-dm-owner', { label: '私訊 Owner', who: 'me', text: '私訊中提到的藍色計畫。', kind: 'dm' }, {
+      botId: 'bot-1', messageId: 'dm-1', channelId: 'dm-channel', channelName: 'Owner DM',
+      conversationType: 'dm', authorId: 'owner-1', authorName: 'Owner',
+    })
+    await brain.queue
+
+    const ownerInGroupTwo = { kind: 'channel', channelId: 'channel-2', guildId: 'guild-2', userId: 'owner-1' }
+    const memberInGroupTwo = { kind: 'channel', channelId: 'channel-2', guildId: 'guild-2', userId: 'member-2' }
+    const ownerDm = { kind: 'dm', channelId: 'dm-two', userId: 'owner-1' }
+    const ownerCross = await brain.recallContext('星河專案', ownerInGroupTwo, 'session-guild-two')
+    assert.match(ownerCross, /Group One \/ #general/)
+    assert.match(ownerCross, /星河專案/)
+    assert.equal(await brain.recallContext('星河專案', memberInGroupTwo, 'session-member-two'), '')
+    assert.equal(await brain.recallContext('私人議題', ownerInGroupTwo, 'session-guild-two'), '')
+    assert.match(await brain.recallContext('星河專案', ownerDm, 'session-owner-dm-two'), /Group One \/ #general/)
+
+    const privateInOwnerGuild = await brain.recallContext('藍色計畫', ownerInGroupTwo, 'session-guild-two')
+    assert.match(privateInOwnerGuild, /私人背景（來源隱去）/)
+    assert.match(privateInOwnerGuild, /不得對頻道使用者透露/)
+    assert.equal(await brain.recallContext('藍色計畫', memberInGroupTwo, 'session-member-two'), '')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('interest pause state is reversible and reports its skip reason', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-interest-'))
   try {
