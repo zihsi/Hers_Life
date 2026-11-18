@@ -73,7 +73,7 @@ export async function ensureWorkspace(workspace, options = {}) {
   return { root, created, directories: [...dirs, diaryDir] }
 }
 
-async function syncMemorySettings(settings) {
+export async function syncMemorySettings(settings) {
   const file = path.join(settings.home, 'ming-memory.json')
   let current = {}
   try { current = JSON.parse(await readFile(file, 'utf8')) } catch {}
