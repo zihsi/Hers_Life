@@ -16,6 +16,33 @@ export const name = 'ming-discord'
 export const inject = ['agents', 'tools']
 const API = '/_dsh/dsh-ming-discord'
 
+function isWithinPath(root, candidate) {
+  const relative = path.relative(root, candidate)
+  return relative === '' || (relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative))
+}
+
+/**
+ * Resolve a workspace-relative file and reject symlinks that escape the
+ * workspace. Lexical path.resolve checks alone are insufficient because a
+ * configured persona folder can itself be a symlink to an external directory.
+ */
+async function resolveWorkspaceFile(root, relative, createParent = false) {
+  const rootAbs = path.resolve(root)
+  const target = path.resolve(rootAbs, String(relative || ''))
+  if (!isWithinPath(rootAbs, target) || target === rootAbs) throw new Error('檔案路徑超出工作區')
+  const rootReal = await realpath(rootAbs)
+  if (createParent) await mkdir(path.dirname(target), { recursive: true })
+  const parentReal = await realpath(path.dirname(target))
+  if (!isWithinPath(rootReal, parentReal)) throw new Error('工作區路徑透過符號連結離開工作區')
+  try {
+    const targetReal = await realpath(target)
+    if (!isWithinPath(rootReal, targetReal)) throw new Error('工作區檔案透過符號連結離開工作區')
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error
+  }
+  return target
+}
+
 const TEMPLATES = {
   'persona/人设.md': '# 人設\n\n在這裡描述角色的外觀、身分與基本設定。人格與個性可在日常互動中逐步形成，不必一次寫死。\n',
   'persona/名字.md': '# 名字與稱呼\n\n- 自己的名字：\n- 全名：\n- 稱呼主人：\n',
@@ -36,13 +63,18 @@ const TEMPLATES = {
 
 export async function ensureWorkspace(workspace, options = {}) {
   const root = path.resolve(workspace)
+  await mkdir(root, { recursive: true })
   const dirs = ['persona', 'diary', 'live', 'memories/notes', 'sightings', 'knowledge', 'config', 'sessions', 'downloads', 'outbox']
-  for (const dir of dirs) await mkdir(path.join(root, dir), { recursive: true })
+  for (const dir of dirs) {
+    const target = await resolveWorkspaceFile(root, path.join(dir, '.workspace-check'), true)
+    const realDir = await realpath(path.dirname(target))
+    const rootReal = await realpath(root)
+    if (!isWithinPath(rootReal, realDir)) throw new Error('工作區資料夾透過符號連結離開工作區')
+  }
   const created = []
   for (const [relative, content] of Object.entries(TEMPLATES)) {
-    const file = path.join(root, relative)
+    const file = await resolveWorkspaceFile(root, relative, true)
     try { await stat(file) } catch {
-      await mkdir(path.dirname(file), { recursive: true })
       try { await writeFile(file, content, { encoding: 'utf8', flag: 'wx' }); created.push(relative) }
       catch (error) { if (error.code !== 'EEXIST') throw error }
     }
@@ -60,16 +92,18 @@ export async function ensureWorkspace(workspace, options = {}) {
     content: '# 日記\\n\\n此資料夾由 Hers Life 設定中心管理；日記會按日期自動建立 Markdown 檔。\\n',
   })
   for (const entry of configuredFiles) {
-    const target = path.resolve(root, entry.relative)
-    const relative = path.relative(root, target)
-    if (!entry.relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('configured workspace file escapes root')
+    if (!entry.relative) throw new Error('configured workspace file escapes root')
+    const target = await resolveWorkspaceFile(root, entry.relative, true)
     try { await stat(target) } catch {
-      await mkdir(path.dirname(target), { recursive: true })
       try { await writeFile(target, entry.content, { encoding: 'utf8', flag: 'wx' }); created.push(entry.relative) }
       catch (error) { if (error.code !== 'EEXIST') throw error }
     }
   }
-  await mkdir(path.resolve(root, diaryDir), { recursive: true })
+  const diaryPath = path.resolve(root, diaryDir)
+  await mkdir(diaryPath, { recursive: true })
+  const rootReal = await realpath(root)
+  const diaryReal = await realpath(diaryPath)
+  if (!isWithinPath(rootReal, diaryReal)) throw new Error('日記資料夾透過符號連結離開工作區')
   return { root, created, directories: [...dirs, diaryDir] }
 }
 
