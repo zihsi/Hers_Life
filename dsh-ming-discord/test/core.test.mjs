@@ -9,6 +9,7 @@ import { SettingsStore, isDiaryFilename, isDiaryPath } from '../settings.js'
 import { DiscordSessionPool } from '../pool.js'
 import { DiscordBrain } from '../memory.js'
 import { DiscordInterestStore } from '../interests.js'
+import { DiscordBridge } from '../discord/bridge.js'
 import { apply as applyDiscord } from '../index.js'
 import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
 
@@ -68,6 +69,57 @@ test('interest pause state is reversible and reports its skip reason', async () 
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+test('private DMs never train shared interests or write into the shared diary', async () => {
+  const createBridge = (target, calls) => {
+    const entry = { sessionId: 'session-1', agent: { session: { seq: 0, id: 'session-1' } } }
+    const bridge = Object.create(DiscordBridge.prototype)
+    bridge.settings = {
+      get(key, fallback) {
+        if (key === 'discord.typing') return false
+        if (key === 'discord.reactions') return false
+        if (key === 'brain.journal') return true
+        return fallback
+      },
+    }
+    bridge.brain = {
+      feedAdd(...args) { calls.feed.push(args) },
+      async recallContext() { return '' },
+      async writeJournal(line) { calls.journal.push(line) },
+    }
+    bridge.pool = {
+      async acquire() { return entry },
+      async touch() {},
+    }
+    bridge.rest = { async send() {}, async react() {} }
+    bridge.describeTarget = async () => target
+    bridge.cleanContent = () => 'a private project detail'
+    bridge.buildContent = async () => [{ type: 'text', text: 'a private project detail' }]
+    bridge.stream = async () => ({ id: 'reply-1', text: 'a private answer' })
+    bridge.learnFrom = async (text) => { calls.learned.push(text) }
+    bridge.selfId = 'bot-1'
+    bridge.logger = null
+    return bridge
+  }
+  const message = {
+    id: '1234567890',
+    channel_id: 'dm-channel',
+    author: { id: 'owner-1', username: 'Owner' },
+    content: 'a private project detail',
+  }
+  const privateCalls = { feed: [], journal: [], learned: [] }
+  await createBridge({ kind: 'dm', channelId: 'dm-channel', userId: 'owner-1', label: 'Private DM' }, privateCalls)
+    .handle(message, true)
+  assert.equal(privateCalls.feed.length, 2, 'the DM event and its reply remain in private-scope conversation memory')
+  assert.equal(privateCalls.journal.length, 0, 'private replies never enter the diary injected into all sessions')
+  assert.equal(privateCalls.learned.length, 0, 'private text never promotes globally shared public interests')
+
+  const publicCalls = { feed: [], journal: [], learned: [] }
+  await createBridge({ kind: 'channel', channelId: 'guild-channel', guildId: 'guild-1', label: '#public' }, publicCalls)
+    .handle({ ...message, channel_id: 'guild-channel', guild_id: 'guild-1' }, false)
+  assert.equal(publicCalls.journal.length, 1, 'public replies retain diary recording')
+  assert.equal(publicCalls.learned.length, 1, 'public text retains interest learning')
 })
 
 test('shared memory recalls across guilds and hides private source attribution', async () => {
