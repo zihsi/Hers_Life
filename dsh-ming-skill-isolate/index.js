@@ -92,7 +92,9 @@ async function writeState(stateFile, state) {
 }
 
 export function apply(ctx, config) {
-  const cfg = normalize(config)
+  const central = ctx.hersLifeDiscord?.getSetting?.('skillIsolate', {}) || {}
+  if (central.enabled === false) return
+  const cfg = normalize({ ...(config || {}), ...central })
   if (ctx.hersLifeDiscord?.workspace) {
     cfg.root = path.resolve(ctx.hersLifeDiscord.workspace)
     if (!config?.stateFile) cfg.stateFile = path.join(cfg.root, 'skills-off.json')
