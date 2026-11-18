@@ -133,7 +133,8 @@ await clean()
 
 // ------------------------------------------------ 2. 查不到前台 ⇒ 写操作一律拒
 await ctx.__tick()   // 醒一轮，把 guarded 挂上
-await sleep(50)
+for (let i = 0; i < 80 && !woken.length; i += 1) await sleep(25)
+ok(woken.length > 0, '第一轮已启动', woken.length + ' 次')
 const guardRuns = handlers.get('tools/pre-execute') || []
 ok(guardRuns.length > 0, '护栏钩子挂上了')
 const runGuard = (tool, args) => {
