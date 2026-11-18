@@ -122,8 +122,12 @@ export class DaveSession {
 
   /** Create (or recreate) the MLS session and hand the key package to the server. */
   reinit(protocolVersion) {
+    const version = Number(protocolVersion)
+    if (!Number.isInteger(version) || version <= 0) {
+      throw new Error('DAVE protocol version 0 would disable end-to-end encryption; plaintext voice fallback is disabled (Stage transport is not implemented)')
+    }
     if (!this.available) return
-    this.protocolVersion = protocolVersion
+    this.protocolVersion = version
     if (this.session === null) {
       this.session = new this.native.DAVESession(protocolVersion, this.userId, this.channelId)
       this.logger?.debug('dave: session created for protocol v' + protocolVersion)
@@ -168,6 +172,9 @@ export class DaveSession {
   prepareTransition(data) {
     const id = Number(data?.transition_id ?? 0)
     const version = Number(data?.protocol_version ?? this.protocolVersion)
+    if (!Number.isInteger(version) || version <= 0) {
+      throw new Error('DAVE transition requested protocol version 0; refusing unencrypted voice fallback')
+    }
     this.pendingTransitions.set(id, version)
     this.logger?.debug('dave: prepare transition ' + id + ' (v' + version + ')')
     // The addon must be told about the transition before it will hand out keys.
@@ -201,7 +208,11 @@ export class DaveSession {
       this.logger?.debug('dave: execute transition ' + id + ' had no pending entry')
       return false
     }
-    const next = this.pendingTransitions.get(id)
+    const next = Number(this.pendingTransitions.get(id))
+    if (!Number.isInteger(next) || next <= 0) {
+      this.pendingTransitions.delete(id)
+      throw new Error('DAVE execute transition requested protocol version 0; refusing unencrypted voice fallback')
+    }
     const previous = this.protocolVersion
     this.protocolVersion = next
     // The addon switches epochs here; its return value says whether a prepared
@@ -214,11 +225,7 @@ export class DaveSession {
         this.logger?.warn('dave: native execute ' + id + ' failed — ' + String(error?.message ?? error))
       }
     }
-    if (previous !== next && next === 0) {
-      this.degraded = true
-      this.session?.setPassthroughMode?.(true, 10)
-      this.logger?.warn('dave: channel downgraded to no end-to-end encryption')
-    } else if (id > 0 && this.degraded) {
+    if (id > 0 && this.degraded) {
       this.degraded = false
       this.logger?.info('dave: end-to-end encryption restored')
     }
