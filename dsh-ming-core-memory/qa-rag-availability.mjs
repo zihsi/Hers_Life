@@ -6,9 +6,10 @@ import { join } from 'node:path'
 
 test('RAG availability uses synthetic files and never a real service', async t => {
   const root = await mkdtemp(join(tmpdir(), 'ming-rag-'))
-  const original = { workspace: process.env.MING_WORKSPACE, home: process.env.DSH_HOME, fetch: globalThis.fetch }
-  process.env.MING_WORKSPACE = root
+  const original = { home: process.env.DSH_HOME, fetch: globalThis.fetch }
   process.env.DSH_HOME = join(root, 'dsh')
+  await mkdir(process.env.DSH_HOME, { recursive: true })
+  await writeFile(join(process.env.DSH_HOME, 'hers-life.json'), JSON.stringify({ workspace: root }), 'utf8')
   const live = join(root, 'live')
   await mkdir(live)
   let calls = 0
@@ -17,9 +18,8 @@ test('RAG availability uses synthetic files and never a real service', async t =
   globalThis.fetch = goodFetch
   t.after(async () => {
     globalThis.fetch = original.fetch
-    for (const [key, value] of [['MING_WORKSPACE', original.workspace], ['DSH_HOME', original.home]]) {
-      if (value === undefined) delete process.env[key]; else process.env[key] = value
-    }
+    if (original.home === undefined) delete process.env.DSH_HOME
+    else process.env.DSH_HOME = original.home
     await rm(root, { recursive: true, force: true })
   })
   let serial = 0
