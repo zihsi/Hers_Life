@@ -293,7 +293,7 @@ function composePublic(cfg, persona, missing) {
     '跨會話對話記憶由 Discord 記憶系統按使用者身分、來源位置與隱私權限檢索。',
     '底線三條：不裝記得；不表演人；可以說不。',
   )
-  return lines.join('\\n')
+  return lines.join('\n')
 }
 
 function composeLight(cfg, diary) {
