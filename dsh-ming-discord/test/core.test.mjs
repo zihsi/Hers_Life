@@ -14,9 +14,51 @@ import { quarantinePrivateDmDiary } from '../privacy.js'
 import { DiscordBridge } from '../discord/bridge.js'
 import { DaveSession } from '../discord/dave.js'
 import { VoiceConnection, VoiceManager } from '../discord/voice.js'
-import { apply as applyDiscord, ensureWorkspace } from '../index.js'
+import { apply as applyDiscord, ensureWorkspace, syncBrowseSettings } from '../index.js'
 import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
 import { apply as applyVoice } from '../../dsh-ming-voice/index.js'
+
+test('Browse settings UI values are fully synchronized to the live runtime config', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-browse-settings-'))
+  try {
+    const settings = new SettingsStore({ workspace: root }, { home: path.join(root, '.dsh') })
+    settings.patch({
+      browse: {
+        enabled: true,
+        idleMinutes: 7,
+        minGapMinutes: 12,
+        dailyMax: 9,
+        sessionRounds: 17,
+        allowSocialWrites: true,
+        freeWindows: [{ start: '18:00', end: '23:00' }],
+        agentPreset: 'browse-agent',
+        adbPath: 'C:\\tools\\adb.exe',
+        serial: '127.0.0.1:16448',
+        targets: ['bilibili'],
+        socialApps: ['com.example.social'],
+        socialWriteWords: ['發布'],
+      },
+    })
+    await syncBrowseSettings(settings)
+    const file = path.join(root, 'live', 'browse-config.json')
+    const first = JSON.parse(await readFile(file, 'utf8'))
+    assert.equal(first.idleMinutes, 7)
+    assert.equal(first.allowSocialWrites, true)
+    assert.equal(first.agentPreset, 'browse-agent')
+    assert.equal(first.adbPath, 'C:\\tools\\adb.exe')
+    assert.deepEqual(first.freeWindows, [{ start: '18:00', end: '23:00' }])
+    assert.deepEqual(first.targets, ['bilibili'])
+
+    settings.patch({ browse: { idleMinutes: 11, allowSocialWrites: false } })
+    await syncBrowseSettings(settings)
+    const second = JSON.parse(await readFile(file, 'utf8'))
+    assert.equal(second.idleMinutes, 11)
+    assert.equal(second.allowSocialWrites, false)
+    assert.equal(second.adbPath, 'C:\\tools\\adb.exe')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
 
 test('workspace initialization creates custom persona files and diary folders automatically', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-custom-workspace-'))
