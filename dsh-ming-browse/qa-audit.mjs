@@ -162,10 +162,14 @@ ok(allowMoney.kind === 'allow', '花钱类操作不再被隐藏硬限制拦截',
 // 注意：browse-state.json 是节流写的（20 秒一次、只在内容变化时写），所以这里不拿它当判据，
 // 只看「有没有再叫醒」。真正的 20 分钟判据（静默才算卡死、还在冒事件就不算）靠读代码 + 日志核，
 // 这个自测跑不了「等 20 分钟」。
+const activeId = woken[woken.length - 1]
+const activeAgent = live.get(activeId)
+for (const fn of handlers.get('agent/status') || []) fn({ agent: activeAgent, status: 'running' })
 const before = woken.length
 await ctx.__tick()
 await sleep(50)
 ok(woken.length === before, '上一轮还在跑 → 不会再开一轮', woken.length + ' vs ' + before)
+for (const fn of handlers.get('agent/status') || []) fn({ agent: activeAgent, status: 'idle' })
 
 console.log('')
 if (fails.length) {
