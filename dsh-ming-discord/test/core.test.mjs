@@ -72,6 +72,60 @@ test('interest pause state is reversible and reports its skip reason', async () 
   }
 })
 
+test('Discord PNG, APNG and GIF stickers are passed to the model as images', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-sticker-'))
+  try {
+    const downloaded = []
+    const stored = []
+    const bridge = Object.create(DiscordBridge.prototype)
+    bridge.settings = {
+      get(key, fallback) { return key === 'discord.maxAttachmentMb' ? 1 : fallback },
+      resolve() { return { dataRoot: root } },
+    }
+    bridge.ctx = {
+      get(name) {
+        assert.equal(name, 'attachments')
+        return {
+          storeImage(input) {
+            stored.push({ name: input.name, mediaType: input.mediaType, bytes: input.data.length })
+            return { ref: { id: 'image-' + stored.length } }
+          },
+        }
+      },
+    }
+    bridge.rest = {
+      async download(url, maxBytes) {
+        downloaded.push({ url, maxBytes })
+        return {
+          buffer: Buffer.from('image-bytes'),
+          mediaType: url.endsWith('.gif') ? 'image/gif' : 'image/png',
+        }
+      },
+    }
+    bridge.logger = null
+    const content = await bridge.buildContent({
+      id: 'sticker-message',
+      attachments: [],
+      sticker_items: [
+        { id: '1001', name: 'png-sticker', format_type: 1 },
+        { id: '1002', name: 'apng-sticker', format_type: 2 },
+        { id: '1003', name: 'gif-sticker', format_type: 4 },
+        { id: '1004', name: 'lottie-sticker', format_type: 3 },
+      ],
+    }, '')
+    assert.equal(downloaded.length, 3)
+    assert.ok(downloaded.some(x => x.url === 'https://cdn.discordapp.com/stickers/1001.png'))
+    assert.ok(downloaded.some(x => x.url === 'https://cdn.discordapp.com/stickers/1002.png'))
+    assert.ok(downloaded.some(x => x.url === 'https://media.discordapp.net/stickers/1003.gif'))
+    assert.equal(stored.length, 3)
+    assert.equal(content.filter(block => block.type === 'image').length, 3)
+    assert.ok(content.some(block => block.type === 'text' && /lottie-sticker/.test(block.text)))
+    assert.equal(downloaded[0].maxBytes, 1024 * 1024)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('slash commands and model tools inherit Discord actor and Owner permissions', async () => {
   const bridge = Object.create(DiscordBridge.prototype)
   const config = {
