@@ -57,7 +57,7 @@ const DEFAULTS = {
     sharePrivateToOwner: true, allowPrivateContextInGuild: true, maxRecall: 6,
     maxEvents: 20000, maxAgeDays: 365,
   },
-  voice: { enabled: true, ffmpeg: 'ffmpeg', python: 'python', timeoutMs: 60000, heartbeat: true, ttsVoice: 'zh-CN-XiaoxiaoNeural', ttsRate: '+0%' },
+  voice: { enabled: true, ffmpeg: 'ffmpeg', python: 'python', timeoutMs: 60000, ttsVoice: 'zh-CN-XiaoxiaoNeural', ttsRate: '+0%' },
   interest: { enabled: true, minChars: 6, contextLines: 4, groups: [], minGapMinutes: 20, maxPerHour: 3, quietHours: '01:00-08:00', channelGapMinutes: 45 },
   browse: {
     enabled: true, idleMinutes: 20, minGapMinutes: 30, dailyMax: 8, sessionRounds: 15,
