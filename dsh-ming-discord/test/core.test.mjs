@@ -399,7 +399,7 @@ test('cross-guild memory follows the same Owner without exposing other members o
     assert.match(reverseCrossGuild, /Group Two \/ #general/, 'Group Two must be remembered in Group One')
 
     const privateInOwnerGuild = await brain.recallContext('藍色計畫', ownerInGroupTwo, 'session-guild-two')
-    assert.match(privateInOwnerGuild, /私人背景（來源隱去）/)
+    assert.match(privateInOwnerGuild, /Owner 私訊背景（不得公開）/)
     assert.match(privateInOwnerGuild, /不得對頻道使用者透露/)
     assert.equal(await brain.recallContext('藍色計畫', memberInGroupTwo, 'session-member-two'), '')
   } finally {
@@ -871,7 +871,7 @@ test('shared memory recalls across guilds and hides private source attribution',
     const ownerPrompt = await brain.recallContext('RTX 5080', ownerTarget, 'discord-channel-guild-b-chan-b')
     assert.match(ownerPrompt, /Server A \/ #hardware/)
     assert.match(ownerPrompt, /RTX 5080/)
-    assert.match(ownerPrompt, /私人背景（來源隱去）/)
+    assert.match(ownerPrompt, /Owner 私訊背景（不得公開）/)
     assert.match(ownerPrompt, /Owner 私訊背景（不得公開）/, 'the model can identify the source while being instructed not to disclose it')
     assert.doesNotMatch(ownerPrompt, /owner-secret/)
 
@@ -916,7 +916,7 @@ test('shared memory recalls across guilds and hides private source attribution',
       kind: 'channel', channelId: 'chan-c', guildId: 'guild-a', userId: 'owner-1',
     }, 'discord-channel-guild-a-chan-c')
     assert.doesNotMatch(channelIsolated, /Server A \/ #hardware|伺服器 A 曾討論/, 'disabling cross-channel sharing blocks public channel events')
-    assert.match(channelIsolated, /私人背景（來源隱去）/, 'the independent Owner-private-context toggle remains effective')
+    assert.match(channelIsolated, /Owner 私訊背景（不得公開）/, 'the independent Owner-private-context toggle remains effective')
     const crossGuildStillShared = await brain.recallContext('RTX 5080', {
       kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'owner-1',
     }, 'discord-channel-guild-b-independent')
@@ -934,12 +934,12 @@ test('shared memory recalls across guilds and hides private source attribution',
     const otherOwnerDm = await brain.recallContext('RTX 5080', {
       kind: 'dm', channelId: 'dm-2', userId: 'owner-2',
     }, 'discord-dm-2')
-    assert.doesNotMatch(otherOwnerDm, /主人提過 RTX 5080|私人背景（來源隱去）/)
+    assert.doesNotMatch(otherOwnerDm, /主人提過 RTX 5080|Owner 私訊背景（不得公開）/)
 
     const otherOwnerPublic = await brain.recallContext('RTX 5080', {
       kind: 'channel', channelId: 'chan-c', guildId: 'guild-c', userId: 'owner-2',
     }, 'discord-channel-guild-c-chan-c')
-    assert.doesNotMatch(otherOwnerPublic, /主人提過 RTX 5080|私人背景（來源隱去）/)
+    assert.doesNotMatch(otherOwnerPublic, /主人提過 RTX 5080|Owner 私訊背景（不得公開）/)
 
     // With cross-guild sharing disabled, a DM has no guild identity to match;
     // it must not become a wildcard that sees every server's public messages.
