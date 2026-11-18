@@ -79,6 +79,8 @@ jobs:
             dsh-ming-skill-isolate/index.js
             dsh-ming-mousepet/index.js
             dsh-ming-activities/index.js
+            scripts/rag-index.mjs
+            scripts/rag-manifest.mjs
           )
           for file in "${files[@]}"; do
             echo "Checking $file"
