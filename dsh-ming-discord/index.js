@@ -107,6 +107,30 @@ export async function ensureWorkspace(workspace, options = {}) {
   return { root, created, directories: [...dirs, diaryDir] }
 }
 
+async function ensureCoreMemoryFile(settings) {
+  const root = settings.resolve().coreMemoryDir
+  await mkdir(root, { recursive: true })
+  const target = await resolveWorkspaceFile(root, 'MEMORY.md', true)
+  try { await stat(target) } catch {
+    const template = [
+      '# DSH 核心記憶',
+      '',
+      '> 由 dsh-core-memory 維護，並注入符合隱私條件的會話系統提示。',
+      '> 保持精煉；只放長期有效的事實、專案決策與約定。',
+      '',
+      '## 環境',
+      '- （機器、部署、常用路徑等長期事實）',
+      '',
+      '## 專案',
+      '- （進行中的專案、關鍵決策與約定）',
+      '',
+    ].join('\\n')
+    try { await writeFile(target, template, { encoding: 'utf8', flag: 'wx', mode: 0o600 }) }
+    catch (error) { if (error.code !== 'EEXIST') throw error }
+  }
+  return target
+}
+
 export async function syncMemorySettings(settings) {
   const file = path.join(settings.home, 'ming-memory.json')
   let current = {}
