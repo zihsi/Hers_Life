@@ -71,6 +71,52 @@ test('interest pause state is reversible and reports its skip reason', async () 
   }
 })
 
+test('slash commands and model tools inherit Discord actor and Owner permissions', () => {
+  const bridge = Object.create(DiscordBridge.prototype)
+  const config = {
+    discord: {
+      enabled: true, allowDm: true, dmPolicy: 'owner',
+      guildIds: ['guild-1'], channelIds: ['channel-1'], mode: 'mention',
+    },
+  }
+  bridge.settings = {
+    get(key, fallback) {
+      const value = key.split('.').reduce((at, part) => at == null ? undefined : at[part], config)
+      return value === undefined ? fallback : value
+    },
+    isOwner(id) { return String(id) === 'owner-1' },
+  }
+  assert.equal(bridge.authorizeInteraction({
+    user: { id: 'owner-1' }, channel_id: 'dm-1',
+  }), '')
+  assert.match(bridge.authorizeInteraction({
+    user: { id: 'member-1' }, channel_id: 'dm-2',
+  }), /私訊政策/)
+  assert.equal(bridge.authorizeInteraction({
+    member: { user: { id: 'member-2' } }, guild_id: 'guild-1', channel_id: 'channel-1',
+  }), '')
+  assert.match(bridge.authorizeInteraction({
+    member: { user: { id: 'member-2' } }, guild_id: 'guild-2', channel_id: 'channel-1',
+  }), /伺服器不在允許清單/)
+  assert.match(bridge.authorizeInteraction({
+    member: { user: { id: 'member-2' } }, guild_id: 'guild-1', channel_id: 'channel-2',
+  }), /頻道不在允許清單/)
+  assert.match(bridge.authorizeInteraction({
+    member: { user: { id: 'member-2' } }, guild_id: 'guild-1', channel_id: 'channel-1',
+  }, { ownerOnly: true }), /僅限 Owner/)
+  config.discord.mode = 'own'
+  assert.match(bridge.authorizeInteraction({
+    member: { user: { id: 'member-2' } }, guild_id: 'guild-1', channel_id: 'channel-1',
+  }), /只允許 Owner/)
+  assert.equal(bridge.authorizeInteraction({
+    member: { user: { id: 'owner-1' } }, guild_id: 'guild-1', channel_id: 'channel-1',
+  }), '')
+
+  bridge.activeActors = new Map([['session-1', { userId: 'owner-1', sessionId: 'session-1', channelId: 'channel-1' }]])
+  assert.equal(bridge.actorForExecution({ agent: { session: { id: 'session-1' } } }).userId, 'owner-1')
+  assert.throws(() => bridge.actorForExecution({ agent: { session: { id: 'other-session' } } }), /目前正在處理 Discord 訊息/)
+})
+
 test('private DM messages and activity never enter the shared event preview', () => {
   const events = []
   const bridge = Object.create(DiscordBridge.prototype)
