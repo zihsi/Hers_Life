@@ -1,6 +1,6 @@
 {
   "name": "dsh-ming-discord",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": true,
   "type": "module",
   "description": "Hers Life 的 Discord 原生適配器：獨立會話、跨會話來源可追溯記憶、統一設定頁。",
