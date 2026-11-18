@@ -52,18 +52,11 @@ const CORPUS = {
     { id: 'w04', text: '她第一次说想要私聊那个语气，不要群里的稳重。', date: '2026-10-30', title: '会话 D' },
     { id: 'w05', text: '她说 dsh 已经重启了，问八个 PR 是不是都做完了。', date: '2026-11-17', title: '会话 E' },
     { id: 'w06', text: '她说回复让 dsh 定，但回复要总结成自然语言摘要。', date: '2026-11-17', title: '会话 E' },
-  ],
-  qq: [
-    { id: 'q01', text: '群友问：这个 AI 是自己写的吗。有人回：自己写的，连插件都是。', date: '2026-11-09', title: '深水区' },
-    { id: 'q02', text: '有人发了张鱼的表情包，说这条鱼今天很精神。', date: '2026-11-10', title: '深水区' },
-    { id: 'q03', text: '她说别戴着耳机睡，眼睛会抗议。', date: '2026-10-29', title: '私聊' },
-    { id: 'q04', text: '群里在聊桌面游戏，说二十六届才不玩。', date: '2026-11-11', title: '感谢对战' },
-    { id: 'q05', text: '有人问：如果我有了别的 AI 你会吃醋吗。', date: '2026-11-09', title: '私聊' },
-    { id: 'q06', text: '同一句话：沉默不是没话说，是确定这一拍不用接——有人把它贴进群里。', date: '2026-11-11', title: '深水区' },
+    { id: 'w07', text: '同一句话：沉默不是没话说，是确定这一拍不用接。', date: '2026-11-11', title: '会话 F' },
   ],
 }
 
-// ---------- 题库（30 道） ----------
+// ---------- 题库（24 道） ----------
 const QUESTIONS = [
   // direct：直接词匹配
   { id: 'D1', category: 'direct', query: '沉默 没话说', relevantIds: ['d01'] },
@@ -73,29 +66,23 @@ const QUESTIONS = [
   { id: 'D5', category: 'direct', query: '分块相加 总长', relevantIds: ['d07'] },
   { id: 'D6', category: 'direct', query: '谜语 主动', relevantIds: ['w03'] },
   { id: 'D7', category: 'direct', query: '不需要证明你有用', relevantIds: ['w02'] },
-  { id: 'D8', category: 'direct', query: '耳机 眼睛会抗议', relevantIds: ['q03'] },
   // synonym：同义表达
   { id: 'S1', category: 'synonym', query: '什么时候该闭嘴', relevantIds: ['d01', 'd08'] },
   { id: 'S2', category: 'synonym', query: '评价是谁说的', relevantIds: ['d02'] },
   { id: 'S3', category: 'synonym', query: '先确认再开口', relevantIds: ['d05'] },
   { id: 'S4', category: 'synonym', query: '自然语言总结', relevantIds: ['w06'] },
-  { id: 'S5', category: 'synonym', query: '别的 AI 吃醋', relevantIds: ['q05'] },
   { id: 'S6', category: 'synonym', query: '说话要留白', relevantIds: ['d08', 'd01'] },
   // disambiguation：多个相似事件
   { id: 'X1', category: 'disambiguation', query: '她说的语气是哪一种', relevantIds: ['w04', 'd01'], forbiddenIds: ['w02'] },
   { id: 'X2', category: 'disambiguation', query: '重启之后问 PR', relevantIds: ['w05'] },
-  { id: 'X3', category: 'disambiguation', query: '群里有人说 AI 是自己写的', relevantIds: ['q01'] },
-  { id: 'X4', category: 'disambiguation', query: '桌面游戏 二十六届', relevantIds: ['q04'] },
-  { id: 'X5', category: 'disambiguation', query: '表情包 鱼', relevantIds: ['q02'] },
   // date：带日期查询
   { id: 'T1', category: 'date', query: '十一月中旬 巧艺 陵云台', relevantIds: ['d03'], since: '2026-11-14', until: '2026-11-16' },
   { id: 'T2', category: 'date', query: '十月三十 她说不需要证明', relevantIds: ['w02'], since: '2026-10-30', until: '2026-10-30' },
   { id: 'T3', category: 'date', query: '十一月十七 账号 退出', relevantIds: ['d06'], since: '2026-11-17', until: '2026-11-17' },
-  { id: 'T4', category: 'date', query: '十月底 耳机', relevantIds: ['q03'], since: '2026-10-29', until: '2026-10-29' },
   // same-text-diff-source：同文不同来源
-  { id: 'C1', category: 'same-text-diff-source', query: '沉默不是没话说', relevantIds: ['d01', 'q06'] },
-  { id: 'C2', category: 'same-text-diff-source', query: '这一拍不用接', relevantIds: ['d01', 'q06'] },
-  { id: 'C3', category: 'same-text-diff-source', query: '确定这一拍', relevantIds: ['d01', 'q06'] },
+  { id: 'C1', category: 'same-text-diff-source', query: '沉默不是没话说', relevantIds: ['d01', 'w07'] },
+  { id: 'C2', category: 'same-text-diff-source', query: '这一拍不用接', relevantIds: ['d01', 'w07'] },
+  { id: 'C3', category: 'same-text-diff-source', query: '确定这一拍', relevantIds: ['d01', 'w07'] },
   // no-answer：明确无答案
   { id: 'N1', category: 'no-answer', query: '量子纠缠的实验数据', relevantIds: [] },
   { id: 'N2', category: 'no-answer', query: '红楼梦第八十回原文', relevantIds: [] },
@@ -113,21 +100,23 @@ writeFileSync(join(live, 'doc-emb.f32'), Buffer.from(new Float32Array(CORPUS.doc
 
 for (const [layer, prefix, embFile, idsFile] of [
   ['web', 'chat', 'chat-emb.f32', 'chat-emb-ids.json'],
-  ['qq', 'qq', 'qq-emb.f32', 'qq-emb-ids.json'],
 ]) {
   const rows = CORPUS[layer]
   writeFileSync(join(live, idsFile), JSON.stringify(rows.map((r) => r.id)), 'utf8')
   writeFileSync(join(live, embFile), Buffer.from(new Float32Array(rows.flatMap((r) => embed(r.text))).buffer))
-  const corpusFile = layer === 'web' ? 'chat-corpus.jsonl' : 'qq-corpus.jsonl'
+  const corpusFile = 'chat-corpus.jsonl'
   writeFileSync(join(live, corpusFile), rows.map((r) => JSON.stringify({
     id: r.id, text: r.text, chatKey: r.title, t0: Date.parse(r.date + 'T12:00:00'),
   })).join('\n') + '\n', 'utf8')
 }
 
 // ---------- 跑 ----------
-const origEnv = process.env.MING_WORKSPACE
+const origHome = process.env.DSH_HOME
 const origFetch = globalThis.fetch
-process.env.MING_WORKSPACE = tmp
+const dshHome = join(tmp, 'dsh')
+mkdirSync(dshHome, { recursive: true })
+writeFileSync(join(dshHome, 'hers-life.json'), JSON.stringify({ workspace: tmp }), 'utf8')
+process.env.DSH_HOME = dshHome
 globalThis.fetch = async (_url, init) => {
   const body = JSON.parse(init.body)
   const text = String(body.input && body.input[0] || '')
@@ -166,8 +155,8 @@ for (const q of QUESTIONS) {
 }
 
 globalThis.fetch = origFetch
-if (origEnv === undefined) delete process.env.MING_WORKSPACE
-else process.env.MING_WORKSPACE = origEnv
+if (origHome === undefined) delete process.env.DSH_HOME
+else process.env.DSH_HOME = origHome
 
 // ---------- 统计 ----------
 const answerable = results.filter((r) => r.relevantIds.length > 0)
@@ -194,7 +183,7 @@ for (const r of results) {
 
 const report = {
   at: new Date().toISOString(),
-  corpus: { doc: CORPUS.doc.length, web: CORPUS.web.length, qq: CORPUS.qq.length },
+  corpus: { doc: CORPUS.doc.length, web: CORPUS.web.length },
   questions: QUESTIONS.length,
   metrics: {
     'Hit@1': Number(hitAt(1).toFixed(3)),
