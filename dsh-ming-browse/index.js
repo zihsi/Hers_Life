@@ -38,6 +38,7 @@ import { check as checkPermission, normalizePolicy } from './lib/permissions.mjs
 import { openMyBrowser } from './browser-launch.mjs'
 
 export const name = 'ming-browse'
+const DSH_HOME = process.env.DSH_HOME || path.join(DSH_HOME)
 
 /** agents.create / resume 要 agents；ctx.interval 要 timer。其余服务按可选处理。 */
 export const inject = ['agents', 'timer', 'tools', 'hersLifeDiscord']
@@ -48,7 +49,7 @@ const BROWSE_SESSION_ID = 'ming-browse'
 function resolveWorkspace() {
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
-    const central = JSON.parse(readFileSync(path.join(os.homedir(), '.dsh', 'ming-memory.json'), 'utf8'))
+    const central = JSON.parse(readFileSync(path.join(DSH_HOME, 'ming-memory.json'), 'utf8'))
     if (central && typeof central.root === 'string' && central.root.trim()) return central.root
   } catch { /* first-run setup may not exist yet */ }
   return path.join(os.homedir(), 'hers-life-workspace')
@@ -1232,7 +1233,7 @@ export function apply(ctx, config) {
   const sessionHasHistory = (id) => {
     if (!id) return false
     try {
-      const home = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
+      const home = process.env.DSH_HOME || path.join(DSH_HOME)
       const root = path.join(home, 'sessions')
       for (const entry of readdirSync(root, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue
