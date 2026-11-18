@@ -151,6 +151,21 @@ test('private diary quarantine propagates directory scan errors instead of marki
   }
 })
 
+
+test('Discord settings store follows the host-provided DSH_HOME directory', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-dsh-home-'))
+  const previous = process.env.DSH_HOME
+  try {
+    process.env.DSH_HOME = root
+    const settings = new SettingsStore({})
+    assert.equal(settings.home, path.resolve(root))
+  } finally {
+    if (previous === undefined) delete process.env.DSH_HOME
+    else process.env.DSH_HOME = previous
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('DM, guild channel and thread get distinct durable session ids', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-pool-'))
   try {
