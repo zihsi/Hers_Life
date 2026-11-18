@@ -28,7 +28,7 @@
 
 | 功能 | 目前實作 | 邊界／注意事項 | 程式位置 |
 |---|---|---|---|
-| Discord 語音連線 | `/voice` 可要求加入／離開語音頻道；底層實作 Opus、UDP、語音 Gateway 與 DAVE | 必須協商正 DAVE 版本並完成 MLS；原生模組缺失／版本不相容、未 ready 或加解密失敗時會拒絕連線或丟棄音訊封包，絕不退回明文 Opus。Stage 雖是 Discord 的 E2EE 例外，但本適配器尚未實作 Stage 專用傳輸路徑 | `dsh-ming-discord/discord/voice.js`, `discord/dave.js` |
+| Discord 語音連線 | `/voice` 可要求加入／離開語音頻道；底層實作 Opus、UDP、語音 Gateway 與 DAVE | `/voice join` 等到 MLS ready 才回報成功（最多 20 秒）；播放工具未 ready 時拒絕。原生模組缺失／版本不相容、未 ready 或加解密失敗時會拒絕連線或丟棄音訊封包，絕不退回明文 Opus。Stage 雖是 Discord 的 E2EE 例外，但本適配器尚未實作 Stage 專用傳輸路徑 | `dsh-ming-discord/discord/voice.js`, `discord/dave.js` |
 | 文字轉語音 | `dsh-ming-voice` 的 `voice_say` 產生 MP3；可再用 `discord_send_file` 將檔案送到目前會話頻道；預設音色、語速與 FFmpeg 可在 Discord 設定頁調整 | 這和即時語音連線是兩條不同路徑；需可用的 Edge TTS 或 Windows SAPI。非 Owner 只能傳送自己在該會話產生、具 session/user 標籤的音訊 | `dsh-ming-voice/index.js`, `dsh-ming-discord/index.js` |
 | 自主瀏覽 | `dsh-ming-browse` 可在設定條件下執行背景瀏覽／活動；Owner 控制入口走 Discord 私訊 | **不是全域唯讀沙盒**。部分高風險 Android／關機類工具有硬性攔截；其他寫入能力仍依工具、設定與行為規則，不能把它宣稱為全面防寫入 | `dsh-ming-browse/index.js`, `lib/permissions.mjs` |
 | 桌面陪伴 | `dsh-ming-mousepet` 提供螢幕觀察、氣泡、UIA／視窗訊息操作；物理輸入是明確回退模式 | Windows PowerShell 5.1／WinForms；UIA 取決於目標應用是否暴露可操作元素；物理輸入會影響真實桌面，不能視為無副作用 | `dsh-ming-mousepet/` |
