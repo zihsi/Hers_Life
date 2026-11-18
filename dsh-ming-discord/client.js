@@ -554,6 +554,8 @@ window.__ModuleLoader__.load({
             check('啟用 Skill Isolate', 'skillIsolate.enabled', '技能隔離與狀態保存。'),
             check('啟用 Core Memory', 'coreMemory.enabled', '核心記憶、歸檔記憶與來源追溯工具。'),
             input('核心記憶資料夾', 'coreMemory.directory', '相對於 DSH_HOME 或填絕對路徑；留空使用 DSH_HOME/memory。'),
+            input('語意檢索 Embedding API Endpoint', 'coreMemory.embeddingEndpoint', '預設 http://127.0.0.1:18091/v1/embeddings；支援 HTTP/HTTPS。'),
+            input('語意檢索 Embedding 模型', 'coreMemory.embeddingModel', '必須與建立向量索引時使用的模型一致。'),
             input('Skill Isolate 狀態檔路徑', 'skillIsolate.stateFile', '留空使用 DSH_HOME 預設位置。'),
             check('啟用 Graph', 'graph.enabled', '關閉後停止 Graph 同步與相關面板。'),
             h('div', { className: 'hl-grid' },
