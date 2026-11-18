@@ -826,7 +826,7 @@ export class DiscordBridge {
   }
 
   actorForExecution(exec) {
-    const sessionId = String(exec?.agent?.session?.id ?? '')
+    const sessionId = String(exec?.agent?.id ?? '')
     const actor = this.actorStorage.getStore() ?? null
     if (!actor || !sessionId || actor.sessionId !== sessionId) {
       throw new Error('此工具只能由目前正在處理 Discord 訊息的會話呼叫。')
