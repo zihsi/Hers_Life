@@ -251,6 +251,31 @@ test('voice Session Description without a positive DAVE version fails the connec
   assert.equal(left, 1, 'failed E2EE negotiation must leave the Discord voice gateway')
 })
 
+test('voice join waits for DAVE readiness and playback refuses inactive E2EE', async () => {
+  const connection = new VoiceConnection({
+    gateway: { leaveVoice() {} }, rest: {}, logger: null,
+    guildId: 'guild-ready', channelId: 'voice-ready', userId: 'bot-ready',
+  })
+  connection.state = 'ready'
+  connection.dave = { active: false }
+  const waiting = connection.waitForDAVE(500)
+  setTimeout(() => {
+    connection.dave.active = true
+    connection.markDAVEReady()
+  }, 5)
+  assert.equal(await waiting, connection)
+  assert.equal(connection.daveReady, true)
+
+  const notReady = new VoiceConnection({
+    gateway: { leaveVoice() {} }, rest: {}, logger: null,
+    guildId: 'guild-not-ready', channelId: 'voice-not-ready', userId: 'bot-not-ready',
+  })
+  notReady.state = 'ready'
+  notReady.dave = { active: false }
+  await assert.rejects(notReady.playPackets([]), /DAVE MLS is not ready/)
+  await notReady.leave()
+})
+
 test('Discord PNG, APNG and GIF stickers are passed to the model as images', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-sticker-'))
   try {
