@@ -28,7 +28,7 @@ import path from 'node:path'
 import os from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { appendFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { execFileSync, spawn } from 'node:child_process'
 // 2026-11-08：心跳间隔（5 分–4 小时，离 30 越远越稀）。单独一个文件是为了能单独量分布。
 import { drawHeartbeatMinutes, normalizeHb } from './heartbeat.mjs'
@@ -1273,18 +1273,31 @@ export function apply(ctx, config) {
       rotation = { id: '', rounds: 0 }
     }
   }
-  const saveRotation = async () => {
-    try {
-      await mkdir(path.join(cfg.workspacePath, 'live'), { recursive: true })
-      await writeFile(rotationFile, JSON.stringify({
-        id: rotation.id,
-        rounds: rotation.rounds,
-        perSession: PER_SESSION,
-        at: localStamp(new Date()),
-      }, null, 2) + '\n', 'utf8')
-    } catch (error) {
-      log('warn', 'cannot write live/browse-session.json: ' + String(error))
+  // adoptSession(), rotateIfDue() and wake() can all request persistence in
+  // close succession. Serialize snapshots and atomically rename a same-folder
+  // temp file so readers never observe a truncated/empty JSON ledger.
+  let rotationWrite = Promise.resolve()
+  let rotationWriteSeq = 0
+  const saveRotation = () => {
+    const snapshot = {
+      id: rotation.id,
+      rounds: rotation.rounds,
+      perSession: PER_SESSION,
+      at: localStamp(new Date()),
     }
+    rotationWrite = rotationWrite.catch(() => {}).then(async () => {
+      await mkdir(path.join(cfg.workspacePath, 'live'), { recursive: true })
+      const temp = rotationFile + '.tmp-' + process.pid + '-' + (++rotationWriteSeq)
+      try {
+        await writeFile(temp, JSON.stringify(snapshot, null, 2) + '\n', 'utf8')
+        await rename(temp, rotationFile)
+      } finally {
+        await rm(temp, { force: true }).catch(() => {})
+      }
+    }).catch((error) => {
+      log('warn', 'cannot write live/browse-session.json: ' + String(error))
+    })
+    return rotationWrite
   }
   loadRotation()
 
