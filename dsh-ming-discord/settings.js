@@ -23,8 +23,11 @@ async function atomicReplace(target, content, options = 'utf8') {
       } catch (replaceError) {
         if (moved) {
           try { await rename(backup, target) } catch {}
+        } else if (replaceError?.code === 'ENOENT') {
+          await rename(temp, target)
+        } else {
+          throw replaceError
         }
-        throw replaceError
       }
     }
   } finally {
