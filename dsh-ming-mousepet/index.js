@@ -21,7 +21,7 @@ import { createWebpick } from './lib/webpick.mjs'
 
 export const name = 'ming-mousepet'
 export const inject = ['tools', 'attachments', 'webServer', 'connection', 'hersLifeDiscord']
-const DSH_HOME = process.env.DSH_HOME || join(DSH_HOME)
+const DSH_HOME = process.env.DSH_HOME || join(homedir(), '.dsh')
 
 function resolveSharedWorkspace() {
   try {
