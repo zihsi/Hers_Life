@@ -104,7 +104,17 @@ async function sapiTts(cfg, text, out) {
 
 export function apply(ctx, config) {
   const cfg = normalize(config)
-  if (ctx.hersLifeDiscord?.workspace) cfg.root = path.resolve(ctx.hersLifeDiscord.workspace)
+  const currentWorkspace = () => {
+    try {
+      const shared = ctx.hersLifeDiscord?.workspace
+      if (typeof shared === 'string' && shared.trim()) return path.resolve(shared)
+    } catch {}
+    return cfg.root
+  }
+  const sharedSetting = (key, fallback) => {
+    try { return ctx.hersLifeDiscord?.getSetting?.(key, fallback) ?? fallback } catch { return fallback }
+  }
+  const currentVoiceDir = () => path.join(currentWorkspace(), 'live', 'voice')
 
   // ---- 面板用的只读口（2026-11-07）----
   // 报当前引擎/音色/语速，列最近合成出来的 mp3。只读，不合成、不花钱。
@@ -127,7 +137,7 @@ export function apply(ctx, config) {
             const name = path.basename(String(url.searchParams.get('name') || ''))
             if (!name.toLowerCase().endsWith('.mp3')) { send(400, { error: 'bad name' }); return }
             try {
-              const buf = await readFile(path.join(cfg.root, 'live', 'voice', name))
+              const buf = await readFile(path.join(currentVoiceDir(), name))
               res.writeHead(200, { 'content-type': 'audio/mpeg', 'content-length': buf.length, 'cache-control': 'no-store' })
               res.end(buf)
             } catch (e) {
@@ -138,7 +148,7 @@ export function apply(ctx, config) {
           if (what !== 'state') { send(404, { error: 'not found' }); return }
 
           const { readdir, stat } = await import('node:fs/promises')
-          const dir = path.join(cfg.root, 'live', 'voice')
+          const dir = currentVoiceDir()
           let files = []
           try {
             const names = (await readdir(dir)).filter((n) => n.toLowerCase().endsWith('.mp3'))
@@ -156,8 +166,8 @@ export function apply(ctx, config) {
           send(200, {
             ok: true,
             engine: String(cfg.engine || ''),
-            voice: String(cfg.voice || ''),
-            rate: String(cfg.rate || ''),
+            voice: String(sharedSetting('voice.ttsVoice', cfg.voice) || cfg.voice),
+            rate: String(sharedSetting('voice.ttsRate', cfg.rate) || cfg.rate),
             dir,
             files,
           })
@@ -188,7 +198,7 @@ export function apply(ctx, config) {
       render: (_args, value) => [{ type: 'text', text: String(value) }],
     },
     async execute(args, exec) {
-      const sessionId = String(exec?.agent?.session?.id ?? '')
+      const sessionId = String(exec?.agent?.id ?? '')
       const actor = ctx.hersLifeDiscord?.actorForExecution?.(exec) ?? null
       if (!sessionId || !actor?.userId || actor.sessionId !== sessionId) {
         throw new Error('voice_say 需要有效的 Discord 發起者與 DSH Session 身分')
@@ -197,16 +207,13 @@ export function apply(ctx, config) {
       if (!text) return 'text 是空的，没东西可合成。'
       if (text.length > 800) return '太长了（' + text.length + ' 字）。语音只适合一两句；长内容用字发。'
 
-      const sharedSetting = (key, fallback) => {
-        try { return ctx.hersLifeDiscord?.getSetting?.(key, fallback) ?? fallback } catch { return fallback }
-      }
       const voice = typeof args?.voice === 'string' && args.voice.trim()
         ? args.voice.trim()
         : String(sharedSetting('voice.ttsVoice', cfg.voice) || cfg.voice)
       const rate = typeof args?.rate === 'string' && args.rate.trim()
         ? args.rate.trim()
         : String(sharedSetting('voice.ttsRate', cfg.rate) || cfg.rate)
-      const dir = path.join(cfg.root, 'live', 'voice')
+      const dir = currentVoiceDir()
       await mkdir(dir, { recursive: true })
       const out = path.join(dir, stamp() + '-' + Math.random().toString(36).slice(2, 6) + '.mp3')
 
