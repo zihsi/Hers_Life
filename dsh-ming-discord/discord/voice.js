@@ -320,14 +320,14 @@ export class VoiceConnection extends EventEmitter {
         } catch {
           return
         }
-        this.onVoicePacket(packet).catch((error) => this.logger?.warn('voice packet: ' + String(error)))
+        this.onVoicePacket(packet).catch((error) => this.fail(error))
         return
       }
       // Binary frames carry the MLS blobs. Node's WebSocket hands them over as
       // a Blob, so reading them is asynchronous by nature.
       this.readBinary(event.data)
         .then((buffer) => this.onBinaryFrame(buffer))
-        .catch((error) => this.logger?.warn('voice binary: ' + String(error?.message ?? error)))
+        .catch((error) => this.fail(error))
     }))
     ws.addEventListener('close', guard('close', (event) => {
       // A socket we already replaced (channel move, reconnect) must not report a
@@ -566,16 +566,15 @@ export class VoiceConnection extends EventEmitter {
   }
 
   onSessionDescription(data) {
-    this.secretKey = Buffer.from(data.secret_key)
-    this.state = 'ready'
-    this.sequence = randomBytes(2).readUInt16BE(0)
-    this.timestamp = randomBytes(4).readUInt32BE(0)
-    this.nonce = 0
-    // The server names the DAVE version it wants in the same packet. Creating
-    // the session here (not earlier) mirrors the reference client: by now the
-    // voice socket is in SelectingProtocol/Ready, which is when MLS may start.
-    const daveVersion = Number(data.dave_protocol_version ?? 0)
-    if (daveVersion > 0) {
+    // Discord's Session Description must negotiate a positive DAVE version for
+    // this adapter. Stage is an E2EE exception, but Stage transport is not
+    // implemented here, so an absent/zero version is a hard failure too.
+    const daveVersion = Number(data?.dave_protocol_version ?? 0)
+    if (!Number.isInteger(daveVersion) || daveVersion <= 0) {
+      this.fail(new Error('voice: Discord did not negotiate DAVE E2EE; refusing unencrypted voice (Stage transport is not implemented)'))
+      return
+    }
+    try {
       this.dave = new DaveSession({
         logger: this.logger,
         userId: this.userId,
@@ -583,10 +582,18 @@ export class VoiceConnection extends EventEmitter {
         sendBinary: (opcode, payload) => this.sendBinary(opcode, payload),
         sendJson: (packet) => this.sendWs(packet),
       })
-      if (this.dave.available) this.dave.reinit(daveVersion)
-      else this.dave = null
+      if (!this.dave.available) throw new Error('DAVE native addon is unavailable')
+      this.dave.reinit(daveVersion)
+    } catch (error) {
+      this.fail(error)
+      return
     }
-    this.logger?.info('voice: connected to #' + this.channelId + (this.dave === null ? ' (no e2ee)' : ' (dave v' + daveVersion + ')'))
+    this.secretKey = Buffer.from(data.secret_key)
+    this.sequence = randomBytes(2).readUInt16BE(0)
+    this.timestamp = randomBytes(4).readUInt32BE(0)
+    this.nonce = 0
+    this.state = 'ready'
+    this.logger?.info('voice: connected to #' + this.channelId + ' (DAVE v' + daveVersion + ')')
     // A session that reached SessionDescription is as healthy as this transport
     // ever gets, so the redial budget starts over on every successful join.
     this.markHealthy()
@@ -676,10 +683,13 @@ export class VoiceConnection extends EventEmitter {
    * transport Discord negotiates.
    */
   buildRtpPacket(opus) {
+    // Non-Stage voice is never allowed to fall back to raw Opus. If DAVE
+    // has not completed its MLS handshake or encryption fails, drop this frame.
+    if (this.dave === null) return null
+    const payload = this.dave.encrypt(opus)
+    if (payload === null || payload === undefined) return null
     // End-to-end encryption wraps the Opus frame first; the transport cipher
-    // below then seals header+payload for the voice server. Doing it the other
-    // way round would hand the server a frame it cannot recognise.
-    const payload = this.dave === null ? opus : this.dave.encrypt(opus)
+    // below then seals header+payload for the voice server.
     const header = Buffer.alloc(12)
     header[0] = 0x80
     header[1] = RTP_PAYLOAD_TYPE
@@ -815,7 +825,8 @@ export class VoiceConnection extends EventEmitter {
       // who this SSRC belongs to — dropping a frame because the speaking event
       // has not arrived yet would silently swallow the first sentence.
       if (this.recording.userId !== null && user !== null && user !== this.recording.userId) return
-      const opus = this.dave === null || user === null ? framed : this.dave.decrypt(user, framed)
+      if (this.dave === null || user === null) return
+      const opus = this.dave.decrypt(user, framed)
       if (opus === null) return
       let stream = this.recording.streams.get(ssrc)
       if (stream === undefined) {
@@ -841,8 +852,11 @@ export class VoiceConnection extends EventEmitter {
   }
 
   sendFrame(opus) {
-    if (!this.udp || this.remote === undefined) return
-    this.udp.send(this.buildRtpPacket(opus), this.remote.port, this.remote.address)
+    if (!this.udp || this.remote === undefined) return false
+    const packet = this.buildRtpPacket(opus)
+    if (packet === null) return false
+    this.udp.send(packet, this.remote.port, this.remote.address)
+    return true
   }
 
   // -------------------------------------------------------------- playback
