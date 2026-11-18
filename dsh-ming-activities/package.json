@@ -1,6 +1,6 @@
 {
   "name": "dsh-ming-activities",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "手动记录共同活动进度；不捕获聊天、不调用模型、不自动续跑。",
