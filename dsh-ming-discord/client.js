@@ -379,6 +379,10 @@ window.__ModuleLoader__.load({
               input('人設注入字元上限', 'maxChars', '', 'number')),
             h('div', { className: 'hl-muted' },
               'DSH_HOME：' + (status.paths?.dshHome || '尚未取得') + '\n'
+              + 'Hers Life 設定檔：' + (status.paths?.settingsFile || '尚未取得') + '\n'
+              + '密鑰檔（只顯示位置）：' + (status.paths?.secretsFile || '尚未取得') + '\n'
+              + 'Memory 相容設定：' + (status.paths?.memoryConfig || '尚未取得') + '\n'
+              + 'Graph 設定：' + (status.paths?.graphConfig || '尚未取得') + '\n'
               + '工作區：' + (status.paths?.workspace || cfg.workspace || '尚未設定') + '\n'
               + '資料索引：' + (status.paths?.dataRoot || '尚未取得') + '\n'
               + '日記：' + (status.paths?.diary || '尚未取得') + '\n'
