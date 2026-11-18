@@ -431,6 +431,11 @@ export function apply(ctx, pluginConfig = {}) {
     sendFile: (channelId, filePath, caption, actor) => sendFile(channelId, filePath, caption, actor),
     isOwner: (userId) => settings.isOwner(userId),
     getSetting: (key, fallback) => settings.get(key, fallback),
+    patchSettings: async (patch) => {
+      const next = settings.patch(patch)
+      await settings.save()
+      return next
+    },
     ensurePrivacy,
     actorForExecution: (exec) => bridge?.actorForExecution(exec) ?? null,
     sessionIdFor: (target) => pool?.sessionIdFor(target) ?? '',
