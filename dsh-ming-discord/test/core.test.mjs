@@ -71,6 +71,41 @@ test('interest pause state is reversible and reports its skip reason', async () 
   }
 })
 
+test('private DM messages and activity never enter the shared event preview', () => {
+  const events = []
+  const bridge = Object.create(DiscordBridge.prototype)
+  bridge.channels = new Map()
+  bridge.events = { push(...args) { events.push(args) } }
+  bridge.logger = null
+
+  bridge.recordEvent('MESSAGE_CREATE', {
+    id: 'private-message-id', channel_id: 'private-channel-id',
+    author: { id: 'private-user-id', username: 'PrivateUser' },
+    content: 'highly private message text',
+  })
+  bridge.recordEvent('MESSAGE_REACTION_ADD', {
+    message_id: 'private-message-id', channel_id: 'private-channel-id',
+    user_id: 'private-user-id', emoji: { name: '🔒' },
+  })
+  bridge.recordEvent('TYPING_START', {
+    channel_id: 'private-channel-id', user_id: 'private-user-id',
+  })
+  bridge.recordEvent('INTERACTION_CREATE', {
+    id: 'private-interaction-id', user: { id: 'private-user-id', username: 'PrivateUser' },
+    data: { name: 'ask' },
+  })
+  assert.equal(events.length, 0)
+
+  bridge.recordEvent('MESSAGE_CREATE', {
+    id: 'public-message-id', guild_id: 'guild-1', channel_id: 'public-channel-id',
+    author: { id: 'member-1', username: 'Member' },
+    content: 'public channel message',
+  })
+  assert.equal(events.length, 1)
+  assert.match(events[0][1], /public channel message/)
+  assert.doesNotMatch(JSON.stringify(events), /private-message-id|private-user-id|highly private/)
+})
+
 test('private DMs never train shared interests or write into the shared diary', async () => {
   const createBridge = (target, calls) => {
     const entry = { sessionId: 'session-1', agent: { session: { seq: 0, id: 'session-1' } } }
