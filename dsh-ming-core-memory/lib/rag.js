@@ -26,7 +26,6 @@ function resolveWorkspace() {
   // remain fallback-only for older installations, never a required setup step.
   const central = readHersLifeSettings()
   if (typeof central.workspace === 'string' && central.workspace.trim()) return central.workspace
-  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
     const settings = JSON.parse(readFileSync(join(dshHome(), 'ming-memory.json'), 'utf8'))
     if (typeof settings.root === 'string' && settings.root.trim()) return settings.root
@@ -40,10 +39,10 @@ export function getEmbeddingConfig() {
   const core = readHersLifeSettings().coreMemory || {}
   const endpointValue = Object.hasOwn(core, 'embeddingEndpoint')
     ? core.embeddingEndpoint
-    : (process.env.EMB_ENDPOINT || DEFAULT_ENDPOINT)
+    : DEFAULT_ENDPOINT
   const modelValue = Object.hasOwn(core, 'embeddingModel')
     ? core.embeddingModel
-    : (process.env.EMB_MODEL || DEFAULT_MODEL)
+    : DEFAULT_MODEL
   let endpoint = String(endpointValue || DEFAULT_ENDPOINT).trim()
   try {
     const parsed = new URL(endpoint)
