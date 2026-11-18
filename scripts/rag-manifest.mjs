@@ -34,9 +34,9 @@ const has = (k) => argv.includes('--' + k)
 const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 let centralSettings = {}
 try { centralSettings = JSON.parse(fs.readFileSync(path.join(DSH_HOME, 'hers-life.json'), 'utf8')) } catch {}
-const workspace = String(centralSettings.workspace || process.env.MING_WORKSPACE || '')
+const workspace = String(centralSettings.workspace || '')
 const DIR = path.resolve(flag('dir') || path.join(workspace, 'live'))
-const MODEL = flag('model') || (centralSettings.coreMemory && centralSettings.coreMemory.embeddingModel) || process.env.EMB_MODEL || 'bge-base-zh-v1.5-q8_0'
+const MODEL = flag('model') || (centralSettings.coreMemory && centralSettings.coreMemory.embeddingModel) || 'bge-base-zh-v1.5-q8_0'
 const DRY = has('dry')
 const NO_SHA = has('no-sha')
 
@@ -105,7 +105,7 @@ for (const layer of LAYERS) {
       model: MODEL,
       revision: 'unknown',
       verified: false,
-      modelSource: flag('model') ? 'command-line --model（未核实）' : 'Hers Life 设置页、环境变量 EMB_MODEL 或脚本默认值（未核实）',
+      modelSource: flag('model') ? 'command-line --model（未核实）' : 'Hers Life 设置页或脚本默认值（未核实）',
       dimensions: dim,
       dtype: 'float32',
       byteOrder: 'little-endian',
