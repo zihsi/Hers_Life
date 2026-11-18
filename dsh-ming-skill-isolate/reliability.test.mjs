@@ -1,6 +1,7 @@
 import {readFile} from 'node:fs/promises'
 import vm from 'node:vm'
 import path from 'node:path'
+import os from 'node:os'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 const source=(await readFile(new URL('./index.js',import.meta.url),'utf8')).replace(/^import .*$/mg,'').replace(/export /g,'')
@@ -10,7 +11,7 @@ test('all live registries invalidated, disposed registry excluded',async()=>{
  const reg=i=>({registerProvider:f=>f({signal:aborts[i].signal,invalidate:()=>calls[i]++})})
  const ctx={on:(_n,f)=>create=f,skills:reg(0),tools:{register:t=>tool=t}}
  vm.runInNewContext(source+'\napply(ctx,{root:"C:/fake"})',{
-  ctx,path,console,process:{env:{MING_WORKSPACE:'C:/fake'}},
+  ctx,path,os,console,process:{env:{MING_WORKSPACE:'C:/fake'}},
   readFile:async()=>persisted,
   writeFile:async(file,body)=>pending.set(file,body),
   mkdir:async()=>{},
