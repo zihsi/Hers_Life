@@ -2,7 +2,7 @@
 
 ## 2026-11-18 · 全倉庫稽核修正
 
-### Discord 適配器 dsh-ming-discord@0.1.7
+### Discord 適配器 dsh-ming-discord@0.1.8
 
 - 私訊訊息、指令活動不再寫入共用事件預覽；私訊回覆不寫共用日記，也不參與公開興趣學習。
 - 新增舊版私訊日記隔離遷移：`私聊 ...` 條目（含多行延續）搬到 `~/.dsh/privacy-quarantine/`，保留原文但從共用日記移除；支援自訂日記目錄、路徑防逃逸與重複執行防護。
@@ -10,20 +10,27 @@
 - PNG／APNG／GIF Discord 貼圖會下載並轉成模型影像區塊；Lottie 仍只提供文字描述。
 - 修正多人同頻道並行時的發起者身分競態，改用 AsyncLocalStorage 綁定每次工具執行；依 DSH 正式 ToolRunContext.agent.id 讀取 Session ID。
 - 私訊召回改為精確比對 Discord User ID；多 Owner 之間不再共享私人背景。關閉跨伺服器記憶時，DM 也不再成為可讀取所有伺服器的萬用範圍。
+- DAVE 改為嚴格 fail-closed：協商缺少正版本、原生版本不相容、MLS 尚未 ready 或加密失敗時，一律不送出明文 Opus；接收端在 DAVE 未 ready 時也丟棄音訊。原生轉換失敗不再吞掉錯誤或假裝完成。
 - 事件預覽同步套用 Guild／Channel 白名單；補齊 Gateway 特權 Intent、DAVE 語音先決條件文件。
 
 ### 開場記憶 dsh-ming-memory@0.2.3
 
 - 建立及既有會話的下一步前都先完成舊私訊日記隔離，避免快取中的開場日記繼續暴露已移出的私訊內容。
 
-### TTS dsh-ming-voice@0.1.3
+### TTS dsh-ming-voice@0.1.4
 
 - voice_say 改用 DSH 保證的 agent.id，並驗證發起者與 Session 身分。
 - 音色、語速、FFmpeg 讀取 Hers Life 中央設定；更換工作區後合成位置與聲音面板即時跟隨新工作區。
+- 工具描述限定只把生成音訊送到目前發起這輪對話的頻道／私訊，不允許模型指定其他頻道。
 
 ### 關係圖 UI dsh-ming-graph@1.1.3
 
 - 重建 client.js 與 build.json，同步中央 TTS 設定提示。
+
+### 套件文件版本
+
+- `dsh-ming-bilibili-account@0.1.3`：修正套件描述，明確指出登入態同步持久化到 DSH credentials service 與本機憑證檔。
+- `dsh-ming-core-memory@1.0.3-ming.2`：README 與實際事實型記憶政策、私有 Git 安裝方式及 DSH 最低版本保持一致。
 
 ### 已知未驗
 
