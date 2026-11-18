@@ -9,7 +9,8 @@
 |---|---|---|
 | 聊天平台 | Discord Bot + DeepSeek Harness；QQ、OneBot、AstrBot 已不支援 | 程式與文件的現行目標 |
 | Node.js | `>=22` | 各插件 manifest；GitHub CI 使用 Node 22 |
-| DSH | 插件 manifest 以 `>=0.2.0` 為最低聲明 | 需要 DSH 的 Cordis inject、tools、agents 等 Host 能力；真實 DSH 仍須以實機啟動確認 |
+| DSH Profile | 支援 DSH Desktop（由 Desktop Plugin Manager 管理）或長駐 `dsh web`；**不支援 headless 作為常駐 Bot Host** | headless 是單次任務、完成即退出，沒有 HTTP Server、Web Runtime 或 Browser Client；無法承載常駐 Discord Gateway 與設定 UI。 |
+| DSH 版本 | 插件 manifest 以 `>=0.2.0` 為最低聲明 | 需要 DSH 的 Cordis inject、tools、agents 等 Host 能力；真實 DSH 仍須以實機啟動確認 |
 | Discord Gateway Intent | 必須在 Developer Portal 啟用 Message Content + Server Members | 程式要求兩項；未啟用可能以 close code `4014` 拒絕 Identify |
 | Windows 桌寵 | Windows + PowerShell 5.1 + WinForms | 不屬於 Ubuntu CI；每台目標機需人工驗證 |
 | Discord 語音 | FFmpeg + 可載入且協定版本相容的 `dsh-ming-discord/discord/dave/davey.node` | `/voice join` 等到 MLS ready 才成功（20 秒逾時）；缺少／不相容、未完成 MLS 或加解密失敗時 fail-closed，不發送明文 Opus。真實 DAVE 握手／音訊尚未由 CI 驗證 |
@@ -32,7 +33,7 @@ GitHub Actions：[`Hers Life Discord CI`](https://github.com/zihsi/Hers_Life/act
 
 以下項目不能用目前的 Ubuntu CI 代替：
 
-1. **Windows DSH 啟動：** 在你的實際 DSH profile 啟用 Discord、Memory、Graph 等插件，確認全部載入且設定頁可開啟。
+1. **Windows DSH 啟動：** 在 DSH Desktop 或長駐 `dsh web` profile 啟用 Discord、Memory、Graph 等插件，確認全部載入且設定頁可開啟。不要用 headless 驗收常駐 Bot；它是 one-shot task runner。
 2. **Discord Gateway：** 用真 Bot 測試 DM、@提及、回覆 Bot、Thread、權限限制、斜線指令與附件。確認 Developer Portal 的兩項特權 Intent 都已開啟。
 3. **語音：** 確認目前 Node/Electron 能載入隨包附上的 `davey.node`，而且它支援 Discord 協商的 DAVE 協定版本；再測 MLS 完成、播放、收音、離開及重新連線。MLS 未 ready 時會丟棄音訊而非送明文。**僅看到 Bot 加入語音頻道，不代表 DAVE 音訊加解密正常。**目前程式會等到 MLS ready 才回報 join 成功，但仍需在真實 Discord 語音頻道驗證音訊收發。
 4. **桌寵／Windows 操作：** 實測截圖、氣泡、UIA、暫停鍵及物理輸入回退；不要只在無管理員權限的簡單視窗測一次就視為所有程式都支援。
