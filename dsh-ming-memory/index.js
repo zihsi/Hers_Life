@@ -268,14 +268,6 @@ function latestDiaryTail(diaries) {
  * 轻量版：不在档案目录的会话（别的工程、别的项目）也带一点身份。
  * 不铺全文，只带名字、三条底线、最新日记的开头——约 200 字，几乎不占 token。
  */
-function composePublic() {
-  return [
-    '【' + SELF.name + ' · 公開 Discord 對話】',
-    '你可以自然參與目前公開頻道，但這個會話不注入本機私人日記、人設檔、工作狀態、重啟接續頁或其他工作區對話。',
-    '不得推測或暗示私人檔案內容；若需要私人背景，請在 Owner 的私訊中處理。',
-  ].join('\n')
-}
-
 function composeLight(cfg, diary) {
   const lines = [
     '【' + SELF.name + ' · 开场记忆·轻量】',
@@ -1004,8 +996,8 @@ function attach(cfg, agent, mode) {
     //   前缀缓存按字节比，系统提示里只要有一个字变了，后面整段历史全部按全价重读。
     //   以前把时间感/状态/重活/别处的话都塞在这个 section 里，每 5 分钟就打断一次。
     sp.section({
-      name: mode === 'full' ? 'ming:opening' : 'ming:opening-light',
-      order: mode === 'full' ? 30 : 29,
+      name: mode === 'light' ? 'ming:opening-light' : 'ming:opening',
+      order: mode === 'light' ? 29 : 30,
       interpolate: false,
       text: () => {
         const rec = PER_AGENT.get(id)
@@ -1096,10 +1088,12 @@ export function apply(ctx, config) {
       const mode = isDiscord
         ? (meta.conversationType === 'dm' && meta.userId && ctx.hersLifeDiscord?.isOwner?.(String(meta.userId)) ? 'full' : 'public')
         : (insideRoot(cwd, cfg.root) ? 'full' : 'light')
-      const snap = mode === 'public' ? null : await refresh(cfg)
+      const snap = await refresh(cfg)
       const rec = {
         mode,
-        text: mode === 'public' ? composePublic() : mode === 'full' ? snap.full : snap.light,
+        // Every Discord session receives the same identity/persona and shared
+        // public diary. Only the Owner's DM receives private live state/resume.
+        text: mode === 'light' ? snap.light : snap.full,
         shared: '',
         when: mode === 'full' ? await readWhenBlock(cfg, agent.id) : '',
         status: mode === 'public' ? '' : await readStatusBlock(cfg),
@@ -1123,7 +1117,7 @@ export function apply(ctx, config) {
         const privacy = await ctx.hersLifeDiscord?.ensurePrivacy?.()
         if (privacy?.entriesMoved > 0) {
           const snap = await refresh(cfg)
-          rec.text = rec.mode === 'full' ? snap.full : snap.light
+          rec.text = rec.mode === 'light' ? snap.light : snap.full
           rec.bucket = Math.floor(Date.now() / cfg.refreshWindowMs)
         }
         // 2026-10-28 那一版的做法是「把时间窗拉长，窗内不重算」，靠少改字来少断缓存；
@@ -1142,7 +1136,7 @@ export function apply(ctx, config) {
         if (rec.bucket !== bucket) {
           rec.bucket = bucket
           const snap = await refresh(cfg)
-          rec.text = rec.mode === 'full' ? snap.full : snap.light
+          rec.text = rec.mode === 'light' ? snap.light : snap.full
         }
       }
     } catch { /* 读失败保留上一版，绝不影响这一步 */ }
