@@ -31,7 +31,6 @@
         voice:
           enabled: true
           ffmpeg: ffmpeg
-          heartbeat: true
         interest:
           enabled: true
           minChars: 6
