@@ -1194,6 +1194,8 @@ function canInjectCoreMemory(agent, ctx) {
 }
 
 export function apply(ctx) {
+  const central = ctx.hersLifeDiscord?.getSetting?.('coreMemory', {}) || {}
+  if (central.enabled === false) return
   // 引导创建（不阻塞激活；失败仅告警）
   enqueue(async () => {
     await mkdir(notesDir(), { recursive: true });
