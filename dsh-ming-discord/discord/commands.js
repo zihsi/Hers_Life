@@ -169,7 +169,10 @@ export class Interactions {
         : type === INTERACTION_TYPE.MODAL_SUBMIT
           ? '表单 ' + String(interaction.data?.custom_id ?? '?')
           : '点了 ' + String(interaction.data?.custom_id ?? '?')
-    this.events?.push('INTERACTION_CREATE', summary, { id, userId: String(user.id ?? '') })
+    // Private DM commands are not copied into the shared public event preview.
+    if (interaction.guild_id !== undefined && interaction.guild_id !== null) {
+      this.events?.push('INTERACTION_CREATE', summary, { id, userId: String(user.id ?? '') })
+    }
 
     if (type === INTERACTION_TYPE.AUTOCOMPLETE) {
       // Answer with the plain option list rather than letting Discord spin.
