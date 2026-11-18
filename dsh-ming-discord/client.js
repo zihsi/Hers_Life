@@ -191,7 +191,10 @@ window.__ModuleLoader__.load({
           setStatus((old) => ({ ...old, ...(d.status || {}), plugins: d.status?.plugins || old.plugins, paths: d.status?.paths || old.paths }))
           setMigration(d.migration || null)
           if (d.restartRequired) {
-            setNote('工作區已切換並保全式複製資料。請重啟 DSH，讓所有配套插件一起切換到新路徑。')
+            const coreMove = d.coreMemoryMigration
+              ? (d.coreMemoryMigration.warning || ('核心記憶資料夾已保全式複製 ' + (d.coreMemoryMigration.copied || 0) + ' 個檔案，保留目的地既有 ' + (d.coreMemoryMigration.kept || 0) + ' 個檔案。'))
+              : ''
+            setNote((d.migration ? '工作區已切換並保全式複製資料。' : '路徑設定已變更。') + (coreMove ? ' ' + coreMove : '') + ' 請重啟 DSH，讓所有配套插件套用新路徑。')
             try {
               const filesResponse = await fetch(API + '/workspace/files', { cache: 'no-store' })
               const filesData = await filesResponse.json()
