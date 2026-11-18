@@ -63,6 +63,10 @@ export class DiscordBridge {
      * as that conversation's turn has been rendered.
      */
     this.imageChoice = new Map()
+    // sessionId → the actual Discord actor whose message currently owns this turn.
+    // ToolRunContext exposes the calling Agent session, allowing tools to enforce
+    // the same identity/permissions as the message that triggered the turn.
+    this.activeActors = new Map()
     /** `${guildId}:${userId}` → channelId, so /voice join can find you. */
     this.voiceStates = new Map()
     /**
@@ -745,6 +749,59 @@ export class DiscordBridge {
     return false
   }
 
+  // ---------------------------------------------------------------- permissions
+
+  authorizeInteraction(interaction, { ownerOnly = false } = {}) {
+    const user = interaction?.member?.user ?? interaction?.user ?? {}
+    const userId = String(user.id ?? '')
+    if (!userId) return '無法確認 Discord 使用者身分，已拒絕這項操作。'
+    const owner = this.settings.isOwner(userId)
+    if (ownerOnly && !owner) return '這項操作僅限 Owner 使用。'
+    if (!this.settings.get('discord.enabled', false)) return 'Discord 聊天入口目前已停用。'
+
+    const guildId = String(interaction?.guild_id ?? '')
+    const channelId = String(interaction?.channel_id ?? '')
+    if (!guildId) {
+      if (!this.settings.get('discord.allowDm', true) || !this.dmAllowed(userId)) {
+        return '目前的私訊政策不允許你使用這項操作。'
+      }
+      return ''
+    }
+
+    const guildIds = this.settings.get('discord.guildIds', [])
+    if (Array.isArray(guildIds) && guildIds.length > 0 && !guildIds.map(String).includes(guildId)) {
+      return '這個伺服器不在允許清單內。'
+    }
+    const channelIds = this.settings.get('discord.channelIds', [])
+    if (Array.isArray(channelIds) && channelIds.length > 0 && !channelIds.map(String).includes(channelId)) {
+      return '這個頻道不在允許清單內。'
+    }
+    if (this.settings.get('discord.mode', 'mention') === 'own' && !owner) {
+      return '目前只允許 Owner 在伺服器中使用指令。'
+    }
+    return ''
+  }
+
+  async allowedTargetChannel(channelId) {
+    const id = String(channelId ?? '')
+    if (!id) return false
+    if (this.settings.get('discord.channelIds', []).length > 0 &&
+      !this.settings.get('discord.channelIds', []).map(String).includes(id)) return false
+    const channel = this.channels.get(id) ?? await this.rest.channel(id).catch(() => null)
+    if (!channel) return false
+    const guildId = String(channel.guild_id ?? channel.guildId ?? '')
+    const guildIds = this.settings.get('discord.guildIds', [])
+    if (guildIds.length > 0 && (!guildId || !guildIds.map(String).includes(guildId))) return false
+    return true
+  }
+
+  actorForExecution(exec) {
+    const sessionId = String(exec?.agent?.session?.id ?? '')
+    const actor = sessionId ? this.activeActors.get(sessionId) : null
+    if (!actor) throw new Error('此工具只能由目前正在處理 Discord 訊息的會話呼叫。')
+    return actor
+  }
+
   // ---------------------------------------------------------------- the turn
 
   async handle(message, isDm) {
@@ -782,7 +839,19 @@ export class DiscordBridge {
       if (target.kind !== 'dm') this.learnFrom(text).catch(() => {})
 
       const beforeSeq = entry.agent.session.seq
-      const reply = await this.stream(entry, content, message, target)
+      const actor = {
+        userId: String(message.author?.id ?? target.userId ?? ''),
+        channelId: String(message.channel_id ?? target.channelId ?? ''),
+        guildId: String(message.guild_id ?? target.guildId ?? ''),
+        isDm: target.kind === 'dm',
+      }
+      this.activeActors.set(sessionId, actor)
+      let reply
+      try {
+        reply = await this.stream(entry, content, message, target)
+      } finally {
+        if (this.activeActors.get(sessionId) === actor) this.activeActors.delete(sessionId)
+      }
       replyMessageId = reply?.id ?? null
 
       const answer = tidyReply(reply?.text ?? lastAssistantText(entry.agent.session, beforeSeq))
