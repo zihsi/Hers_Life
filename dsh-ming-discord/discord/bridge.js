@@ -78,6 +78,9 @@ export class DiscordBridge {
      * friendly name.
      */
     this.recentChat = new Map()
+    // Discord channel IDs are globally unique and each maps to exactly one DSH Session.
+    // Queue turns per channel so concurrent messages cannot read each other's output.
+    this.sessionQueues = new Map()
     this.limiter = new (class {
       constructor(limit) { this.limit = limit; this.active = 0; this.queue = [] }
       run(task) {
@@ -566,7 +569,7 @@ export class DiscordBridge {
       // Interest wake is only a passive, keyword-gated side path. Ordinary
       // mention/reply handling below remains unchanged.
       if (mode === 'mention' && !this.addressed(message)) {
-        void this.maybeWakeInterest(message).catch((error) => {
+        void this.enqueueSession(String(message.channel_id), () => this.limiter.run(() => this.maybeWakeInterest(message))).catch((error) => {
           this.logger?.warn('interest wake failed: ' + String(error?.message ?? error))
         })
       }
@@ -588,7 +591,7 @@ export class DiscordBridge {
       for (const [key, at] of this.recent) if (at < cutoff) this.recent.delete(key)
     }
 
-    this.limiter.run(() => this.handle(message, isDm)).catch((error) => {
+    this.handle(message, isDm).catch((error) => {
       this.logger?.warn('message handling failed: ' + String(error))
     })
   }
@@ -836,7 +839,29 @@ export class DiscordBridge {
 
   // ---------------------------------------------------------------- the turn
 
+  /**
+   * Serialize work for one Discord channel while allowing different channels
+   * to progress independently. The channel ID is globally unique and is also
+   * the SessionPool key for DM, guild-channel and thread sessions.
+   */
+  enqueueSession(channelId, task) {
+    const key = String(channelId ?? '')
+    if (key === '') return Promise.reject(new Error('Discord turn has no channel id'))
+    const previous = this.sessionQueues.get(key) ?? Promise.resolve()
+    const current = previous.catch(() => {}).then(task)
+    const tail = current.catch(() => {})
+    this.sessionQueues.set(key, tail)
+    return current.finally(() => {
+      if (this.sessionQueues.get(key) === tail) this.sessionQueues.delete(key)
+    })
+  }
+
   async handle(message, isDm) {
+    const channelId = String(message?.channel_id ?? '')
+    return this.enqueueSession(channelId, () => this.limiter.run(() => this.handleTurn(message, isDm)))
+  }
+
+  async handleTurn(message, isDm) {
     const target = await this.describeTarget(message, isDm)
     const text = this.cleanContent(message, target)
     if (text.trim() === '' && (message.attachments?.length ?? 0) === 0) return
