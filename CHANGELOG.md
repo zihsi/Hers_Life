@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## 2026-11-18 · 全倉庫稽核修正
+
+### Discord 適配器 dsh-ming-discord@0.1.7
+
+- 私訊訊息、指令活動不再寫入共用事件預覽；私訊回覆不寫共用日記，也不參與公開興趣學習。
+- 新增舊版私訊日記隔離遷移：`私聊 ...` 條目（含多行延續）搬到 `~/.dsh/privacy-quarantine/`，保留原文但從共用日記移除；支援自訂日記目錄、路徑防逃逸與重複執行防護。
+- Slash 指令落實 DM 政策、Guild／Channel 白名單及 Owner-only 權限；跨頻道發檔案被限制到目前發起回合的頻道，並以真實路徑與使用者／Session 標籤限制檔案範圍。
+- PNG／APNG／GIF Discord 貼圖會下載並轉成模型影像區塊；Lottie 仍只提供文字描述。
+- 修正多人同頻道並行時的發起者身分競態，改用 AsyncLocalStorage 綁定每次工具執行；依 DSH 正式 ToolRunContext.agent.id 讀取 Session ID。
+- 事件預覽同步套用 Guild／Channel 白名單；補齊 Gateway 特權 Intent、DAVE 語音先決條件文件。
+
+### 開場記憶 dsh-ming-memory@0.2.3
+
+- 建立及既有會話的下一步前都先完成舊私訊日記隔離，避免快取中的開場日記繼續暴露已移出的私訊內容。
+
+### TTS dsh-ming-voice@0.1.3
+
+- voice_say 改用 DSH 保證的 agent.id，並驗證發起者與 Session 身分。
+- 音色、語速、FFmpeg 讀取 Hers Life 中央設定；更換工作區後合成位置與聲音面板即時跟隨新工作區。
+
+### 關係圖 UI dsh-ming-graph@1.1.3
+
+- 重建 client.js 與 build.json，同步中央 TTS 設定提示。
+
+### 已知未驗
+
+- CI 使用 Ubuntu + Node 22 與模擬 Host；不等同真 Windows DSH、真 Discord Gateway、語音 DAVE 握手／收發音訊、Bilibili 真人掃碼或桌寵 UIA 的端到端驗收。
+- 未在使用者電腦上直接操作其 DSH Profile；更新後仍需本機重啟及測試。
+
+
 ## Discord-only 重构（2026-11-17，分支 `discord-dsh-only`）
 
 本分支将整套 Hers Life 插件集改为 **Discord + DSH** 唯一组合；QQ、OneBot、QQ-Agent、AstrBot 与旧平台桥接目录均已移除，不再保留兼容入口。
