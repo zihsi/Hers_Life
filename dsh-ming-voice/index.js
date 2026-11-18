@@ -104,7 +104,16 @@ async function sapiTts(cfg, text, out) {
 }
 
 export function apply(ctx, config) {
-  const cfg = normalize(config)
+  const central = ctx.hersLifeDiscord?.getSetting?.('voice', {}) || {}
+  if (central.enabled === false) return
+  const cfg = normalize({
+    ...(config || {}),
+    ffmpeg: central.ffmpeg ?? config?.ffmpeg,
+    python: central.python ?? config?.python,
+    timeoutMs: central.timeoutMs ?? config?.timeoutMs,
+    voice: central.ttsVoice ?? config?.voice,
+    rate: central.ttsRate ?? config?.rate,
+  })
   const currentWorkspace = () => {
     try {
       const shared = ctx.hersLifeDiscord?.workspace
