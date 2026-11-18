@@ -205,9 +205,11 @@ function requireBilibiliOwner(ctx, exec, operation) {
 }
 
 export function apply(ctx, config) {
+  const central = ctx.hersLifeDiscord?.getSetting?.('bilibili', {}) || {}
+  if (central.enabled === false) return
   // ——— B站取数（搜索 / 视频详情 / 字幕 / 直链 / 抽帧） ———
   // 配置走纯对象，不挂 schemastery：少一个依赖就少一处加载失败。
-  const cfg = config && typeof config === 'object' ? config : {}
+  const cfg = { ...(config && typeof config === 'object' ? config : {}), ...central }
   const credentialFile = cfg.credentialFile || DEFAULT_CREDENTIAL_FILE
 
   // 2026-11-17（核查 R01）：一个账号一个权威。内存 / 凭证服务 / 文件只由 account 写。
