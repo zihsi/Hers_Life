@@ -46,11 +46,11 @@ Discord session 會跳過本插件的一般對話捕獲路徑，避免和 Discor
 
 `live/discord-memory.jsonl` 由 Discord 適配器維護。每筆事件帶有 Discord message ID、作者 ID／名稱、伺服器、頻道、Thread、時間、所屬 DSH session 與事件角色。星圖以 Discord User ID 合併同一個人，並保留事件出處，方便回查。
 
-跨會話不會把所有歷史整包注入。DiscordBrain 會依目前訊息的關鍵詞與設定範圍挑選相關事件，並在提示中附上來源標籤。DM、一般頻道與 Thread 的原始 session 歷史仍然彼此獨立。
+所有 Discord session 共用同一份人格核心；Owner DM 另可注入私人日記與工作狀態，公開頻道只注入人格檔、不注入私人日記或接續資料。跨會話不會把所有歷史整包注入。DiscordBrain 會依目前訊息的關鍵詞、目前發言者身分與設定範圍挑選相關事件，並在提示中附上來源標籤。DM、一般頻道與 Thread 的原始 session 歷史仍然彼此獨立。
 
 隱私預設：
 
-- 公開頻道事件可按設定跨頻道／跨伺服器召回。
+- 同一 Guild 的公開事件可按設定跨頻道召回；跨 Guild 只允許同一 Owner 的訊息及她對該 Owner 的回覆跨伺服器召回，其他成員不跨 Guild。
 - Owner 私訊只會在已設定 Owner 的私訊會話之間共享。
 - 公開頻道只有 Owner 本人發言的回合，才可依開關使用 Owner 私訊作為私人背景；其他成員不會取得 Owner 私訊內容。即使召回，也隱去私訊來源標籤。
 - 關閉相應記憶開關後，資料不會被刪除，只是不再召回。
