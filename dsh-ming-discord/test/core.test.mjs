@@ -522,7 +522,9 @@ test('cross-guild memory follows the same Owner without exposing other members o
     assert.equal(await brain.recallContext('星河專案', memberInGroupTwo, 'session-member-two'), '')
     const ownerContinuity = await brain.recallContext('私人議題', ownerInGroupTwo, 'session-guild-two')
     assert.doesNotMatch(ownerContinuity, /另一位成員的私人議題/, 'recent continuity must never import another member\'s message')
-    assert.match(await brain.recallContext('星河專案', ownerDm, 'session-owner-dm-two'), /Group One \/ #general/)
+    const guildMemoryInDm = await brain.recallContext('星河專案', ownerDm, 'session-owner-dm-two')
+    assert.match(guildMemoryInDm, /Group One \/ #general/)
+    assert.match(guildMemoryInDm, /Discord 私訊 \/ Owner DM/, 'DM recall must retain the destination conversation label')
     const reverseCrossGuild = await brain.recallContext('海風計畫', ownerInGroupOne, 'session-guild-one')
     assert.match(reverseCrossGuild, /Group Two \/ #general/, 'Group Two must be remembered in Group One')
 
