@@ -192,6 +192,8 @@ export function apply(ctx, pluginConfig = {}) {
     detach = null
     try { await voice?.destroy?.() } catch {}
     try { gateway?.destroy?.() } catch {}
+    // Drain queued conversation-memory writes before adapter restart/unload.
+    try { await brain?.queue } catch {}
     rest = gateway = bridge = voice = brain = interests = events = pool = null
   }
 
