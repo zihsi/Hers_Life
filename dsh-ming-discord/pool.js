@@ -123,8 +123,11 @@ export class DiscordSessionPool {
         } catch (replaceError) {
           if (moved) {
             try { await rename(backup, this.file) } catch {}
+          } else if (replaceError?.code === 'ENOENT') {
+            await rename(temp, this.file)
+          } else {
+            throw replaceError
           }
-          throw replaceError
         }
       } finally {
         await rm(temp, { force: true }).catch(() => {})
