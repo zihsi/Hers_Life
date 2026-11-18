@@ -72,7 +72,7 @@ export function isDiaryPath(value, diaryDir) {
 }
 export class SettingsStore {
   constructor(config = {}, options = {}) {
-    this.home = options.home || path.join(os.homedir(), '.dsh')
+    this.home = path.resolve(options.home || process.env.DSH_HOME || path.join(os.homedir(), '.dsh'))
     this.file = path.join(this.home, 'hers-life.json')
     this.secretsFile = path.join(this.home, 'hers-life-secrets.json')
     let saved = {}
