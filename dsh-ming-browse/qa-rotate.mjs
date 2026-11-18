@@ -90,8 +90,19 @@ apply(ctx, {
   maxShots: 0,
 })
 
-const readLedger = async () => JSON.parse(await readFile(path.join(ws, 'live', 'browse-session.json'), 'utf8'))
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const readLedger = async (workspace, expected = {}) => {
+  // Poll for the expected committed snapshot; never parse a file while a write
+  // is in progress or assume a fixed sleep is enough on a slow CI filesystem.
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    try {
+      const value = JSON.parse(await readFile(path.join(workspace, 'live', 'browse-session.json'), 'utf8'))
+      if (Object.entries(expected).every(([key, want]) => value[key] === want)) return value
+    } catch { /* retry until the expected atomic snapshot is visible */ }
+    await sleep(10)
+  }
+  throw new Error('browse-session.json did not reach expected state: ' + JSON.stringify(expected))
+}
 
 // ---------------------------------------------------------------- 跑 16 轮
 for (let i = 1; i <= PER_SESSION + 1; i += 1) {
@@ -105,7 +116,7 @@ ok(created.slice(0, PER_SESSION).every((id) => id === 'ming-browse'),
 ok(created[PER_SESSION] === 'ming-browse-2', '第 ' + (PER_SESSION + 1) + ' 轮换了新会话', created[PER_SESSION])
 ok(disposed.includes('ming-browse'), '旧会话被放下（dispose）', disposed.join(','))
 
-const ledger = await readLedger()
+const ledger = await readLedger(ws, { id: 'ming-browse-2', rounds: 1 })
 ok(ledger.id === 'ming-browse-2', '账本记着新 id', JSON.stringify(ledger))
 ok(ledger.rounds === 1, '新会话从第 1 轮起算', String(ledger.rounds))
 ok(ledger.perSession === PER_SESSION, '账本记着每段上限', String(ledger.perSession))
@@ -123,7 +134,7 @@ for (let i = 1; i <= PER_SESSION - 1; i += 1) {
   await ctx.__tick()
   await sleep(20)
 }
-const ledger2 = await readLedger()
+const ledger2 = await readLedger(ws, { id: 'ming-browse-2', rounds: PER_SESSION })
 ok(ledger2.id === 'ming-browse-2' && ledger2.rounds === PER_SESSION,
   '第二段跑满 ' + PER_SESSION + ' 轮不提前换', JSON.stringify(ledger2))
 
@@ -198,10 +209,9 @@ apply(ctx2, {
 })
 await ctx2.__tick()
 // adoptSession 和 wake 各写一次账本，都是异步落盘；等它们都写完再读。
-await sleep(150)
 ok(created2[0] !== 'ming-browse-12', '账本那段被归档 → 不回头捡跑过的旧段', String(created2[0]))
 ok(created2[0] === 'ming-browse-14', '账本那段被归档 → 开一段全新的（-14）', String(created2[0]))
-const ledger3 = JSON.parse(await readFile(path.join(ws2, 'live', 'browse-session.json'), 'utf8'))
+const ledger3 = await readLedger(ws2, { id: 'ming-browse-14', rounds: 1 })
 ok(ledger3.id === 'ming-browse-14' && ledger3.rounds === 1,
   '新段从第 1 轮起算（不是接着旧段的数）', JSON.stringify(ledger3))
 
