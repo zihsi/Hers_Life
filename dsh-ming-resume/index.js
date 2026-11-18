@@ -25,7 +25,7 @@ import { readFileSync } from 'node:fs'
 import os from 'node:os'
 
 export const name = 'ming-resume'
-const DSH_HOME = process.env.DSH_HOME || path.join(DSH_HOME)
+const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 export const inject = ['hersLifeDiscord']
 function resolveWorkspace() {
   if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
