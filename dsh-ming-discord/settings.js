@@ -29,7 +29,7 @@ const DEFAULTS = {
   interest: { enabled: true, minChars: 6, contextLines: 4, groups: [], minGapMinutes: 20, maxPerHour: 3, quietHours: '01:00-08:00', channelGapMinutes: 45 },
   browse: {
     enabled: true, idleMinutes: 20, minGapMinutes: 30, dailyMax: 8, sessionRounds: 15,
-    quietHours: '08:00-18:30', gapMode: 'fixed', hbMin: 5, hbCenter: 30, hbMax: 240,
+    quietHours: '08:00-18:30', gapMode: 'fixed', hbMin: 5, hbCenter: 30, hbMax: 240, allowSocialWrites: true,
     freeWindows: [{ start: '18:30', end: '08:00' }, { start: '13:50', end: '18:15', only: 'rest' }],
     holidaysFile: 'live/holidays.json', maxItems: 2, maxShots: 2,
     serial: '127.0.0.1:16448', adbPath: 'D:\\MuMuPlayer\\nx_device\\12.0\\shell\\adb.exe',
