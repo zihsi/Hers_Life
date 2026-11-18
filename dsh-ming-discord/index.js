@@ -69,6 +69,41 @@ async function syncMemorySettings(settings) {
   await rename(temp, file)
 }
 
+async function migrateLegacyBrowseSettings(settings) {
+  let saved = {}
+  try { saved = JSON.parse(await readFile(settings.file, 'utf8')) } catch {}
+  if (Object.prototype.hasOwnProperty.call(saved, 'browse')) return false
+  const legacyFile = path.join(settings.resolve().workspace, 'live', 'browse-config.json')
+  let legacy = {}
+  try { legacy = JSON.parse(await readFile(legacyFile, 'utf8')) } catch { return false }
+  const browse = {}
+  for (const key of ['dailyMax', 'minGapMinutes', 'gapMode', 'hbMin', 'hbCenter', 'hbMax']) {
+    if (legacy[key] !== undefined) browse[key] = legacy[key]
+  }
+  if (!Object.keys(browse).length) return false
+  settings.patch({ browse })
+  await settings.save()
+  return true
+}
+
+async function syncBrowseSettings(settings) {
+  const browse = settings.get('browse', {})
+  const file = path.join(settings.resolve().workspace, 'live', 'browse-config.json')
+  await mkdir(path.dirname(file), { recursive: true })
+  const next = {
+    dailyMax: browse.dailyMax,
+    minGapMinutes: browse.minGapMinutes,
+    gapMode: browse.gapMode,
+    hbMin: browse.hbMin,
+    hbCenter: browse.hbCenter,
+    hbMax: browse.hbMax,
+    at: new Date().toISOString(),
+  }
+  const temp = file + '.tmp-' + process.pid
+  await writeFile(temp, JSON.stringify(next, null, 2) + '\n', 'utf8')
+  await rename(temp, file)
+}
+
 async function syncGraphSettings(settings) {
   const file = path.join(settings.home, 'ming-graph.json')
   let current = {}
@@ -200,9 +235,11 @@ export function apply(ctx, pluginConfig = {}) {
   const loadAndStart = async () => {
     await settings.load()
     await ensureWorkspace(settings.resolve().workspace)
+    await migrateLegacyBrowseSettings(settings)
     await ensurePrivacy()
     await syncMemorySettings(settings)
     await syncGraphSettings(settings)
+    await syncBrowseSettings(settings)
     await startAdapter()
   }
   void loadAndStart().catch((error) => {
@@ -242,6 +279,7 @@ export function apply(ctx, pluginConfig = {}) {
             if (body.clearToken === true) await settings.saveToken('')
             await syncMemorySettings(settings)
             await syncGraphSettings(settings)
+            await syncBrowseSettings(settings)
             const nextWorkspace = settings.resolve().workspace
             let migration = null
             if (nextWorkspace !== previousWorkspace) migration = await copyMissing(previousWorkspace, nextWorkspace)
@@ -275,6 +313,7 @@ export function apply(ctx, pluginConfig = {}) {
             await settings.patch({ workspace: destination })
             await syncMemorySettings(settings)
             await syncGraphSettings(settings)
+            await syncBrowseSettings(settings)
             await ensureWorkspace(destination)
             await ensurePrivacy()
             await startAdapter()
