@@ -49,7 +49,6 @@ const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 // 2026-11-15 14:4x：面板第一版上线就撞上这件事——宿主进程里根本没有 MING_WORKSPACE，
 // 而本机配置只写了 diaryDir，于是 /acp 读不到账本。同一个坑也让 cost 页的价目表一直指着 '\live\...'。
 function resolveWorkspace() {
-  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
     const central = JSON.parse(readFileSync(path.join(DSH_HOME, 'hers-life.json'), 'utf8'))
     if (central && central.workspace) return String(central.workspace)
@@ -59,7 +58,7 @@ function resolveWorkspace() {
     if (central && central.root) return String(central.root)
   } catch { /* first-run setup may not have written the central file yet */ }
   try {
-    const f = process.env.MING_GRAPH_CONFIG || path.join(DSH_HOME, 'ming-graph.json')
+    const f = path.join(DSH_HOME, 'ming-graph.json')
     const j = JSON.parse(readFileSync(f, 'utf8'))
     if (j && j.workspace) return String(j.workspace)
     if (j && j.diaryDir) return path.dirname(String(j.diaryDir).replace(/[\\/]+$/, ''))
@@ -78,9 +77,9 @@ const DEFAULTS = {
   skillsCwd: WORKSPACE,
   skillsOffFile: '',
   // 费用价目表：我们自己维护，缺省在 <workspace>/live/cost-prices.json
-  costPricesFile: process.env.MING_COST_PRICES || (WORKSPACE ? WORKSPACE + '\\live\\cost-prices.json' : ''),
+  costPricesFile: (WORKSPACE ? WORKSPACE + '\\live\\cost-prices.json' : ''),
   // 2026-11-10：「索引费用」按钮写出来的自动价目。人工那份永远压过它。
-  costAutoFile: process.env.MING_COST_AUTO || (WORKSPACE ? WORKSPACE + '\\live\\cost-prices.auto.json' : ''),
+  costAutoFile: (WORKSPACE ? WORKSPACE + '\\live\\cost-prices.auto.json' : ''),
   workspace: WORKSPACE,
   diaryDir: WORKSPACE ? path.join(WORKSPACE, 'diary') : '',
   discordMemoryFile: WORKSPACE ? path.join(WORKSPACE, 'live', 'discord-memory.jsonl') : '',
@@ -91,7 +90,7 @@ const DEFAULTS = {
 // 放 ~/.dsh/ming-graph.json（或用环境变量 MING_GRAPH_CONFIG 指一个文件），
 // 仓库里只留通用默认。沒有這個檔案也能跑：只顯示 DSH 記憶與 Discord 事件。
 export function loadLocalConfig(file) {
-  const f = file || process.env.MING_GRAPH_CONFIG || path.join(DSH_HOME, 'ming-graph.json')
+  const f = file || path.join(DSH_HOME, 'ming-graph.json')
   try {
     const j = JSON.parse(readFileSync(f, 'utf8'))
     return j && typeof j === 'object' ? j : {}
@@ -182,7 +181,7 @@ export async function readOverview(cfg) {
 
 async function readAcp(wsHint) {
   const ws = wsHint || WORKSPACE
-  if (!ws) return { ok: false, error: '没配工作区：~/.dsh/ming-graph.json 写 diaryDir 或 workspace，或设环境变量 MING_WORKSPACE', jobs: [], calls: [], counts: {} }
+  if (!ws) return { ok: false, error: '尚未取得工作區；請在 Hers Life 設定中心設定工作區', jobs: [], calls: [], counts: {} }
   const live = path.join(ws, 'live')
   const jsonl = (name) => {
     try {
@@ -275,8 +274,8 @@ export function apply(ctx, config) {
     if (!local.skillsCwd && !config?.skillsCwd) cfg.skillsCwd = WORKSPACE
     if (!local.diaryDir && !config?.diaryDir) cfg.diaryDir = path.join(WORKSPACE, 'diary')
     if (!local.discordMemoryFile && !config?.discordMemoryFile) cfg.discordMemoryFile = path.join(WORKSPACE, 'live', 'discord-memory.jsonl')
-    if (!local.costPricesFile && !config?.costPricesFile && !central.costPricesFile && !process.env.MING_COST_PRICES) cfg.costPricesFile = path.join(WORKSPACE, 'live', 'cost-prices.json')
-    if (!local.costAutoFile && !config?.costAutoFile && !central.costAutoFile && !process.env.MING_COST_AUTO) cfg.costAutoFile = path.join(WORKSPACE, 'live', 'cost-prices.auto.json')
+    if (!local.costPricesFile && !config?.costPricesFile && !central.costPricesFile) cfg.costPricesFile = path.join(WORKSPACE, 'live', 'cost-prices.json')
+    if (!local.costAutoFile && !config?.costAutoFile && !central.costAutoFile) cfg.costAutoFile = path.join(WORKSPACE, 'live', 'cost-prices.auto.json')
   }
   // Discord server/channel labels travel with each event; optional roomLabels may override the display name.
   cfg.roomLabels = { ...GROUP_NAMES, ...(cfg.roomLabels || {}) }
