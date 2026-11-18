@@ -364,7 +364,7 @@ window.__ModuleLoader__.load({
         card('人格與稱呼', '這裡沿用原本設定頁的身份設定；人設正文保存在工作區 persona 資料夾。',
           h(React.Fragment, null,
             h('div', { className: 'hl-grid' },
-              input('Discord Agent 預設（留空使用 DSH 預設）', 'agentPreset', '選擇要套用的 DSH Agent Preset 名稱。'),
+              input('Discord Agent 預設（留空使用 DSH 預設）', 'agentPreset', '所有新 Discord 會話都會套用同一個 Preset；若載入失敗會停止建立會話，不會悄悄換成人格不同的預設。'),
               h('label', { className: 'hl-field' }, h('span', { className: 'hl-label' }, 'AI 的名字'), h('input', { className: 'hl-input', value: identity.selfName || '', onChange: (e) => setIdentity((v) => Object.assign({}, v, { selfName: e.target.value })) })),
               h('label', { className: 'hl-field' }, h('span', { className: 'hl-label' }, '全名'), h('input', { className: 'hl-input', value: identity.selfFullName || '', onChange: (e) => setIdentity((v) => Object.assign({}, v, { selfFullName: e.target.value })) })),
               h('label', { className: 'hl-field' }, h('span', { className: 'hl-label' }, '如何稱呼你'), h('input', { className: 'hl-input', value: identity.userName || '', onChange: (e) => setIdentity((v) => Object.assign({}, v, { userName: e.target.value })) }),
