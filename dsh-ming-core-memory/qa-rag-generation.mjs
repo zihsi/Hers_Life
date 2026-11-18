@@ -10,6 +10,14 @@ import { pathToFileURL } from 'node:url'
 
 const DIM = 768
 const root = mkdtempSync(join(tmpdir(), 'ming-rag-gen-'))
+const originalDshHome = process.env.DSH_HOME
+const dshHome = join(root, 'dsh')
+mkdirSync(dshHome, { recursive: true })
+writeFileSync(join(dshHome, 'hers-life.json'), JSON.stringify({
+  workspace: root,
+  coreMemory: { embeddingModel: 'bge-base-zh-v1.5-q8_0' },
+}))
+process.env.DSH_HOME = dshHome
 const live = join(root, 'live')
 mkdirSync(live, { recursive: true })
 
@@ -33,14 +41,13 @@ writeFileSync(join(genDir, 'manifest.json'), JSON.stringify({
   schemaVersion: 1,
   layer: 'doc',
   generation: 'gen-1',
-  embedding: { model: process.env.EMB_MODEL || 'bge-base-zh-v1.5-q8_0', dimensions: DIM },
+  embedding: { model: 'bge-base-zh-v1.5-q8_0', dimensions: DIM },
   rowCount: 1,
   files: {},
 }))
 mkdirSync(join(live, 'rag-index'), { recursive: true })
 writeFileSync(join(live, 'rag-index', 'current.json'), JSON.stringify({ generation: 'gen-1', at: '2026-11-17T10:00:00Z' }))
 
-process.env.MING_WORKSPACE = root
 // 嵌入服务：假网络，给一个和两组向量都能算分的查询向量
 globalThis.fetch = async () => ({
   ok: true,
@@ -79,5 +86,7 @@ const ok = (name, cond, extra) => {
 }
 
 rmSync(root, { recursive: true, force: true })
+if (originalDshHome === undefined) delete process.env.DSH_HOME
+else process.env.DSH_HOME = originalDshHome
 console.log('\n' + pass + ' passed, ' + fail + ' failed')
 process.exit(fail ? 1 : 0)
