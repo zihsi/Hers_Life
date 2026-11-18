@@ -722,6 +722,12 @@ test('shared memory recalls across guilds and hides private source attribution',
     assert.doesNotMatch(ownerPrompt, /Discord 私訊/)
     assert.doesNotMatch(ownerPrompt, /owner-secret/)
 
+    const ownerDmPrompt = await brain.recallContext('RTX 5080', {
+      kind: 'dm', channelId: 'dm-2', userId: 'owner-1',
+    }, 'discord-dm-owner-1')
+    assert.match(ownerDmPrompt, /Server A \/ #hardware/, 'Owner DM can recall their own public channel conversation')
+    assert.match(ownerDmPrompt, /RTX 5080/)
+
     // Other members cannot inspect another guild's conversations.
     const memberPrompt = await brain.recallContext('RTX 5080', {
       kind: 'channel', channelId: 'chan-b', guildId: 'guild-b', userId: 'member-3',
