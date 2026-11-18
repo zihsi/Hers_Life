@@ -273,6 +273,9 @@ test('voice join waits for DAVE readiness and playback refuses inactive E2EE', a
   notReady.state = 'ready'
   notReady.dave = { active: false, destroy() {} }
   await assert.rejects(notReady.playPackets([]), /DAVE MLS is not ready/)
+  // The test bypasses the gateway handshake, so consume the constructor's
+  // pending readiness rejection before explicitly tearing the fixture down.
+  notReady.ready.catch(() => {})
   await notReady.leave()
 })
 
