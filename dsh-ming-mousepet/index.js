@@ -321,6 +321,9 @@ function readBody(req) {
 }
 
 export async function apply(ctx, rawConfig = {}) {
+  const central = ctx.hersLifeDiscord?.getSetting?.('mousepet', {}) || {}
+  if (central.enabled === false) return
+  const mergedConfig = { ...rawConfig, ...central, companion: { ...(rawConfig.companion || {}), ...(central.companion || {}) } }
   const requireDiscordOwner = (exec, operation) => {
     const meta = exec?.agent?.session?.header?.meta?.hersLife
       ?? exec?.agent?.session?.header?.metadata?.hersLife ?? {}
@@ -334,7 +337,7 @@ export async function apply(ctx, rawConfig = {}) {
   const defineTool = await loadDefineTool()
   const log = (message) => { try { ctx?.logger?.info?.(`[ming-mousepet] ${message}`) } catch { /* ignore */ } }
   const saved = await loadSavedSettings(log)
-  let current = normalizeSettings(saved, normalizeSettings(rawConfig))
+  let current = normalizeSettings(central, normalizeSettings(saved, normalizeSettings(mergedConfig)))
   // 2026-11-08 21:1x 她：「点按桌宠直接进行一次不记次数的活动，长按拖动」。
   // sidecar 判出「这是一次轻点」才抛 tap；这里把它接成「桌宠说一句」，不占每日配额、不动 nextAt。
   let lastTapAt = 0
