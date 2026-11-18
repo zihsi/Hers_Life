@@ -12,7 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const read = async (p) => (await fs.readFile(path.join(here, p), 'utf8')).replace(/\\r\\n/g, '\\n')
+const read = async (p) => (await fs.readFile(path.join(here, p), 'utf8')).replace(/\r\n/g, '\n')
 
 // 2026-11-17（F-1）：不再写死作者机器上的 C:/dsh。MING_ROOT 指源码仓库根；
 // 没设就取本脚本的上一级目录（build.mjs 在 <root>/dsh-ming-memory/ 里）。
@@ -20,7 +20,7 @@ const MING_ROOT = process.env.MING_ROOT
   ? path.resolve(process.env.MING_ROOT)
   : path.resolve(here, '..')
 const THEME_SRC = path.join(MING_ROOT, 'dsh-ming-ui', 'src', 'theme.js')
-const theme = (await fs.readFile(THEME_SRC, 'utf8')).replace(/\\r\\n/g, '\\n')
+const theme = (await fs.readFile(THEME_SRC, 'utf8')).replace(/\r\n/g, '\n')
 const panel = await read('src/panel.js')
 
 const out = `/**
