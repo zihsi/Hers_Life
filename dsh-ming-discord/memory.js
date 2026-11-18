@@ -120,13 +120,18 @@ export class DiscordBrain {
     if (event.sessionId === sessionKey) return false
     if (event.scope === 'guild') {
       if (!this.settings.get('memory.shareAcrossChannels', true)) return false
-      if (!this.settings.get('memory.shareAcrossGuilds', true)) {
-        // A DM has no guild of its own to match; when cross-guild sharing is
-        // disabled, do not treat it as a wildcard that can see every server.
-        if (target.kind === 'dm') return false
-        return String(event.guildId) === String(target.guildId)
-      }
-      return true
+      const sameGuild = target.kind !== 'dm' && String(event.guildId) === String(target.guildId)
+      if (sameGuild) return true
+      if (!this.settings.get('memory.shareAcrossGuilds', true)) return false
+
+      // Cross-guild memory is for the same Owner's relationship with her, not
+      // a bridge that lets one Discord community inspect another community's
+      // members. Only the exact Owner's own messages and replies to that Owner
+      // travel between guilds or into that Owner's DM.
+      const userId = String(target.userId ?? '')
+      if (!userId || !this.settings.isOwner(userId)) return false
+      const participantId = String(event.participantId || event.authorId || '')
+      return participantId === userId
     }
     if (!this.settings.get('memory.sharePrivateToOwner', true)) return false
     const participantId = String(event.participantId || event.authorId || '')
