@@ -211,7 +211,9 @@ function nextNineAM(from = new Date()) {
 }
 
 export function apply(ctx, config) {
-  const cfg = normalize(config)
+  const central = ctx.hersLifeDiscord?.getSetting?.('browse', {}) || {}
+  if (central.enabled === false) return
+  const cfg = normalize({ ...(config || {}), ...central })
   if (ctx.hersLifeDiscord?.workspace) cfg.workspacePath = path.resolve(ctx.hersLifeDiscord.workspace)
 
   // ---- 面板用的只读口（2026-11-07）----
