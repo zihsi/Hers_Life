@@ -101,7 +101,7 @@ node scripts/make-market-index.mjs --ref=discord-dsh-only --validator="<DSH_HOME
 |---|---|
 | `DSH_HOME` | DSH 宿主提供的資料根目錄；插件自動讀取，不需要手動設定 |
 | 工作區路徑 | 在 Hers Life 設定頁選擇，其他插件從統一服務取得 |
-| FFmpeg／ffplay | 應由設定 UI 指定完整路徑；目前仍有部分子插件保留 PATH／舊環境變數相容，尚待整合 |
+| FFmpeg／Python／DSH Tools | 可在 Hers Life 設定頁指定完整路徑；不需要自行設定 PATH 或 DSH_TOOLS_PATH |
 | Discord Owner ID | 在 Discord 设置中心填写；用于私讯白名单、后台任务回报与 Owner 权限判断 |
 
 ## 人格
