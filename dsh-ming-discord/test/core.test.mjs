@@ -744,6 +744,10 @@ test('shared memory recalls across guilds and hides private source attribution',
       kind: 'channel', channelId: 'chan-a', guildId: 'guild-a', userId: 'owner-1',
     }, 'discord-channel-guild-a-chan-a')
     assert.match(reversePrompt, /Server B \/ #general/, 'Owner can recall Server B conversation back in Server A')
+    const vagueFollowup = await brain.recallContext('那件事呢？', {
+      kind: 'channel', channelId: 'chan-a', guildId: 'guild-a', userId: 'owner-1',
+    }, 'discord-channel-guild-a-chan-a')
+    assert.match(vagueFollowup, /Server B \/ #general/, 'short follow-ups retain recent context from another session')
 
     config.memory.shareAcrossChannels = false
     const channelIsolated = await brain.recallContext('RTX 5080', {
