@@ -149,7 +149,7 @@ function warnOnce(msg) {
 }
 
 export function loadLocalConfig(file) {
-  const f = file || path.join(DSH_HOME, 'ming-memory.json')
+  const f = file || process.env.MING_MEMORY_CONFIG || path.join(DSH_HOME, 'ming-memory.json')
   try {
     const j = JSON.parse(readFileSync(f, 'utf8'))
     return j && typeof j === 'object' ? j : {}
