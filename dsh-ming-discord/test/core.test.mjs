@@ -14,9 +14,35 @@ import { quarantinePrivateDmDiary } from '../privacy.js'
 import { DiscordBridge } from '../discord/bridge.js'
 import { DaveSession } from '../discord/dave.js'
 import { VoiceConnection, VoiceManager } from '../discord/voice.js'
-import { apply as applyDiscord } from '../index.js'
+import { apply as applyDiscord, ensureWorkspace } from '../index.js'
 import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
 import { apply as applyVoice } from '../../dsh-ming-voice/index.js'
+
+test('workspace initialization creates custom persona files and diary folders automatically', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-custom-workspace-'))
+  try {
+    const customPersona = path.join(root, 'persona', 'custom', 'voice.md')
+    const result = await ensureWorkspace(root, {
+      personaFiles: ['persona/custom/voice.md'],
+      diaryDir: 'records/private-diary',
+    })
+    const persona = await readFile(customPersona, 'utf8')
+    const diaryReadme = await readFile(path.join(root, 'records', 'private-diary', 'README.md'), 'utf8')
+    assert.match(persona, /^# voice/m)
+    assert.match(diaryReadme, /按日期自動建立/)
+    assert.ok(result.created.includes('persona/custom/voice.md'))
+    assert.ok(result.created.includes('records/private-diary/README.md'))
+
+    await writeFile(customPersona, '# Existing custom persona\\nDo not overwrite.\\n', 'utf8')
+    await ensureWorkspace(root, {
+      personaFiles: ['persona/custom/voice.md'],
+      diaryDir: 'records/private-diary',
+    })
+    assert.equal(await readFile(customPersona, 'utf8'), '# Existing custom persona\\nDo not overwrite.\\n')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
 
 test('Discord journal writes respect the configured diary folder', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-journal-'))
