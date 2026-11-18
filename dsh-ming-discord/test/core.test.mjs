@@ -144,6 +144,7 @@ test('slash command dispatcher excludes private DMs from shared interaction even
     },
     logger: null,
     events: { push(...args) { pushed.push(args) } },
+    eventAllowed: interaction => interaction.guild_id === 'guild-1' && interaction.channel_id === 'channel-1',
   })
   interactions.handle('ask', async () => 'ok')
   await interactions.dispatch({
@@ -160,7 +161,14 @@ test('slash command dispatcher excludes private DMs from shared interaction even
   })
   assert.equal(pushed.length, 1)
   assert.equal(pushed[0][0], 'INTERACTION_CREATE')
-  assert.equal(callbacks.length, 2)
+  await interactions.dispatch({
+    id: 'blocked-guild-interaction', token: 'token-3', type: 2,
+    guild_id: 'guild-2', channel_id: 'channel-1',
+    member: { user: { id: 'member-2', username: 'OtherGuild' } },
+    data: { name: 'ask', options: [] },
+  })
+  assert.equal(pushed.length, 1, 'blocked guild interactions must not enter shared event history')
+  assert.equal(callbacks.length, 3)
 })
 
 test('private DM messages and activity never enter the shared event preview', () => {
@@ -169,6 +177,8 @@ test('private DM messages and activity never enter the shared event preview', ()
   bridge.channels = new Map()
   bridge.events = { push(...args) { events.push(args) } }
   bridge.logger = null
+  const eventConfig = { discord: { enabled: true, guildIds: ['guild-1'], channelIds: ['public-channel-id'] } }
+  bridge.settings = { get(key, fallback) { return key.split('.').reduce((at, part) => at == null ? undefined : at[part], eventConfig) ?? fallback } }
 
   bridge.recordEvent('MESSAGE_CREATE', {
     id: 'private-message-id', channel_id: 'private-channel-id',
@@ -195,7 +205,17 @@ test('private DM messages and activity never enter the shared event preview', ()
   })
   assert.equal(events.length, 1)
   assert.match(events[0][1], /public channel message/)
-  assert.doesNotMatch(JSON.stringify(events), /private-message-id|private-user-id|highly private/)
+
+  bridge.recordEvent('MESSAGE_CREATE', {
+    id: 'blocked-channel-message', guild_id: 'guild-1', channel_id: 'not-allowed-channel',
+    author: { id: 'member-2', username: 'BlockedChannel' }, content: 'blocked channel secret',
+  })
+  bridge.recordEvent('MESSAGE_CREATE', {
+    id: 'blocked-guild-message', guild_id: 'not-allowed-guild', channel_id: 'public-channel-id',
+    author: { id: 'member-3', username: 'BlockedGuild' }, content: 'blocked guild secret',
+  })
+  assert.equal(events.length, 1, 'messages outside configured guild/channel allowlists must not enter shared event history')
+  assert.doesNotMatch(JSON.stringify(events), /private-message-id|private-user-id|highly private|blocked-channel-message|blocked-guild-message|blocked channel secret|blocked guild secret/)
 })
 
 test('private DMs never train shared interests or write into the shared diary', async () => {
