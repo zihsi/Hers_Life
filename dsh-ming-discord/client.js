@@ -488,6 +488,8 @@ window.__ModuleLoader__.load({
               input('游標模式（companion／clean）', 'mousepet.cursorMode', 'companion 或 clean'),
               input('游標停留時間（毫秒）', 'mousepet.cursorHoldMs', '', 'number'),
               input('游標尺寸', 'mousepet.cursorSize', '', 'number'),
+              input('游標皮膚 ID', 'mousepet.cursorState', 'pointer 或 custom:skin-name'),
+              input('晃動靈敏度（low／medium／high）', 'mousepet.shake.level', 'medium'),
               input('網頁拾取資料夾', 'mousepet.webpickDir', '留空使用工作區預設位置'),
               input('桌寵工作區覆寫', 'mousepet.companion.workspace', '留空沿用共用工作區'),
               input('桌寵更新間隔（毫秒）', 'mousepet.companion.tickMs', '0 表示使用預設節奏。', 'number'),
