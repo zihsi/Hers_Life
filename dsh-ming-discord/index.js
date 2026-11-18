@@ -34,7 +34,7 @@ const TEMPLATES = {
   'outbox/README.md': '# Discord 發送暫存區\n\nOwner 可從工作區內傳送檔案到目前發起回合的頻道。其他成員只能傳送本次使用者／Session 的 live/voice/ 語音（需有 sidecar 標籤），或 outbox/<session-id>/<user-id>/ 內的檔案。\n',
 }
 
-async function ensureWorkspace(workspace) {
+async function ensureWorkspace(workspace, options = {}) {
   const root = path.resolve(workspace)
   const dirs = ['persona', 'diary', 'live', 'memories/notes', 'sightings', 'knowledge', 'config', 'sessions', 'downloads', 'outbox']
   for (const dir of dirs) await mkdir(path.join(root, dir), { recursive: true })
@@ -47,7 +47,30 @@ async function ensureWorkspace(workspace) {
       catch (error) { if (error.code !== 'EEXIST') throw error }
     }
   }
-  return { root, created, directories: dirs }
+  // Create user-configured persona files and diary roots too. A path entered in
+  // the settings UI must never require the user to manually create a file.
+  const configuredPersonaFiles = Array.isArray(options.personaFiles) ? options.personaFiles : []
+  const diaryDir = String(options.diaryDir || 'diary').replace(/\\/g, '/')
+  const configuredFiles = configuredPersonaFiles.map((relative) => ({
+    relative: String(relative),
+    content: '# ' + path.basename(String(relative), path.extname(String(relative))) + '\\n\\n',
+  }))
+  if (diaryDir !== 'diary') configuredFiles.push({
+    relative: diaryDir + '/README.md',
+    content: '# 日記\\n\\n此資料夾由 Hers Life 設定中心管理；日記會按日期自動建立 Markdown 檔。\\n',
+  })
+  for (const entry of configuredFiles) {
+    const target = path.resolve(root, entry.relative)
+    const relative = path.relative(root, target)
+    if (!entry.relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('configured workspace file escapes root')
+    try { await stat(target) } catch {
+      await mkdir(path.dirname(target), { recursive: true })
+      try { await writeFile(target, entry.content, { encoding: 'utf8', flag: 'wx' }); created.push(entry.relative) }
+      catch (error) { if (error.code !== 'EEXIST') throw error }
+    }
+  }
+  await mkdir(path.resolve(root, diaryDir), { recursive: true })
+  return { root, created, directories: [...dirs, diaryDir] }
 }
 
 async function syncMemorySettings(settings) {
@@ -205,7 +228,7 @@ export function apply(ctx, pluginConfig = {}) {
       return
     }
     try {
-      await ensureWorkspace(settings.resolve().workspace)
+      await ensureWorkspace(settings.resolve().workspace, { personaFiles: settings.get('personaFiles', []), diaryDir: settings.get('diaryDir', 'diary') })
       rest = new DiscordRest({ token: settings.token, logger })
       events = new DiscordEvents({ dataRoot: settings.resolve().dataRoot, logger })
       brain = new DiscordBrain({ workspace: settings.resolve().workspace, settings, logger })
@@ -296,7 +319,7 @@ export function apply(ctx, pluginConfig = {}) {
             const nextWorkspace = settings.resolve().workspace
             let migration = null
             if (nextWorkspace !== previousWorkspace) migration = await copyMissing(previousWorkspace, nextWorkspace)
-            await ensureWorkspace(nextWorkspace)
+            await ensureWorkspace(nextWorkspace, { personaFiles: settings.get('personaFiles', []), diaryDir: settings.get('diaryDir', 'diary') })
             await ensurePrivacy()
             await startAdapter()
             const resolved = settings.resolve()
@@ -334,7 +357,7 @@ export function apply(ctx, pluginConfig = {}) {
             await syncMemorySettings(settings)
             await syncGraphSettings(settings)
             await syncBrowseSettings(settings)
-            await ensureWorkspace(destination)
+            await ensureWorkspace(destination, { personaFiles: settings.get('personaFiles', []), diaryDir: settings.get('diaryDir', 'diary') })
             await ensurePrivacy()
             await startAdapter()
             send(res, 200, { ok: true, from: old, to: destination, ...result })
