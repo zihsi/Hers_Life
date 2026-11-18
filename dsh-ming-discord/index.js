@@ -183,13 +183,18 @@ async function syncGraphSettings(settings) {
   let current = {}
   try { current = JSON.parse(await readFile(file, 'utf8')) } catch {}
   const ownerIds = settings.ownerIds()
+  const workspace = settings.resolve().workspace
+  const graph = settings.get('graph', {})
   const next = {
     ...current,
-    workspace: settings.resolve().workspace,
-    diaryDir: path.join(settings.resolve().workspace, String(settings.get('diaryDir', 'diary') || 'diary')),
+    workspace,
+    diaryDir: path.join(workspace, String(settings.get('diaryDir', 'diary') || 'diary')),
     dshMemoryDir: path.join(settings.home, 'memory'),
     ownerId: ownerIds[0] || '',
     ownerName: String(settings.get('userName', '主人') || '主人'),
+    syncSeconds: graph.syncSeconds,
+    costPricesFile: graph.costPricesFile ? path.resolve(workspace, String(graph.costPricesFile)) : path.join(workspace, 'live', 'cost-prices.json'),
+    costAutoFile: graph.costAutoFile ? path.resolve(workspace, String(graph.costAutoFile)) : path.join(workspace, 'live', 'cost-prices.auto.json'),
   }
   await mkdir(settings.home, { recursive: true })
   await settings.writeFile(file, JSON.stringify(next, null, 2) + '\n', 'utf8')
