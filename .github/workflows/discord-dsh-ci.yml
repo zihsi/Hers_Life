@@ -100,3 +100,8 @@ jobs:
         shell: pwsh
         run: |
           node --input-type=module -e "import { loadDavey } from './dsh-ming-discord/discord/dave.js'; const native = loadDavey(console); if (!native || typeof native.DAVESession !== 'function') throw new Error('DAVE native addon failed to load on Windows x64'); console.log('DAVE protocol version:', native.DAVE_PROTOCOL_VERSION);"
+
+      - name: Run Discord adapter regression tests on Windows
+        shell: pwsh
+        run: |
+          node --test dsh-ming-discord/test/core.test.mjs
