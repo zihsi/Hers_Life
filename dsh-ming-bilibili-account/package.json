@@ -1,6 +1,6 @@
 {
   "name": "dsh-ming-bilibili-account",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "type": "module",
   "description": "B站帳號工具：掃碼登入、帳號狀態與社交工具；登入態同步持久化於 DSH credentials service 與本機憑證檔。",
