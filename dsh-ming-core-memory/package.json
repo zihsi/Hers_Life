@@ -1,6 +1,6 @@
 {
   "name": "dsh-ming-core-memory",
-  "version": "1.0.3-ming.1",
+  "version": "1.0.3-ming.2",
   "description": "dsh-core-memory 的本地 fork：事实型核心记忆、归档记忆与来源可追溯检索；Discord 对话事件由独立跨会话记忆层管理。",
   "type": "module",
   "main": "lib/index.js",
