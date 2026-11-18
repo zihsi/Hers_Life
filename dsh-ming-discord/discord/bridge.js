@@ -167,6 +167,17 @@ export class DiscordBridge {
   recordEvent(type, data) {
     try {
       if (data === null || data === undefined) return
+      // Direct/group DMs have no guild_id. Do not copy their content, message
+      // IDs, reactions, typing state or command metadata into the shared event
+      // preview/log shown in the common settings page.
+      const privateOnlyEvents = new Set([
+        'MESSAGE_CREATE', 'MESSAGE_UPDATE', 'MESSAGE_DELETE',
+        'MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE',
+        'TYPING_START', 'INTERACTION_CREATE',
+      ])
+      if (data.guild_id === undefined || data.guild_id === null) {
+        if (privateOnlyEvents.has(type)) return
+      }
       const labels = {
         MESSAGE_CREATE: '新消息', MESSAGE_UPDATE: '消息被编辑', MESSAGE_DELETE: '消息被删除',
         MESSAGE_REACTION_ADD: '有人加了表情', MESSAGE_REACTION_REMOVE: '有人收回表情',
