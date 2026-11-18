@@ -27,7 +27,8 @@ export const BUILTIN_PRICES = {
   'deepseek-v4-pro': { peak: [0.30, 9.0, 27.0], offpeak: [0.15, 4.5, 13.5] },
 }
 
-export const DEFAULT_LEDGER = path.join(os.homedir(), '.dsh', 'dsh-bottom-info-bar', 'usage-ledger.sqlite')
+export const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
+export const DEFAULT_LEDGER = path.join(DSH_HOME, 'dsh-bottom-info-bar', 'usage-ledger.sqlite')
 
 /**
  * 价目表的三层（2026-11-10 加第二层）：
