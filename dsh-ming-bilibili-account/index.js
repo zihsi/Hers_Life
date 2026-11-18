@@ -7,8 +7,8 @@
  * 登录态怎么拿：扫码。生成 qrcode_key → 你在手机 B 站上确认 → 轮询换 cookie。
  * 密码和 cookie 都不经过聊天框。
  *
- * 登录态存哪：**只存在进程内存里**，不落盘、不进记忆库、不进日记。
- * 代价是 DSH 重启要重扫一次。我觉得这个代价该付。
+ * 登录态由 lib/account.mjs 统一管理：优先使用 DSH credentials service，同时写入 DSH_HOME 下的凭证文件。
+ * 退出会写 tombstone，防止旧文件把已退出的登录态复活；Cookie 不写入聊天、日记或日志。
  */
 export const name = 'ming-bilibili-account'
 
