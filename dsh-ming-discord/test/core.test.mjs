@@ -14,9 +14,39 @@ import { quarantinePrivateDmDiary } from '../privacy.js'
 import { DiscordBridge } from '../discord/bridge.js'
 import { DaveSession } from '../discord/dave.js'
 import { VoiceConnection, VoiceManager } from '../discord/voice.js'
-import { apply as applyDiscord, ensureWorkspace, syncBrowseSettings } from '../index.js'
+import { apply as applyDiscord, ensureWorkspace, syncBrowseSettings, syncMemorySettings } from '../index.js'
 import { apply as applyMemory, inject as memoryInject, __internals as memoryInternals } from '../../dsh-ming-memory/index.js'
 import { apply as applyVoice } from '../../dsh-ming-voice/index.js'
+
+test('Persona and diary UI paths are synchronized to the Memory plugin config', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-memory-settings-'))
+  try {
+    const settings = new SettingsStore({
+      workspace: root,
+      personaFiles: ['persona/custom/voice.md'],
+      diaryDir: 'records/journal',
+      diaryCount: 5,
+      diaryChars: 9000,
+      maxChars: 15000,
+    }, { home: path.join(root, '.dsh') })
+    await syncMemorySettings(settings)
+    const file = path.join(settings.home, 'ming-memory.json')
+    const first = JSON.parse(await readFile(file, 'utf8'))
+    assert.equal(first.root, root)
+    assert.deepEqual(first.personaFiles, ['persona/custom/voice.md'])
+    assert.equal(first.diaryDir, 'records/journal')
+    assert.equal(first.diaryCount, 5)
+    assert.equal(first.diaryChars, 9000)
+    assert.equal(first.maxChars, 15000)
+
+    settings.patch({ diaryDir: 'records/new-journal' })
+    await syncMemorySettings(settings)
+    const second = JSON.parse(await readFile(file, 'utf8'))
+    assert.equal(second.diaryDir, 'records/new-journal')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
 
 test('Browse settings UI values are fully synchronized to the live runtime config', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-browse-settings-'))
