@@ -1,6 +1,6 @@
 import path from 'node:path'
 import os from 'node:os'
-import { cp, mkdir, readFile, rename, stat, writeFile, readdir } from 'node:fs/promises'
+import { cp, mkdir, readFile, rename, stat, writeFile, readdir, realpath } from 'node:fs/promises'
 import { SettingsStore, isDiaryFilename, isDiaryPath } from './settings.js'
 import { DiscordSessionPool } from './pool.js'
 import { DiscordBrain } from './memory.js'
@@ -30,11 +30,12 @@ const TEMPLATES = {
   'knowledge/README.md': '# 知識庫\n',
   'config/README.md': '# 工作區設定\n',
   'diary/README.md': '# 日記\n\n日記會按日期建立 Markdown 檔。\n',
+  'outbox/README.md': '# Discord 發送暫存區\n\n要透過 discord_send_file 發送給目前頻道的檔案，請先放在這裡。公開會話只能傳送 outbox/ 與 live/voice/ 內的檔案。\n',
 }
 
 async function ensureWorkspace(workspace) {
   const root = path.resolve(workspace)
-  const dirs = ['persona', 'diary', 'live', 'memories/notes', 'sightings', 'knowledge', 'config', 'sessions', 'downloads']
+  const dirs = ['persona', 'diary', 'live', 'memories/notes', 'sightings', 'knowledge', 'config', 'sessions', 'downloads', 'outbox']
   for (const dir of dirs) await mkdir(path.join(root, dir), { recursive: true })
   const created = []
   for (const [relative, content] of Object.entries(TEMPLATES)) {
@@ -346,11 +347,25 @@ export function apply(ctx, pluginConfig = {}) {
     }
     return results
   }
-  const sendFile = async (channelId, filePath, caption = '') => {
+  const sendFile = async (channelId, filePath, caption = '', actor = null) => {
     if (!bridge) throw new Error('Discord 尚未連線')
-    const root = path.resolve(settings.resolve().workspace)
-    const target = path.resolve(String(filePath ?? ''))
-    if (target !== root && !target.startsWith(root + path.sep)) throw new Error('只允許傳送工作區內的檔案')
+    if (!actor || !actor.userId || !actor.channelId) throw new Error('無法確認呼叫此工具的 Discord 會話與使用者')
+    if (String(channelId) !== String(actor.channelId)) throw new Error('只能把檔案傳送到目前發起這輪對話的 Discord 頻道／私訊')
+    const root = await realpath(settings.resolve().workspace)
+    const target = await realpath(path.resolve(String(filePath ?? '')))
+    const relative = path.relative(root, target)
+    if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) {
+      throw new Error('只允許傳送工作區內的檔案')
+    }
+    // A non-Owner group member can ask for voice or an explicitly staged
+    // deliverable, but cannot use this tool to exfiltrate persona, diary,
+    // credentials, session logs or other private workspace files.
+    if (!settings.isOwner(actor.userId)) {
+      const rel = relative.split(path.sep).join('/')
+      if (!rel.startsWith('live/voice/') && !rel.startsWith('outbox/')) {
+        throw new Error('公開會話只能傳送 live/voice/ 或 outbox/ 內的檔案')
+      }
+    }
     const info = await stat(target)
     if (!info.isFile() || info.size > Math.max(1, Number(settings.get('discord.maxAttachmentMb', 24)) || 24) * 1024 * 1024) {
       throw new Error('檔案不存在、不是一般檔案或超過附件大小上限')
@@ -367,7 +382,7 @@ export function apply(ctx, pluginConfig = {}) {
     say: (channelId, text, options) => bridge?.say(channelId, text, options) ?? Promise.reject(new Error('Discord 尚未連線')),
     sayFiles: (channelId, files, text) => bridge?.sayFiles(channelId, files, text) ?? Promise.reject(new Error('Discord 尚未連線')),
     sendToOwner,
-    sendFile,
+    sendFile: (channelId, filePath, caption, actor) => sendFile(channelId, filePath, caption, actor),
     isOwner: (userId) => settings.isOwner(userId),
     sessionIdFor: (target) => pool?.sessionIdFor(target) ?? '',
     ownerIds: () => settings.ownerIds(),
@@ -380,7 +395,11 @@ export function apply(ctx, pluginConfig = {}) {
     description: '透過 Discord 私訊向設定頁中的 Owner 發送文字。',
     parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'], additionalProperties: false },
     output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: String(value) }] },
-    async execute(args) { return JSON.stringify(await sendToOwner(String(args?.text ?? ''))) },
+    async execute(args, exec) {
+      const actor = bridge?.actorForExecution(exec)
+      if (!settings.isOwner(actor.userId)) throw new Error('只有 Owner 在自己的 Discord 會話中可以呼叫這項工具。')
+      return JSON.stringify(await sendToOwner(String(args?.text ?? '')))
+    },
   })
   ctx.tools?.register?.({
     name: 'discord_send_file',
@@ -391,6 +410,9 @@ export function apply(ctx, pluginConfig = {}) {
       }, required: ['channelId', 'path'], additionalProperties: false,
     },
     output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: String(value) }] },
-    async execute(args) { return JSON.stringify(await sendFile(args.channelId, args.path, args.caption ?? '')) },
+    async execute(args, exec) {
+      const actor = bridge?.actorForExecution(exec)
+      return JSON.stringify(await sendFile(args.channelId, args.path, args.caption ?? '', actor))
+    },
   })
 }
