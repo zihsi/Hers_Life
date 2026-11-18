@@ -336,6 +336,7 @@ export class DiscordBridge {
           description: notes.map((note) => '• ' + note.title + (note.tags?.length ? '（' + note.tags.join('、') + '）' : '')).join('\n'),
           color: 0x4a7dff,
         }],
+        flags: 64,
       }
     })
     this.interactions.handle('status', async ({ interaction }) => {
@@ -345,7 +346,7 @@ export class DiscordBridge {
       modules.push('Discord：' + (this.gateway?.ready ? '在线' : '离线'))
       modules.push('记忆：' + (this.brain === null ? '关' : this.brain.notes.length + ' 条'))
       modules.push('语音：' + (this.voice === null ? '关' : this.voice.list().length + ' 个频道'))
-      return { embeds: [{ title: '她的状态', description: modules.join('\n'), color: 0x30a46c }] }
+      return { embeds: [{ title: '她的狀態', description: modules.join('\n'), color: 0x30a46c }], flags: 64 }
     })
     this.interactions.handle('voice', async ({ interaction, option, user }) => {
       const denied = this.authorizeInteraction(interaction, { ownerOnly: true })
@@ -856,6 +857,7 @@ export class DiscordBridge {
       const beforeSeq = entry.agent.session.seq
       const actor = {
         userId: String(message.author?.id ?? target.userId ?? ''),
+        sessionId,
         channelId: String(message.channel_id ?? target.channelId ?? ''),
         guildId: String(message.guild_id ?? target.guildId ?? ''),
         isDm: target.kind === 'dm',
