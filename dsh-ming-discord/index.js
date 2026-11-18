@@ -369,10 +369,10 @@ export function apply(ctx, pluginConfig = {}) {
         throw new Error('公開會話只能傳送本次會話的 live/voice/ 檔案或 outbox/' + sessionFolder + '/ 內的檔案')
       }
       if (inVoice) {
-        let ownerSession = ''
-        try { ownerSession = (await readFile(target + '.session', 'utf8')).trim() } catch {}
-        if (ownerSession !== String(actor.sessionId)) {
-          throw new Error('這個語音檔不是由目前 Discord 會話產生，已拒絕跨會話傳送')
+        let tag = null
+        try { tag = JSON.parse(await readFile(target + '.session', 'utf8')) } catch {}
+        if (tag?.sessionId !== String(actor.sessionId) || tag?.userId !== String(actor.userId)) {
+          throw new Error('這個語音檔不是由目前 Discord 使用者在此會話產生，已拒絕跨使用者／跨會話傳送')
         }
       }
     }
