@@ -11,6 +11,8 @@
 - DM 記憶預設只在已設定 Owner 的私訊會話之間共享。公開頻道只有 Owner 本人發言時，才可按「允許 Owner 私訊作為背景」開關召回私人背景；其他成員不會取得該背景，且提示中隱去私訊來源標籤。
 - 私訊政策可選「僅 Owner／白名單／任何人」；白名單模式的 Discord User ID 可直接在同一設定頁維護。
 - 舊工作區缺少目錄或模板時會自動建立，不覆蓋既有檔案。
+- 指令權限沿用伺服器／頻道白名單與 DM 政策；`/memory`、`/status`、`/say`、`/voice`、右鍵「記下來」僅限 Owner。記憶與狀態回覆使用 ephemeral，不公開顯示。
+- `discord_send_file` 只能傳送目前發起這輪對話的頻道；Owner 可傳工作區內檔案，其他成員只能傳本次會話產生的 `live/voice/` 語音（帶 session 標籤）或 `outbox/<session-id>/` 暫存檔。路徑會經 realpath 檢查，避免用 symlink 逃出工作區。
 
 ## 安裝
 
@@ -28,6 +30,7 @@
 ## 注意
 
 - Discord Bot Token 只存在本機 ~/.dsh/hers-life-secrets.json，UI 不會讀回明碼。
+- 私訊內容不寫入共用日記、不參與公開興趣學習，也不出現在共用事件預覽；私訊本身仍可保留在該 Owner 私訊 session 的私有記憶帳本。
 - 需要 Node 22+（建議 DSH 自帶的 Node 24）。
 - Token 不會出現在設定 API 回傳內容；一般設定檔中若有舊版明碼 Token，啟動遷移時會搬到獨立密鑰檔。
 - 請先理解 Owner 私訊背景只會在 Owner 自己發言的公開回合中召回；需要最嚴格的隔離時，關閉「允許 Owner 本人發言時使用私訊作為背景」。
