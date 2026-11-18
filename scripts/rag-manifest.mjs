@@ -1,23 +1,24 @@
 #!/usr/bin/env node
-// scripts/rag-manifest.mjs —— 给已有的三层索引补清单（交接书 J-2 / J-3 的最小生成器）
+// scripts/rag-manifest.mjs —— 给已有的两层索引补清单（交接书 J-2 / J-3 的最小生成器）
 //
 // 为什么单独一个脚本：生成链在本机脚本里（doc-emb / chat-embed / qq-embed），不在公开仓库。
 // 这个脚本只做「读现有产物 → 写清它是什么」，不重建索引、不碰源语料、不连嵌入服务。
 //
 // 用法：
-//   node scripts/rag-manifest.mjs                 # 默认 $MING_WORKSPACE/live
+//   node scripts/rag-manifest.mjs                 # 默认 Hers Life 工作区的 live 目录
 //   node scripts/rag-manifest.mjs --dir=C:\dsh\hers_workplace\live
 //   node scripts/rag-manifest.mjs --dry           # 只打印，不写文件
 //   node scripts/rag-manifest.mjs --no-sha        # 跳过 sha256（大库省时间）
 //
 // 口径（写进清单，别撒谎）：
-//   · model 来自 --model 或环境变量 EMB_MODEL；**没有独立核实过**，所以 revision=unknown、
+//   · model 来自 --model 或 Hers Life 设置页；**没有独立核实过**，所以 revision=unknown、
 //     verified=false、modelSource 写明来源。
 //   · dimensions 从文件推：byteLength / 4 / ids.length。除不尽就报错，不猜。
 //   · 条数、映射关系对不上就退出码 1，不写半份清单。
 
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import crypto from 'node:crypto'
 
 const argv = process.argv.slice(2)
@@ -30,15 +31,18 @@ const flag = (k, d = '') => {
 }
 const has = (k) => argv.includes('--' + k)
 
-const DIR = path.resolve(flag('dir') || (process.env.MING_WORKSPACE ? path.join(process.env.MING_WORKSPACE, 'live') : 'live'))
-const MODEL = flag('model') || process.env.EMB_MODEL || 'bge-base-zh-v1.5-q8_0'
+const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
+let centralSettings = {}
+try { centralSettings = JSON.parse(fs.readFileSync(path.join(DSH_HOME, 'hers-life.json'), 'utf8')) } catch {}
+const workspace = String(centralSettings.workspace || process.env.MING_WORKSPACE || '')
+const DIR = path.resolve(flag('dir') || path.join(workspace, 'live'))
+const MODEL = flag('model') || (centralSettings.coreMemory && centralSettings.coreMemory.embeddingModel) || process.env.EMB_MODEL || 'bge-base-zh-v1.5-q8_0'
 const DRY = has('dry')
 const NO_SHA = has('no-sha')
 
 const LAYERS = [
   { name: 'doc', emb: 'doc-emb.f32', ids: 'doc-emb-ids.json', corpus: null, manifest: 'doc-emb.manifest.json' },
   { name: 'web', emb: 'chat-emb.f32', ids: 'chat-emb-ids.json', corpus: 'chat-corpus.jsonl', manifest: 'chat-emb.manifest.json' },
-  { name: 'qq', emb: 'qq-emb.f32', ids: 'qq-emb-ids.json', corpus: 'qq-corpus.jsonl', manifest: 'qq-emb.manifest.json' },
 ]
 
 function sha256(file) {
@@ -101,7 +105,7 @@ for (const layer of LAYERS) {
       model: MODEL,
       revision: 'unknown',
       verified: false,
-      modelSource: flag('model') ? 'command-line --model（未核实）' : '环境变量 EMB_MODEL 或脚本默认值（未核实）',
+      modelSource: flag('model') ? 'command-line --model（未核实）' : 'Hers Life 设置页、环境变量 EMB_MODEL 或脚本默认值（未核实）',
       dimensions: dim,
       dtype: 'float32',
       byteOrder: 'little-endian',
