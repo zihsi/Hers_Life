@@ -13,11 +13,12 @@
  * implementation in `aead.js` (this Node build is BoringSSL without ChaCha20).
  * Opus frames come from ffmpeg, using the small Ogg helper next door.
  *
- * DAVE (Discord's end-to-end encryption) is required to complete the handshake:
- * a client that advertises protocol version 0 is closed with 4017 before READY.
- * `dave.js` wraps the prebuilt addon; when it cannot be loaded the connection
- * falls back to a plain channel and logs why, so the module still works on a
- * machine where the binary is missing.
+ * DAVE (Discord's end-to-end encryption) is required for non-Stage voice
+ * channels: a client that advertises protocol version 0 is closed with 4017.
+ * `dave.js` wraps the prebuilt addon; when it cannot be loaded, connection
+ * fails before opening the voice socket while text Discord remains available.
+ * Stage channels are exempt from DAVE, but no Stage-specific transport path is
+ * currently implemented in this adapter.
  */
 import { EventEmitter } from 'node:events'
 import { createSocket } from 'node:dgram'
