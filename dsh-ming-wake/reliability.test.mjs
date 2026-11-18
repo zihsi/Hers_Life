@@ -128,7 +128,16 @@ test('tool takes current session from execution context and respects explicit ta
   assert.match(await h.tool().execute({ minutes: 1, reason: 'no context' }), /sessionId/)
   assert.equal((await h.read()).items.length, 2)
 })
-test('corrupt queue is preserved rather than overwritten by a new arm', async t => {test('non-Owner Discord member can only arm the current channel session', async t => {
+test('corrupt queue is preserved rather than overwritten by a new arm', async t => {
+  const h = await harness(t)
+  await writeFile(h.file, '{broken')
+  await assert.rejects(h.tool().execute({ minutes: 1, reason: 'new', sessionId: 'fake' }))
+  await h.tick()
+  assert.equal(await readFile(h.file, 'utf8'), '{broken')
+  assert.equal(h.sent.length, 0)
+})
+
+test('non-Owner Discord member can only arm the current channel session', async t => {
   const h = await harness(t, { initial: { items: [] }, discord: true, userId: 'member' })
   await assert.rejects(
     h.tool().execute({ minutes: 1, reason: 'other', sessionId: 'private-session' }, h.discordExec()),
@@ -137,13 +146,9 @@ test('corrupt queue is preserved rather than overwritten by a new arm', async t 
   await h.tool().execute({ minutes: 1, reason: 'this channel' }, h.discordExec())
   assert.deepEqual((await h.read()).items.map(i => i.sessionId), ['fake'])
 })
+
 test('Discord Owner may explicitly target another session', async t => {
   const h = await harness(t, { initial: { items: [] }, discord: true, userId: 'owner' })
   await h.tool().execute({ minutes: 1, reason: 'cross session', sessionId: 'private-session' }, h.discordExec('owner'))
   assert.deepEqual((await h.read()).items.map(i => i.sessionId), ['private-session'])
-})
-
-  const h = await harness(t); await writeFile(h.file, '{broken')
-  await assert.rejects(h.tool().execute({ minutes: 1, reason: 'new', sessionId: 'fake' }))
-  await h.tick(); assert.equal(await readFile(h.file, 'utf8'), '{broken'); assert.equal(h.sent.length, 0)
 })
