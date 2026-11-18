@@ -688,13 +688,25 @@ export function apply(ctx, config) {
     }
   }
 
+  let selfWakeQueue = Promise.resolve()
   const patchSelfWake = async (patch) => {
-    let cur = {}
-    try { cur = JSON.parse(await readFile(selfWakePath, 'utf8')) || {} } catch { /* 没有就从空开始 */ }
-    const next = { ...cur, ...patch, updated_at: new Date().toISOString() }
-    await mkdir(path.dirname(selfWakePath), { recursive: true })
-    await writeFile(selfWakePath, JSON.stringify(next, null, 2) + '\n', 'utf8')
-    return next
+    const write = async () => {
+      let cur = {}
+      try { cur = JSON.parse(await readFile(selfWakePath, 'utf8')) || {} } catch { /* 没有就从空开始 */ }
+      const next = { ...cur, ...patch, updated_at: new Date().toISOString() }
+      await mkdir(path.dirname(selfWakePath), { recursive: true })
+      const temp = selfWakePath + '.tmp-' + randomUUID()
+      try {
+        await writeFile(temp, JSON.stringify(next, null, 2) + '\n', 'utf8')
+        await replaceFile(temp, selfWakePath)
+      } finally {
+        await rm(temp, { force: true }).catch(() => {})
+      }
+      return next
+    }
+    const task = selfWakeQueue.then(write, write)
+    selfWakeQueue = task.catch(() => {})
+    return task
   }
 
   // 手排上限 24 小时：再长就该说清为什么，而不是静默排一个三天后的点。
