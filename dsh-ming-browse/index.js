@@ -320,6 +320,14 @@ export function apply(ctx, config) {
               if (Object.keys(rest).length) {
                 await writeFile(f, JSON.stringify({ ...rest, at: new Date().toISOString() }, null, 2) + String.fromCharCode(10), 'utf8')
               }
+              const centralPatch = {}
+              for (const key of ['dailyMax', 'minGapMinutes', 'gapMode', 'hbMin', 'hbCenter', 'hbMax']) {
+                if (out[key] !== undefined) centralPatch[key] = out[key]
+              }
+              if (Object.keys(centralPatch).length) {
+                await ctx.hersLifeDiscord?.patchSettings?.({ browse: centralPatch })
+                Object.assign(cfg, centralPatch)
+              }
               if (typeof unlimited === 'boolean') {
                 const uf = path.join(cfg.workspacePath, 'live', 'browse-unlimited.json')
                 if (unlimited) {
