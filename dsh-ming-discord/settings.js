@@ -1,7 +1,36 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+
+async function atomicReplace(target, content, options = 'utf8') {
+  await mkdir(path.dirname(target), { recursive: true })
+  const temp = target + '.tmp-' + randomUUID()
+  try {
+    await writeFile(temp, content, options)
+    try {
+      await rename(temp, target)
+    } catch (error) {
+      if (process.platform !== 'win32' || !['EPERM', 'EEXIST', 'ENOTEMPTY'].includes(error?.code)) throw error
+      const backup = target + '.bak-' + randomUUID()
+      let moved = false
+      try {
+        await rename(target, backup)
+        moved = true
+        await rename(temp, target)
+        await rm(backup, { force: true })
+      } catch (replaceError) {
+        if (moved) {
+          try { await rename(backup, target) } catch {}
+        }
+        throw replaceError
+      }
+    }
+  } finally {
+    await rm(temp, { force: true }).catch(() => {})
+  }
+}
 
 const DEFAULTS = {
   enabled: false,
@@ -161,6 +190,7 @@ export class SettingsStore {
     this.settings.personaFiles = safeRelativeList(this.settings.personaFiles, DEFAULTS.personaFiles)
     this.settings.diaryDir = safeRelativePath(this.settings.diaryDir, DEFAULTS.diaryDir)
     this.token = ''
+    this.writeQueue = Promise.resolve()
   }
   async load() {
     await mkdir(this.home, { recursive: true })
@@ -209,18 +239,20 @@ export class SettingsStore {
       discord: { ...discord, tokenConfigured: this.hasToken() },
     }
   }
+  async writeFile(target, content, options = 'utf8') {
+    const write = () => atomicReplace(target, content, options)
+    this.writeQueue = this.writeQueue.then(write, write)
+    return this.writeQueue
+  }
   async save() {
     await mkdir(this.home, { recursive: true })
-    const tmp = this.file + '.tmp-' + process.pid
-    await writeFile(tmp, JSON.stringify(this.settings, null, 2) + '\n', 'utf8')
-    await rename(tmp, this.file)
+    return this.writeFile(this.file, JSON.stringify(this.settings, null, 2) + '\n', 'utf8')
   }
   async saveToken(token) {
     this.token = String(token ?? '').trim()
     await mkdir(this.home, { recursive: true })
-    const tmp = this.secretsFile + '.tmp-' + process.pid
-    await writeFile(tmp, JSON.stringify({ discordBotToken: this.token }, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 })
-    await rename(tmp, this.secretsFile)
+    const tokenValue = this.token
+    return this.writeFile(this.secretsFile, JSON.stringify({ discordBotToken: tokenValue }, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 })
   }
   async patch(patch = {}, token) {
     const allowed = ['enabled', 'workspace', 'ownerIds', 'agentPreset', 'personaFiles', 'diaryDir', 'diaryCount', 'diaryChars', 'maxChars', 'discord', 'memory', 'voice', 'interest', 'browse', 'resume', 'wake', 'mousepet', 'bilibili', 'activities', 'skillIsolate', 'coreMemory', 'graph', 'advanced']
