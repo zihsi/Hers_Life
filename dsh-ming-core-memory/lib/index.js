@@ -12,7 +12,7 @@ import { readFile, writeFile, rename, mkdir, readdir, rm } from 'node:fs/promise
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { buildGraph, expand, describeChain, mergedIds, conflictCandidates, REPLACES } from './graph.js';
 import { ragSearch } from './rag.js';
 import { createInspectorRoute } from './inspector.js';
@@ -39,9 +39,11 @@ export const inject = ['tools', 'hersLifeDiscord'];
 function dshHome() {
   return process.env.DSH_HOME || join(homedir(), '.dsh');
 }
-const corePath = () => join(dshHome(), 'memory', 'MEMORY.md');
-const notesDir = () => join(dshHome(), 'memory', 'notes');
-const indexPath = () => join(dshHome(), 'memory', 'index.json');
+let configuredMemoryRoot = '';
+const memoryRoot = () => configuredMemoryRoot || join(dshHome(), 'memory');
+const corePath = () => join(memoryRoot(), 'MEMORY.md');
+const notesDir = () => join(memoryRoot(), 'notes');
+const indexPath = () => join(memoryRoot(), 'index.json');
 
 /** 身份称呼（2026-11-10，浔点头「一起抽」）。
  *  跟 dsh-ming-memory 共用 ~/.dsh/ming-memory.json，其次读 ~/.dsh/core-memory.json。
@@ -948,7 +950,7 @@ const toolDefs = [
         let memoryDir = null;
         let before = null;
         try {
-          memoryDir = join(dshHome(), 'memory');
+          memoryDir = memoryRoot();
           before = foldRecall(await readRecallRows(memoryDir));
           const g = recallGate({ hitIds: scored.map((h) => h.note.id), state: before });
           if (g.open) {
@@ -1227,6 +1229,8 @@ function canInjectCoreMemory(agent, ctx) {
 
 export function apply(ctx) {
   const central = ctx.hersLifeDiscord?.getSetting?.('coreMemory', {}) || {}
+  const configured = String(central.directory || '').trim()
+  configuredMemoryRoot = configured ? resolve(dshHome(), configured) : join(dshHome(), 'memory')
   if (central.enabled === false) return
   // 引导创建（不阻塞激活；失败仅告警）
   enqueue(async () => {
