@@ -40,7 +40,7 @@ const DEFAULTS = {
   resume: { enabled: true, adbPath: 'D:\\MuMuPlayer\\nx_device\\12.0\\shell\\adb.exe', serial: '127.0.0.1:7555', pauseMediaOnInterrupt: true },
   wake: { enabled: true },
   mousepet: {
-    enabled: true, cursorMode: 'companion', cursorHoldMs: 2600, cursorSize: 64, cursorState: 'pointer', webpickDir: '',
+    enabled: true, cursorMode: 'companion', cursorHoldMs: 2600, cursorSize: 64, cursorState: 'pointer', webpickDir: '', toolsPath: '',
     shake: { on: true, level: 'medium' },
     companion: { enabled: true, tickMs: 0, provider: 'wb-proxy', model: 'hy4-preview', bubbleMs: 4200, workspace: '' },
   },
