@@ -2,11 +2,11 @@
 
 ## 2026-11-18 · 全倉庫稽核修正
 
-### Discord 適配器 dsh-ming-discord@0.1.9
+### Discord 適配器 dsh-ming-discord@0.1.10
 
 - 私訊訊息、指令活動不再寫入共用事件預覽；私訊回覆不寫共用日記，也不參與公開興趣學習。
 - 新增舊版私訊日記隔離遷移：`私聊 ...` 條目（含多行延續）搬到 `~/.dsh/privacy-quarantine/`，保留原文但從共用日記移除；支援自訂日記目錄、路徑防逃逸與重複執行防護。
-- Slash 指令落實 DM 政策、Guild／Channel 白名單及 Owner-only 權限；跨頻道發檔案被限制到目前發起回合的頻道，並以真實路徑與使用者／Session 標籤限制檔案範圍。
+- Slash 指令落實 DM 政策、Guild／Channel 白名單及 Owner-only 權限；跨頻道發檔案被限制到目前發起回合的頻道，並以真實路徑與使用者／Session 標籤限制檔案範圍。 `discord_send_file` 不再接受模型提供的 `channelId`，直接使用目前 turn 的可信 Discord 頻道身分。
 - PNG／APNG／GIF Discord 貼圖會下載並轉成模型影像區塊；Lottie 仍只提供文字描述。
 - 修正多人同頻道並行時的發起者身分競態，改用 AsyncLocalStorage 綁定每次工具執行；依 DSH 正式 ToolRunContext.agent.id 讀取 Session ID。
 - 私訊召回改為精確比對 Discord User ID；多 Owner 之間不再共享私人背景。關閉跨伺服器記憶時，DM 也不再成為可讀取所有伺服器的萬用範圍。
