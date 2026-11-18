@@ -123,14 +123,18 @@ export class DiscordBrain {
     if (event.scope === 'guild') {
       if (!this.settings.get('memory.shareAcrossChannels', true)) return false
       const sameGuild = target.kind !== 'dm' && String(event.guildId) === String(target.guildId)
-      if (sameGuild) return true
+      // Cross-channel continuity belongs to the same Owner. Do not let a
+      // member use the bot as a side door into staff-only/private channels.
+      const userId = String(target.userId ?? '')
+      if (sameGuild) {
+        if (!userId || !this.settings.isOwner(userId)) return false
+        const participantId = String(event.participantId || event.authorId || '')
+        return participantId === userId
+      }
       if (!this.settings.get('memory.shareAcrossGuilds', true)) return false
 
-      // Cross-guild memory is for the same Owner's relationship with her, not
-      // a bridge that lets one Discord community inspect another community's
-      // members. Only the exact Owner's own messages and replies to that Owner
-      // travel between guilds or into that Owner's DM.
-      const userId = String(target.userId ?? '')
+      // Cross-guild memory is also restricted to the exact Owner's own
+      // messages and the bot's replies to that Owner.
       if (!userId || !this.settings.isOwner(userId)) return false
       const participantId = String(event.participantId || event.authorId || '')
       return participantId === userId
