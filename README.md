@@ -14,7 +14,7 @@
 
 此分支只支持 **Discord Bot + DSH**。QQ、OneBot、QQ-Agent、AstrBot 以及旧平台桥接均已退役，不保留兼容层。
 
-Discord 原生适配器负责 Gateway、频道／私讯／Thread 会话、附件、语音、兴趣唤醒与统一设置页。Bot Token 存在 `~/.dsh/hers-life-secrets.json`；设置页只显示是否已配置，不回传密钥。
+Discord 原生适配器负责 Gateway、频道／私讯／Thread 会话、附件、语音、兴趣唤醒与统一设置页。Bot Token 存在 `$DSH_HOME/hers-life-secrets.json`；设置页只显示是否已配置，不回传密钥。
 
 首次設定 Bot 時，請在 Developer Portal → Bot → Privileged Gateway Intents 開啟 **Message Content Intent** 與 **Server Members Intent**；本程式兩項都會送入 Gateway Identify，未啟用時可能收到 `4014 Disallowed Intents`。語音另需 FFmpeg 與可載入的 DAVE 原生模組，詳見 [Discord 適配器說明](dsh-ming-discord/README.md)。
 
@@ -43,20 +43,20 @@ Discord 原生适配器负责 Gateway、频道／私讯／Thread 会话、附件
 
 每个 DM、伺服器频道与 Thread 都有自己的 DSH session 和独立历史。跨会话记忆不是把所有历史拼在一起，而是把重要事件写入 `live/discord-memory.jsonl`，附上 Discord message ID、作者、服务器、频道、Thread 与时间；其他会话按相关性召回，并保留来源标签。
 
-公开频道事件可按设置跨频道／跨服务器共享。Owner 私訊只在同一個 Discord User ID 的 Owner 私訊會話之間共享；設定多位 Owner 時彼此仍隔離。私人背景進入公開頻道時，只在該 Owner 本人發言的回合召回，並要求 AI 不復述或洩露私人原文。权限与范围可在 Discord 设置中心调整。
+同一 Guild 的公開事件可按設定跨頻道共享；跨 Guild 只共享目前 Owner 自己的訊息及她對該 Owner 的回覆，其他成員的訊息不跨 Guild。Owner 私訊只在同一個 Discord User ID 的 Owner 私訊會話之間共享；設定多位 Owner 時彼此仍隔離。
 
 ## 装法
 
-这些包走 DSH profile 的 `link:` 安装，没有发 npm。假定你 clone 到 `<workspace>\ming`：
+這些包可透過 DSH 插件市場安裝；不需要手動找 profile JSON。請在 DSH 的「插件市場 → 索引源」加入上方索引 URL，再從 UI 安裝需要的套件。若是開發者本機 link 安裝，才需要編輯 profile dependencies。假定你 clone 到 `<workspace>\\ming`：
 
 ```jsonc
-// <DSH_HOME>/profiles/web/package.json 的 dependencies
+// 開發者手動 link 安裝時：<DSH_HOME>/profiles/desktop/package.json 或 profiles/web/package.json
 "dsh-ming-graph": "link:<workspace>\ming/dsh-ming-graph",
 "dsh-ming-mousepet": "link:<workspace>\ming/dsh-ming-mousepet",
 // 其他必需配套插件照此添加；dsh-ming-activities 是可选扩展
 ```
 
-再把它们加进同一个文件的 `dsh.profile.bundles` 数组，重启 DSH。
+再把它們加進同一個文件的 `dsh.profile.bundles` 數組，重啟 DSH。一般使用者建議走插件市場 UI。
 
 `client.js` 是构建物。改 `src/` 之后要重建：
 
@@ -91,9 +91,9 @@ node scripts/make-market-index.mjs --ref=discord-dsh-only --validator="<DSH_HOME
 
 | 变量 / 位置 | 说明 |
 |---|---|
-| `MING_WORKSPACE` | 工作区目录的可选环境变量覆盖；通常在 Discord 设置页选择工作区 |
-| `USERPROFILE` | 本机路径默认从它拼，不用改 |
-| `MING_FFPLAY` | 试听用的 ffplay，默认走 `PATH` |
+| `DSH_HOME` | DSH 宿主提供的資料根目錄；插件自動讀取，不需要手動設定 |
+| 工作區路徑 | 在 Hers Life 設定頁選擇，其他插件從統一服務取得 |
+| FFmpeg／ffplay | 應由設定 UI 指定完整路徑；目前仍有部分子插件保留 PATH／舊環境變數相容，尚待整合 |
 | Discord Owner ID | 在 Discord 设置中心填写；用于私讯白名单、后台任务回报与 Owner 权限判断 |
 
 ## 人格
