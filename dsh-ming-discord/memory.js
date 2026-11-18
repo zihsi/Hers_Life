@@ -226,9 +226,9 @@ export class DiscordBrain {
     const hasPrivate = selected.some(({ event }) => event.scope === 'private')
     const lines = selected.map(({ event }) => {
       const privateInGuild = event.scope === 'private' && target.kind !== 'dm'
-      const time = privateInGuild ? '私人背景' : String(event.at).replace('T', ' ').slice(0, 16)
-      const who = privateInGuild ? '主人背景' : event.role === 'assistant' ? 'AI' : (event.authorName || '使用者')
-      const label = privateInGuild ? '私人背景（來源隱去）' : this.sourceLabel(event)
+      const time = privateInGuild ? 'Owner 私訊（保密）' : String(event.at).replace('T', ' ').slice(0, 16)
+      const who = privateInGuild ? '主人' : event.role === 'assistant' ? 'AI' : (event.authorName || '使用者')
+      const label = privateInGuild ? 'Owner 私訊背景（不得公開）' : this.sourceLabel(event)
       return '- [' + label + ' · ' + time + '] ' + who + '：' + event.text.slice(0, 420)
     })
     for (const { note } of privateNoteMatches) {
