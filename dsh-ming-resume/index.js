@@ -28,7 +28,6 @@ export const name = 'ming-resume'
 const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 export const inject = ['hersLifeDiscord']
 function resolveWorkspace() {
-  if (process.env.MING_WORKSPACE) return process.env.MING_WORKSPACE
   try {
     const data = JSON.parse(readFileSync(path.join(DSH_HOME, 'ming-memory.json'), 'utf8'))
     if (typeof data.root === 'string' && data.root.trim()) return data.root
