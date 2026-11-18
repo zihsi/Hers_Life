@@ -111,11 +111,32 @@ async function migrateLegacyBrowseSettings(settings) {
 
 async function syncBrowseSettings(settings) {
   const browse = settings.get('browse', {})
-  const file = path.join(settings.resolve().workspace, 'live', 'browse-config.json')
+  const workspace = settings.resolve().workspace
+  const file = path.join(workspace, 'live', 'browse-config.json')
   await mkdir(path.dirname(file), { recursive: true })
+  // This is the live configuration bridge consumed by ming-browse. Keep the
+  // entire supported settings surface here, not just the old three scheduler
+  // fields; otherwise the UI can save successfully while the runtime keeps
+  // using stale ADB, platform, write-policy, window and Agent-preset values.
   const next = {
-    dailyMax: browse.dailyMax,
+    enabled: browse.enabled !== false,
+    workspacePath: workspace,
+    idleMinutes: browse.idleMinutes,
     minGapMinutes: browse.minGapMinutes,
+    dailyMax: browse.dailyMax,
+    sessionRounds: browse.sessionRounds,
+    quietHours: browse.quietHours,
+    allowSocialWrites: browse.allowSocialWrites !== false,
+    freeWindows: browse.freeWindows,
+    holidaysFile: browse.holidaysFile,
+    agentPreset: browse.agentPreset || '',
+    maxItems: browse.maxItems,
+    maxShots: browse.maxShots,
+    targets: browse.targets,
+    serial: browse.serial,
+    adbPath: browse.adbPath,
+    socialApps: browse.socialApps,
+    socialWriteWords: browse.socialWriteWords,
     gapMode: browse.gapMode,
     hbMin: browse.hbMin,
     hbCenter: browse.hbCenter,
