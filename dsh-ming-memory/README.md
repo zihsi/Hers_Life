@@ -59,7 +59,7 @@ Discord session 會跳過本插件的一般對話捕獲路徑，避免和 Discor
 
 把 `dsh-ming-memory` 和 `dsh-ming-graph` 放在同一個 Hers Life 倉庫中，並在 DSH profile 同時安裝／啟用。Graph 透過相對路徑載入 memory 的資料層，因此兩個目錄必須保持目前的並列結構。
 
-工作區路徑以 Hers Life 設定中心為準。設定中心會同步舊插件需要的相容設定檔；一般安裝不需手動設定 `MING_WORKSPACE` 或 `MING_QQ_DATA`。`MING_WORKSPACE` 僅保留為進階環境覆蓋。
+工作區路徑以 Hers Life 設定中心為準。設定中心會同步本插件所需的設定檔；一般安裝不必設定任何 `MING_*` 環境變數。`MING_WORKSPACE` 僅保留為進階覆蓋選項。
 
 ## 離線檢查
 
