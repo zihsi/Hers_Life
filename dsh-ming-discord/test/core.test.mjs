@@ -19,7 +19,7 @@ test('legacy private DM diary entries are quarantined before shared memory reads
   const root = await mkdtemp(path.join(os.tmpdir(), 'hers-life-privacy-'))
   const workspace = path.join(root, 'workspace')
   const privateHome = path.join(root, '.dsh')
-  const diary = path.join(workspace, 'diary')
+  const diary = path.join(workspace, 'custom-notes', 'daily')
   await mkdir(diary, { recursive: true })
   try {
     const file = path.join(diary, '2026-11-18.md')
@@ -32,7 +32,7 @@ test('legacy private DM diary entries are quarantined before shared memory reads
       '',
     ].join('\n'), 'utf8')
 
-    const result = await quarantinePrivateDmDiary(workspace, privateHome)
+    const result = await quarantinePrivateDmDiary(workspace, privateHome, path.join('custom-notes', 'daily'))
     assert.equal(result.filesChanged, 1)
     assert.equal(result.entriesMoved, 2)
 
@@ -48,9 +48,13 @@ test('legacy private DM diary entries are quarantined before shared memory reads
     assert.match(archive, /another private secret/)
     assert.match(archive, /second private continuation/)
 
-    const repeated = await quarantinePrivateDmDiary(workspace, privateHome)
+    const repeated = await quarantinePrivateDmDiary(workspace, privateHome, path.join('custom-notes', 'daily'))
     assert.equal(repeated.entriesMoved, 0)
     assert.equal(repeated.alreadyDone, true)
+    await assert.rejects(
+      quarantinePrivateDmDiary(workspace, privateHome, '../outside'),
+      /escapes workspace/,
+    )
   } finally {
     await rm(root, { recursive: true, force: true })
   }
