@@ -366,6 +366,13 @@ test('cross-guild memory follows the same Owner without exposing other members o
     brain.feedAdd('session-guild-one', { label: '#general @ Group One', who: 'me', text: '另一位成員的私人議題。', kind: 'channel' }, {
       ...ownerOrigin, messageId: 'm-member', authorId: 'member-2', authorName: 'Member Two',
     })
+    brain.feedAdd('session-guild-one-channel-two', { label: '#dev @ Group One', who: 'me', text: '同伺服器跨頻道的藍圖 B。', kind: 'channel' }, {
+      ...ownerOrigin, messageId: 'm-owner-channel-two', channelId: 'channel-2', channelName: 'dev',
+    })
+    brain.feedAdd('session-guild-two', { label: '#general @ Group Two', who: 'me', text: '另一個伺服器的海風計畫 C。', kind: 'channel' }, {
+      ...ownerOrigin, messageId: 'm-owner-guild-two', guildId: 'guild-2', guildName: 'Group Two',
+      channelId: 'channel-22', channelName: 'general',
+    })
     brain.feedAdd('session-dm-owner', { label: '私訊 Owner', who: 'me', text: '私訊中提到的藍色計畫。', kind: 'dm' }, {
       botId: 'bot-1', messageId: 'dm-1', channelId: 'dm-channel', channelName: 'Owner DM',
       conversationType: 'dm', authorId: 'owner-1', authorName: 'Owner',
@@ -373,8 +380,14 @@ test('cross-guild memory follows the same Owner without exposing other members o
     await brain.queue
 
     const ownerInGroupTwo = { kind: 'channel', channelId: 'channel-2', guildId: 'guild-2', userId: 'owner-1' }
+    const ownerInGroupOneOtherChannel = { kind: 'channel', channelId: 'channel-3', guildId: 'guild-1', userId: 'owner-1' }
+    const ownerInGroupOne = { kind: 'channel', channelId: 'channel-1', guildId: 'guild-1', userId: 'owner-1' }
     const memberInGroupTwo = { kind: 'channel', channelId: 'channel-2', guildId: 'guild-2', userId: 'member-2' }
     const ownerDm = { kind: 'dm', channelId: 'dm-two', userId: 'owner-1' }
+    const sameGuildCross = await brain.recallContext('星河專案', ownerInGroupOneOtherChannel, 'session-guild-one-channel-three')
+    assert.match(sameGuildCross, /Group One \/ #general/, 'channel one must be remembered in channel two')
+    const sameGuildReverse = await brain.recallContext('藍圖 B', ownerInGroupOne, 'session-guild-one')
+    assert.match(sameGuildReverse, /Group One \/ #dev/, 'channel two must be remembered in channel one')
     const ownerCross = await brain.recallContext('星河專案', ownerInGroupTwo, 'session-guild-two')
     assert.match(ownerCross, /Group One \/ #general/)
     assert.match(ownerCross, /星河專案/)
@@ -382,6 +395,8 @@ test('cross-guild memory follows the same Owner without exposing other members o
     const ownerContinuity = await brain.recallContext('私人議題', ownerInGroupTwo, 'session-guild-two')
     assert.doesNotMatch(ownerContinuity, /另一位成員的私人議題/, 'recent continuity must never import another member\'s message')
     assert.match(await brain.recallContext('星河專案', ownerDm, 'session-owner-dm-two'), /Group One \/ #general/)
+    const reverseCrossGuild = await brain.recallContext('海風計畫', ownerInGroupOne, 'session-guild-one')
+    assert.match(reverseCrossGuild, /Group Two \/ #general/, 'Group Two must be remembered in Group One')
 
     const privateInOwnerGuild = await brain.recallContext('藍色計畫', ownerInGroupTwo, 'session-guild-two')
     assert.match(privateInOwnerGuild, /私人背景（來源隱去）/)
