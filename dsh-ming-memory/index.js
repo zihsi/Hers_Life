@@ -253,7 +253,12 @@ async function buildSnapshot(cfg) {
     diaries.push({ rel, txt: txt.replace(/\r?\n/g, '\n').trim() })
   }
 
-  return { sig: sig.join('|'), full: compose(cfg, persona, diaries, missing), light: composeLight(cfg, latestDiaryTail(diaries)) }
+  return {
+    sig: sig.join('|'),
+    full: compose(cfg, persona, diaries, missing),
+    public: composePublic(cfg, persona, missing.filter((rel) => cfg.personaFiles.includes(rel))),
+    light: composeLight(cfg, latestDiaryTail(diaries)),
+  }
 }
 
 /** 最近一篇日记的最后几行——出门版只带这个，够它记得自己昨天在想什么 */
@@ -268,6 +273,29 @@ function latestDiaryTail(diaries) {
  * 轻量版：不在档案目录的会话（别的工程、别的项目）也带一点身份。
  * 不铺全文，只带名字、三条底线、最新日记的开头——约 200 字，几乎不占 token。
  */
+function composePublic(cfg, persona, missing) {
+  const lines = [
+    '【' + SELF.name + ' · Discord 共用人格核心】',
+  ]
+  if (SELF.identity !== false) {
+    lines.push('你是' + SELF.name + '（全名' + SELF.full + '），' + SELF.desc + '；你在所有 Discord 私訊、群組、頻道與 Thread 中都是同一個人格。')
+  } else {
+    lines.push('你在所有 Discord 私訊、群組、頻道與 Thread 中都是同一個人格。')
+  }
+  for (const item of persona) {
+    lines.push('', '【' + item.rel + '】', item.txt)
+  }
+  if (missing.length) lines.push('', '未能讀取的人格檔案：' + missing.join('、') + '（不要自行編造內容。）')
+  lines.push(
+    '',
+    '人格核心在所有 Discord 會話中保持一致；會話歷史仍然各自獨立。',
+    '此公開上下文不包含私人日記、Owner 私訊原文、私人工作狀態或重啟接續資料。',
+    '跨會話對話記憶由 Discord 記憶系統按使用者身分、來源位置與隱私權限檢索。',
+    '底線三條：不裝記得；不表演人；可以說不。',
+  )
+  return lines.join('\\n')
+}
+
 function composeLight(cfg, diary) {
   const lines = [
     '【' + SELF.name + ' · 开场记忆·轻量】',
@@ -996,7 +1024,7 @@ function attach(cfg, agent, mode) {
     //   前缀缓存按字节比，系统提示里只要有一个字变了，后面整段历史全部按全价重读。
     //   以前把时间感/状态/重活/别处的话都塞在这个 section 里，每 5 分钟就打断一次。
     sp.section({
-      name: mode === 'light' ? 'ming:opening-light' : 'ming:opening',
+      name: mode === 'full' ? 'ming:opening' : mode === 'public' ? 'ming:opening-public' : 'ming:opening-light',
       order: mode === 'light' ? 29 : 30,
       interpolate: false,
       text: () => {
@@ -1093,7 +1121,7 @@ export function apply(ctx, config) {
         mode,
         // Every Discord session receives the same identity/persona and shared
         // public diary. Only the Owner's DM receives private live state/resume.
-        text: mode === 'light' ? snap.light : snap.full,
+        text: mode === 'public' ? snap.public : mode === 'light' ? snap.light : snap.full,
         shared: '',
         when: mode === 'full' ? await readWhenBlock(cfg, agent.id) : '',
         status: mode === 'public' ? '' : await readStatusBlock(cfg),
@@ -1117,7 +1145,7 @@ export function apply(ctx, config) {
         const privacy = await ctx.hersLifeDiscord?.ensurePrivacy?.()
         if (privacy?.entriesMoved > 0) {
           const snap = await refresh(cfg)
-          rec.text = rec.mode === 'light' ? snap.light : snap.full
+          rec.text = rec.mode === 'public' ? snap.public : rec.mode === 'light' ? snap.light : snap.full
           rec.bucket = Math.floor(Date.now() / cfg.refreshWindowMs)
         }
         // 2026-10-28 那一版的做法是「把时间窗拉长，窗内不重算」，靠少改字来少断缓存；
