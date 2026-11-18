@@ -294,11 +294,13 @@ export function apply(ctx, pluginConfig = {}) {
               sessionIndex: path.join(resolved.dataRoot, 'discord-sessions.json'),
               coreMemory: path.join(settings.home, 'memory', 'MEMORY.md'),
               coreNotes: path.join(settings.home, 'memory', 'notes'),
+              privateDmNotes: path.join(settings.home, 'privacy-quarantine', 'private-dm-notes'),
+              privateDmArchive: path.join(settings.home, 'privacy-quarantine', 'private-dm-diary'),
               browseConfig: path.join(resolved.workspace, 'live', 'browse-config.json'),
               wakeQueue: path.join(resolved.workspace, 'live', 'wake-arm.json'),
               voiceOutput: path.join(resolved.workspace, 'live', 'voice'),
-              bilibiliCredentials: path.join(settings.home, 'bili-duty', 'bili_credential.json'),
-              skillIsolationState: settings.get('skillIsolate.stateFile') || path.join(resolved.workspace, 'skills-off.json'),
+              bilibiliCredentials: settings.get('bilibili.credentialFile') || path.join(settings.home, 'bili-duty', 'bili_credential.json'),
+              skillIsolationState: settings.get('skillIsolate.stateFile') ? path.resolve(String(settings.get('skillIsolate.stateFile'))) : path.join(resolved.workspace, 'skills-off.json'),
             }
             const plugins = {}
             for (const [name, provider] of statusProviders) {
